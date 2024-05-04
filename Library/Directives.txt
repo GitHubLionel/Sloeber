@@ -1,0 +1,56 @@
+Les options de compilation à mettre dans : Project/Properties/Arduino/"Compile Options"
+- Rajouter les directives dans "append to C and C++" sous la forme : -Ddirective.
+
+Pour mettre les opérations sur les float en IRAM :
+(note : depuis core 2.7.0, les opérations FP ne sont plus en IRAM)
+- FP_IN_IROM
+
+
+**** SSD1306.h *****
+- SSD1306_RAM_128
+- SSD1306_RAM_132
+
+
+**** SSD1327.h *****
+- SSD1327_Top_Down (default)
+- SSD1327_Left_Right
+- SSD1327_Down_Top
+- SSD1327_Right_Left
+- DEBUG_SSD1327
+
+
+**** display.h *****
+- USE_LCD
+- USE_OLED
+- USE_TFT
+
+
+**** RTCLocal.h *****
+- USE_NTP_SERVER
+
+
+**** Timer_utils.h *****
+- USING_TIM_DIV1	false/true
+- USING_TIM_DIV16	false/true
+- USING_TIM_DIV256	false/true
+
+
+**** Cirrus.h *****
+// Si CIRRUS_CS5480 n'est pas défini, on utilise le CS5490 et on est forcément en UART
+- CIRRUS_CS5480
+- CIRRUS_USE_UART
+- CIRRUS_UART_HARD	0=soft / 1=hard
+- LOG_CIRRUS_CONNECT
+
+
+**** Simple_Get_Data.h *****
+- USE_SSR
+
+**** TeleInfo.cpp *****
+TI_DEBUG
+
+
+
+
+
+

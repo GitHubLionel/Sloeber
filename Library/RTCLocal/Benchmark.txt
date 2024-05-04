@@ -1,0 +1,270 @@
+
+
+String Test1(unsigned int hh, unsigned int mm, unsigned int ss)
+{
+  static const char *digits = "0123456789";  // Les chiffres
+  char time[9] = "00:00:00";
+  char *ptime = time;
+
+  if (hh < 10)
+  {
+    ptime++;
+    *ptime++ = (char)(48 + hh);
+  }
+  else
+  {
+    *ptime++ = digits[hh / 10];
+    *ptime++ = digits[hh % 10];
+  }
+  ptime++;
+
+  if (mm < 10)
+  {
+    ptime++;
+    *ptime++ = (char)(48 + mm);
+  }
+  else
+  {
+    *ptime++ = digits[mm / 10];
+    *ptime++ = digits[mm % 10];
+  }
+  ptime++;
+  if (ss < 10)
+  {
+    ptime++;
+    *ptime++ = (char)(48 + ss);
+  }
+  else
+  {
+    *ptime++ = digits[ss / 10];
+    *ptime = digits[ss % 10];
+  }
+
+  return String(time);
+}
+
+String Test2(unsigned int hh, unsigned int mm, unsigned int ss)
+{
+  char time[10] = {0};
+  sprintf(time, "%.2d:%.2d:%.2d", hh, mm, ss);
+  return String(time);
+}
+
+String Test3(unsigned int hh, unsigned int mm, unsigned int ss)
+{
+  char time[10] = {0};
+  char *ptime = time;
+
+  *ptime++ = (char)(48 + (hh / 10));
+  *ptime++ = (char)(48 + (hh % 10));
+  *ptime++ = ':';
+  *ptime++ = (char)(48 + (mm / 10));
+  *ptime++ = (char)(48 + (mm % 10));
+  *ptime++ = ':';
+  *ptime++ = (char)(48 + (ss / 10));
+  *ptime = (char)(48 + (ss % 10));
+
+  return String(time);
+}
+
+String Test4(unsigned int hh, unsigned int mm, unsigned int ss)
+{
+  char time[10] = {0};
+  static const char *digits = "0123456789";  // Les chiffres
+  char *ptime = time;
+
+  *ptime++ = digits[hh / 10];
+  *ptime++ = digits[hh % 10];
+  *ptime++ = ':';
+  *ptime++ = digits[mm / 10];
+  *ptime++ = digits[mm % 10];
+  *ptime++ = ':';
+  *ptime++ = digits[ss / 10];
+  *ptime++ = digits[ss % 10];
+  *ptime = 0;
+
+  return String(time);
+}
+
+String Test5(unsigned int hh, unsigned int mm, unsigned int ss)
+{
+  char time[9] = "00:00:00";
+  char *ptime = time;
+
+  if (hh < 10)
+  {
+    ptime++;
+    *ptime++ = (char)(48 + hh);
+  }
+  else
+  {
+    *ptime++ = (char)(48 + (hh / 10));
+    *ptime++ = (char)(48 + (hh % 10));
+  }
+  ptime++;
+
+  if (mm < 10)
+  {
+    ptime++;
+    *ptime++ = (char)(48 + mm);
+  }
+  else
+  {
+    *ptime++ = (char)(48 + (mm / 10));
+    *ptime++ = (char)(48 + (mm % 10));
+  }
+  ptime++;
+  if (ss < 10)
+  {
+    ptime++;
+    *ptime++ = (char)(48 + ss);
+  }
+  else
+  {
+    *ptime++ = (char)(48 + (ss / 10));
+    *ptime = (char)(48 + (ss % 10));
+  }
+
+  return String(time);
+}
+
+
+void Test(void)
+{
+  String ss;
+  int h=9, m=8, s=6;
+  unsigned long count = millis();
+
+  for (int i=0; i<10000; i++)
+    {
+      ss = Test1(h, m, s);
+      if (ss == "5") ss="";
+    }
+
+  count = millis() - count;
+
+  print_debug("Test 1 : ", false);
+  print_debug((int)count, true);
+
+  count = millis();
+
+  for (int i=0; i<10000; i++)
+    {
+      ss = Test2(h, m, s);
+      if (ss == "5") ss="";
+    }
+
+  count = millis() - count;
+
+  print_debug("Test 2 : ", false);
+  print_debug((int)count, true);
+
+
+  count = millis();
+
+  for (int i=0; i<10000; i++)
+    {
+      ss = Test3(h, m, s);
+      if (ss == "5") ss="";
+    }
+
+  count = millis() - count;
+
+  print_debug("Test 3 : ", false);
+  print_debug((int)count, true);
+
+  count = millis();
+
+  for (int i=0; i<10000; i++)
+    {
+      ss = Test4(h, m, s);
+      if (ss == "5") ss="";
+    }
+
+  count = millis() - count;
+
+  print_debug("Test 4 : ", false);
+  print_debug((int)count, true);
+
+  count = millis();
+
+  for (int i=0; i<10000; i++)
+    {
+      ss = Test5(h, m, s);
+      if (ss == "5") ss="";
+    }
+
+  count = millis() - count;
+
+  print_debug("Test 5 : ", false);
+  print_debug((int)count, true);
+
+  // **********************
+  h=19; m=38; s=26;
+
+  count = millis();
+
+    for (int i=0; i<10000; i++)
+      {
+        ss = Test1(h, m, s);
+        if (ss == "5") ss="";
+      }
+
+    count = millis() - count;
+
+    print_debug("Test 1 : ", false);
+    print_debug((int)count, true);
+
+    count = millis();
+
+    for (int i=0; i<10000; i++)
+      {
+        ss = Test2(h, m, s);
+        if (ss == "5") ss="";
+      }
+
+    count = millis() - count;
+
+    print_debug("Test 2 : ", false);
+    print_debug((int)count, true);
+
+
+    count = millis();
+
+    for (int i=0; i<10000; i++)
+      {
+        ss = Test3(h, m, s);
+        if (ss == "5") ss="";
+      }
+
+    count = millis() - count;
+
+    print_debug("Test 3 : ", false);
+    print_debug((int)count, true);
+
+    count = millis();
+
+    for (int i=0; i<10000; i++)
+      {
+        ss = Test4(h, m, s);
+        if (ss == "5") ss="";
+      }
+
+    count = millis() - count;
+
+    print_debug("Test 4 : ", false);
+    print_debug((int)count, true);
+
+    count = millis();
+
+    for (int i=0; i<10000; i++)
+      {
+        ss = Test5(h, m, s);
+        if (ss == "5") ss="";
+      }
+
+    count = millis() - count;
+
+    print_debug("Test 5 : ", false);
+    print_debug((int)count, true);
+}

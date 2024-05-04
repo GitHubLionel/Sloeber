@@ -1,0 +1,96 @@
+
+***** Log avant flash, interrogation AT  ******
+
+AT
+
+OK
+AT+GMR
+AT version:1.3.0.0(Jul 14 2016 18:54:01)
+SDK version:2.0.0(5a875ba)
+v1.0.0.3
+Mar 13 2018 09:37:06
+OK
+AT+RST
+
+OK
+
+ ets Jan  8 2013,rst cause:1, boot mode:(3,7)
+
+load 0x40100000, len 2408, room 16 
+tail 8
+chksum 0xe5
+load 0x3ffe8000, len 776, room 0 
+tail 8
+chksum 0x84
+load 0x3ffe8310, len 632, room 0 
+tail 8
+chksum 0xd8
+csum 0xd8
+
+2nd boot version : 1.6
+  SPI Speed      : 40MHz
+  SPI Mode       : QIO
+  SPI Flash Size & Map: 32Mbit(512KB+512KB)
+jump to run user1 @ 1000
+
+?„Ï?g‰€s?Ú'|‰dd‰?l?„{?dƒl?d`ƒ„r?$Ïd?l`?‚s?l??ƒll`{lè?{l??‚?c??c?cb;‰?sbÏÛoÓ?og„l?˚l?d??$lè??ƒ?‰?$?'¸??„?cll«{p??„ƒcd?b{lsd
+ready
+
+***** Log aprËs flash du projet template de base  ******
+
+------------------------------
+ESP Flash and Sketch info
+------------------------------
+Flash real id:   001640D8
+Flash real size: 4194304 bytes (4.00 Mo)
+
+Flash ide  size: 4194304 bytes (4.00 Mo)
+Flash ide speed: 40 MHz
+Flash ide mode:  DIO
+Flash Chip configuration ok.
+
+
+CPU Frequency: 80 MHz
+Sketch size: 429216 bytes (419.16 ko)
+Sketch free space: 618496 bytes (604.00 ko)
+
+------------------------------
+File system info
+------------------------------
+Total space:	3121152 bytes (2.98 Mo)
+Total space used:	81920 bytes (80.00 ko)
+Free space:	3039232 bytes (2.90 Mo)
+Block size:	8192 bytes (8.00 ko)
+Block number:	381
+Page size:	3121152 bytes (2.98 Mo)
+Max open files:	5
+Max path lenght:	32
+
+------------------------------
+List files
+------------------------------
+	FS Enter Dir: /
+	FS File: ESPTemplate.css, size: 2.01 ko, time: 1638470701
+	FS File: ESPTemplate.js, size: 8.29 ko, time: 1649496742
+	FS File: FileSaver.min.js, size: 2.63 ko, time: 1601998556
+	FS File: favicon.ico, size: 894.00 o, time: 1601307342
+	FS File: index.html, size: 2.72 ko, time: 1647861126
+	FS File: loader.gif.gz, size: 10.12 ko, time: 1647876761
+
+****** Starting ******
+
+Connecting to TP-Link_6C90
+77718983
+.............
+WiFi connected in 5179 ms
+IP address: 
+IP=192.168.0.105
+WiFi signal : -85 dBm
+handleReadFile: /
+handleReadFile: /ESPTemplate.css
+handleReadFile: /ESPTemplate.js
+handleReadFile: /FileSaver.min.js
+handleReadFile: /loader.gif
+handleReadFile: /favicon.ico
+handleSetTime: 25-04-22H11-50-05U1650880206
+TIME=25-04-22H11-50-05U1650880206handleGetFile: /log.txt

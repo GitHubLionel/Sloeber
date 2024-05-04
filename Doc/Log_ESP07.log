@@ -1,0 +1,59 @@
+
+
+****** Starting : ESP_OTA
+------------------------------
+ESP Flash and Sketch info
+------------------------------
+Flash real id:   0016405E
+Flash real size: 4194304 bytes (4.00 Mo)
+
+Flash ide  size: 4194304 bytes (4.00 Mo)
+Flash ide speed: 40 MHz
+Flash ide mode:  DIO
+Flash Chip configuration ok.
+
+CPU Frequency: 80 MHz
+Chip id: 2729671
+Sketch size: 469360 bytes (458.36 ko)
+Sketch free space: 577536 bytes (564.00 ko)
+
+------------------------------
+File system info
+------------------------------
+Total space:	3121152 bytes (2.98 Mo)
+Total space used:	81920 bytes (80.00 ko)
+Free space:	3039232 bytes (2.90 Mo)
+Block size:	8192 bytes (8.00 ko)
+Block number:	381
+Page size:	3121152 bytes (2.98 Mo)
+Max open files:	5
+Max path lenght:	32
+
+------------------------------
+List files
+------------------------------
+	FS Enter Dir: /
+	FS File: ESPTemplate.css, size: 2.11 ko, time: 1659019427
+	FS File: ESPTemplate.js, size: 7.94 ko, time: 1658847773
+	FS File: FileSaver.min.js, size: 2.63 ko, time: 1601998556
+	FS File: favicon.ico, size: 894.00 o, time: 1175506094
+	FS File: index.html, size: 4.05 ko, time: 2798400958
+	FS File: loader.gif.gz, size: 10.12 ko, time: 1647876761
+	FS File: log.txt, size: 757.00 o, time: 5
+	FS File: time.dat, size: 29.00 o, time: 2798401366
+Read last time : 30-07-22H15-14-30U-149656593
+** Wait for network **
+
+Connecting to TP-Link_6C90
+77718983
+........
+WiFi connected in 3243 ms
+IP address: 
+IP=192.168.0.105
+WiFi signal : -51 dBm
+** Connected to network **
+handleReadFile: /
+handleReadFile: /ESPTemplate.css
+handleReadFile: /FileSaver.min.js
+handleReadFile: /ESPTemplate.js
+handleReadFile: /loader.gif
