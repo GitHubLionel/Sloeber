@@ -1,0 +1,134 @@
+/* Change the percent in the tablink css  */
+/* General */
+* {box-sizing: border-box}
+
+html {
+  font-family: "Times New Roman", Times, serif; 
+  font-size: 1.2em;
+}
+
+hr { 
+  padding: 15px;
+  border-width: 0px;
+} 
+
+/* For waiting during upload */
+.loader_gif {
+  position: fixed;
+  z-index: 9999;
+  background: url('loader.gif') 50% 50% no-repeat;
+  top: 0px;
+  left: 0px;
+  height: 100%;
+  width : 100%;
+  cursor: wait;
+  visibility: hidden;
+}
+
+.loader_txt {
+  border: solid 1px black;
+  position: fixed;
+  z-index: 100;  
+  left: 50%;
+  top: 50%;
+  background-color: #cccccc;
+  width: 400px;
+  margin-left: -200px;
+  text-align: center;
+  cursor: wait;
+  visibility: hidden;  
+}
+
+/* Header div */
+.header {
+  background-color: #1325ed;
+  color: #ffffff;
+  font-size: 1.6em;
+  font-weight: bold;
+  padding: 1px 5px 1px 5px;
+/*  margin-bottom: 10px;*/
+}
+
+.right {
+  float: right;
+}
+
+.left {
+  float: left;
+}
+
+.div_space {
+  margin-bottom: 10px;
+}
+
+.odd {
+  background-color: #e2dff7;
+}
+
+/**
+ Menu
+ Change the percent width to add menu
+*/
+.tablink {
+  background-color: black;
+  color: white;
+  float: left;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  padding: 10px 3px 10px 3px;
+  width: 50%;   /* percent is function of the number of page */
+}
+
+.tablink:hover {
+  background-color: #777;
+}
+
+.tabcontent {
+  display: none;
+  text-align: center;
+  height: 100%;
+}
+
+/* special button */
+button {
+  font-family: "Times New Roman", Times, serif;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  letter-spacing: .02em;
+  outline: none;
+}
+
+.myButton {
+  box-shadow:inset 0px 1px 0px 0px #e184f3;
+  background:linear-gradient(to bottom, #c123de 5%, #a20dbd 100%);
+  border-radius:6px;
+  border:1px solid #a511c0;
+  display:inline-block;
+  cursor:pointer;
+  color:#ffffff;
+  font-size:16px;
+  font-weight:bold;
+  padding:6px 24px;
+}
+
+.myButton:hover {
+  background:linear-gradient(to bottom, #a20dbd 5%, #c123de 100%);
+  background-color:#a20dbd;
+}
+
+.myButton:active {
+  position:relative;
+  top:1px;
+}
+
+.flash {
+  background-color: gold;
+  width: 300px;
+  margin: 0 auto;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  text-align: center;
+}
+
+#m_Config {background-color: white;}
