@@ -893,7 +893,7 @@ char* CIRRUS_COM_Register(uint8_t *Request, char *response)
 		if (read_register(registre, page, &result))
 		{
 			// Expédition du résultat en hexa au format : 0xXXXXXX
-			sprintf(response, "0x%.6X", result.Bit32);
+			sprintf(response, "0x%.6X", (unsigned int)result.Bit32);
 		}
 		else
 			strcpy(response, "REG_ERROR");

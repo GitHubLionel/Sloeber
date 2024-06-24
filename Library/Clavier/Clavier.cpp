@@ -126,7 +126,7 @@ void Clavier_UpdateTime()
 				}
 			}
 			else
-				Start_click--;
+				Start_click = Start_click - 1; // -- deprecated
 		}
 	}
 }
@@ -245,7 +245,7 @@ void Btn_Check_Config(bool infinite)
 	uint32_t Check_count = 0;
 
 	print_debug("\r\n ** Info Clavier **");
-	sprintf(buffer_deb, "[%d - ", ADC_res);
+	sprintf(buffer_deb, "[%d - ", (unsigned int)ADC_res);
 	for (uint8_t i = 0; i < Btn_Count; i++)
 	{
 		sprintf(buffer, "%s%d] ==> %s", buffer_deb, Low_sampling[i], Btn_Texte[Btn_Count - i]);

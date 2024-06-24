@@ -18,6 +18,9 @@
 #define LITTLEFS_MAX_LEN	32
 #define TIME_FILENAME	"/time.dat"
 
+// Unix Date time au premier janvier 2020
+#define DT01_01_2020	1577833200UL
+
 // Callback pour le changement de jour : pour minuit et la mise à jour date
 typedef void (*RTC_daychange_cb)(uint8_t year, uint8_t month, uint8_t day);
 
@@ -39,7 +42,7 @@ class RTCLocal
 
 		uint32_t seconds_count = 0UL;	// Compteur de seconde depuis le démarrage
 		// Temps Unix initialisé au 1er janvier 2020 (nombre de seconde depuis 1/1/1970 00:00:00 UTC
-		uint32_t UNIX_time = 1577833200UL;
+		uint32_t UNIX_time = DT01_01_2020;
 
 		bool lockUpdate = false;
 

@@ -8,6 +8,8 @@ WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org");
 #endif
 
+//#define RTC_DEBUG
+
 // Function for debug message, may be redefined elsewhere
 void __attribute__((weak)) print_debug(const char *mess, bool ln = true)
 {
@@ -173,6 +175,16 @@ void RTCLocal::UpdateDateTime(struct tm *t, uint32_t unix_time)
 {
 	lockUpdate = true;
 
+#ifdef RTC_DEBUG
+	char buf[20] = {0};
+	sprintf(buf, "ut = %lu", unix_time);
+	print_debug(buf);
+#define MAX_SIZE 80
+	char buffer[MAX_SIZE];
+	strftime(buffer, MAX_SIZE, "dt = %d/%m/%Y %H:%M:%S", t);
+	print_debug(buffer);
+#endif
+
 	// Activation de la callback si on a changé de jour
 	if (_cb_daychange != NULL)
 	{
@@ -205,14 +217,12 @@ void RTCLocal::setDateTime(const char *time, bool with_epoch, bool default_forma
 {
 	struct tm t;
 	uint8_t _month;
-	uint32_t _Unix_time;
+	unsigned int _Unix_time;
 
 	if (with_epoch)
 	{
 		sscanf(time, "%d-%hhu-%dH%d-%d-%dU%u", &t.tm_mday, &_month, &t.tm_year, &t.tm_hour, &t.tm_min,
 				&t.tm_sec, &_Unix_time);
-		t.tm_mon = _month - 1;  // Month, where 0 = jan
-		t.tm_year += 100;       // Year start in 1900
 	}
 	else
 	{
@@ -222,11 +232,12 @@ void RTCLocal::setDateTime(const char *time, bool with_epoch, bool default_forma
 		else
 			sscanf(time, "%d/%hhu/%d#%d:%d:%d", &t.tm_mday, &_month, &t.tm_year, &t.tm_hour, &t.tm_min,
 				&t.tm_sec);
-		t.tm_mon = _month - 1;  // Month, where 0 = jan
-		t.tm_year += 100;       // Year start in 1900
-		t.tm_isdst = -1;        // Is DST on? 1 = yes, 0 = no, -1 = unknown
-		_Unix_time = mktime(&t);
 	}
+	t.tm_mon = _month - 1;  // Month, where 0 = jan
+	t.tm_year += 100;       // Year start in 1900
+	t.tm_isdst = 0;         // Is DST on? 1 = yes, 0 = no, -1 = unknown
+	if (!with_epoch)
+		_Unix_time = mktime(&t);
 
 	// Mise à jour de la date
 	UpdateDateTime(&t, _Unix_time);
@@ -251,14 +262,27 @@ bool RTCLocal::setEpochTime(int8_t gmt)
 		return false;
 	}
 
-	unsigned long epochTime = timeClient.getEpochTime();
-	struct tm *ptm = gmtime((time_t *)&epochTime);
-
-	// Mise à jour de la date
-	UpdateDateTime(ptm, epochTime);
+	// Beware, time_t is "long long int" if ESP_IDF >= 5 else time_t is "long int"
+	time_t epochTime = timeClient.getEpochTime();
 
 	// End timeClient
 	timeClient.end();
+
+	// Just verify that time is newer than year 2020
+	if (epochTime > DT01_01_2020)
+	{
+		struct tm ptm;
+
+		// Set timezone to Paris Standard Time (not usefull here)
+//		setenv("TZ", "CET-1CEST,M3.5.0,M10.5.0/3", 1);
+//		tzset();
+		localtime_r(&epochTime, &ptm);
+
+		// Mise à jour de la date
+		UpdateDateTime(&ptm, epochTime);
+	}
+	else
+		return false;
 
 	return true;
 }
@@ -431,7 +455,7 @@ char* RTCLocal::getFormatedDateTime(char *datetime) const
 	strcat(datetime, "H");
 	strcat(datetime, getTime(tmp, '-'));
 	strcat(datetime, "U");
-	sprintf(tmp, "%d", this->UNIX_time);
+	sprintf(tmp, "%u", (unsigned int)this->UNIX_time);
 	strcat(datetime, tmp);
 
 	return datetime;

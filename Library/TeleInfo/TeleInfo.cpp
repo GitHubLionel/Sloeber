@@ -175,7 +175,7 @@ void TeleInfo::PrintAllToSerial()
 		print_debug((char*) buffer);
 		sprintf((char*) buffer, "Trame length => %d", strlen(_frame));
 		print_debug((char*) buffer);
-		sprintf((char*) buffer, "Temps de configuration : %d ms", conf_delay);
+		sprintf((char*) buffer, "Temps de configuration : %d ms", (unsigned int)conf_delay);
 		print_debug((char*) buffer);
 	}
 }

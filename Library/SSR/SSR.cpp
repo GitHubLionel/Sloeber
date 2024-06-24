@@ -105,7 +105,7 @@ void PrintVal(const char *text, float val, bool integer)
 {
 	char buffer[50];
 	if (integer)
-		sprintf(buffer, "%s: %d\r\n", text, (uint32_t) val);
+		sprintf(buffer, "%s: %d\r\n", text, (int) val);
 	else
 		sprintf(buffer, "%s: %.3f\r\n", text, val);
 	PrintTerminal(buffer);
@@ -158,7 +158,11 @@ void IRAM_ATTR onTimerSSR(void)
 			Timer_SSR.startTimer();
 #elif ESP32
 //			timerStop(Timer_SSR);
+#if defined(ESP_IDF_VERSION) && (ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)) // ESP32 2.0.x
 			timerAlarmWrite(Timer_SSR, SSR_TURN_ON_us, true);
+#else
+			timerAlarm(Timer_SSR, SSR_TURN_ON_us, true, SSR_TURN_ON_us);
+#endif
 			timerWrite(Timer_SSR, 0);
 //			timerRestart(Timer_SSR);
 #endif
@@ -171,7 +175,10 @@ void IRAM_ATTR onTimerSSR(void)
 			if (LED_PIN != -1)
 				SET_PIN_HIGH(LED_PIN);
 #elif ESP32
+#if defined(ESP_IDF_VERSION) && (ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)) // ESP32 2.0.x
 			timerAlarmDisable(Timer_SSR);
+#endif
+			timerStop(Timer_SSR);
 //				ledcWrite(LED_CHANNEL, 128);
 #endif
 		}
@@ -203,7 +210,7 @@ void IRAM_ATTR onCirrusZC(void)
 void IRAM_ATTR onCirrusZC(void)
 {
 	ZCMUX_ENTER();
-	Count_CS_ZC++;
+	Count_CS_ZC = Count_CS_ZC + 1; // ++ deprecated
 	if (!Top_200ms)
 		Top_200ms = (Count_CS_ZC % 20 == 0);
 
@@ -219,9 +226,15 @@ void IRAM_ATTR onCirrusZC(void)
 			SET_PIN_LOW(LED_PIN);
 #elif ESP32
 //		timerStop(Timer_SSR);
+#if defined(ESP_IDF_VERSION) && (ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)) // ESP32 2.0.x
 		timerAlarmWrite(Timer_SSR, SSR_COUNT, true);
+#else
+		timerAlarm(Timer_SSR, SSR_COUNT, true, SSR_COUNT);
+#endif
 		timerWrite(Timer_SSR, 0);
+#if defined(ESP_IDF_VERSION) && (ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)) // ESP32 2.0.x
 		timerAlarmEnable(Timer_SSR);
+#endif
 //		timerRestart(Timer_SSR);
 		if (LED_PIN != -1)
 			ledcWrite(LED_CHANNEL, 1023 - SSR_COUNT / 9); // (int)(255*P_100/100.0)
@@ -287,10 +300,18 @@ void SSR_Init(uint8_t ZC_Pin, uint8_t SSR_Pin, int8_t LED_Pin)
 	else
 		print_debug("Error starting Timer_SSR_50us");
 #elif ESP32
+#if defined(ESP_IDF_VERSION) && (ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)) // ESP32 2.0.x
 	Timer_SSR = timerBegin(TIMER_NUM, 80, true);  // Pour une clock de 80 MHz => tick de 1 us
+#else
+	Timer_SSR = timerBegin(80);
+#endif
 	if (Timer_SSR)
 	{
+#if defined(ESP_IDF_VERSION) && (ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)) // ESP32 2.0.x
 		timerAttachInterrupt(Timer_SSR, &onTimerSSR, true);
+#else
+		timerAttachInterrupt(Timer_SSR, &onTimerSSR);
+#endif
 //		timerAlarmWrite(Timer_SSR, SSR_COUNT, true);
 //		timerAlarmEnable(Timer_SSR);
 		print_debug("Starting Timer_SSR_50us OK");
@@ -307,11 +328,15 @@ void SSR_Init(uint8_t ZC_Pin, uint8_t SSR_Pin, int8_t LED_Pin)
 		SET_PIN_LOW(LED_PIN);
 #ifndef SIMPLE_ZC_TEST
 #ifdef ESP32
+#if defined(ESP_IDF_VERSION) && (ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)) // ESP32 2.0.x
 		// Configure le channel
 		ledcSetup(LED_CHANNEL, 1000, 10);  // 10 bits = 1024
 
 		// Attache le channel sur le pin led
-		ledcAttachPin(LED_PIN, LED_CHANNEL);
+		ledcAttachPin(LED_PIN, LED_CHANNEL); // ESP32 2.0.11
+#else
+		ledcAttach(LED_PIN, 1000, 10);
+#endif
 #endif
 #endif
 	}
@@ -640,7 +665,7 @@ void SSR_Update_Surplus_Timer()
 	// calculate the difference between the desired value and the actual value
 	Error = SetPoint - Cirrus_power_signed;
 	// track error over time, scaled to the timer interval
-	Integral += (Error * Dt);
+	Integral = Integral + (Error * Dt); // += deprecated
 	// determine the amount of change from the last time checked
 //  Derivative = (Error - LastError) / Dt;
 	// calculate how much drive the output in order to get to the
@@ -649,7 +674,7 @@ void SSR_Update_Surplus_Timer()
 	// remember the error for the next time around.
 //  LastError = Error;
 
-	TotalOutput += (Output / 2);
+	TotalOutput = TotalOutput + (Output / 2); // += deprecated
 
 	if (TotalOutput < 0)
 	{

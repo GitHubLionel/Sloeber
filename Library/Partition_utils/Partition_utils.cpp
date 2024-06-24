@@ -94,10 +94,15 @@ bool CreateOpenDataPartition(bool ForceFormat)
 	Data_Partition = CreatePartition();
 
 #ifdef ESP8266
+	(void) ForceFormat;
 	if (Data_Partition->begin())
 #else
 	if (ForceFormat)
+#ifdef USE_FATFS
 		Data_Partition->format(0, (char *)"data");
+#else
+		Data_Partition->format();
+#endif
 
 	if (Data_Partition->begin(true, "/data", 10, "data"))
 #endif
@@ -184,12 +189,12 @@ void ESPinformations(void)
 #elif ESP32
 	Serial_Info->printf("Flash chip Mode:   %08X\r\n", ESP.getFlashChipMode());
 #endif
-	Serial_Info->printf("Flash real size: %u bytes (%s)\r\n\r\n", realSize,
+	Serial_Info->printf("Flash real size: %u bytes (%s)\r\n\r\n", (unsigned int)realSize,
 			formatBytes(realSize, 0).c_str());
 
-	Serial_Info->printf("Flash ide  size: %u bytes (%s)\r\n", ideSize,
+	Serial_Info->printf("Flash ide  size: %u bytes (%s)\r\n", (unsigned int)ideSize,
 			formatBytes(ideSize, 0).c_str());
-	Serial_Info->printf("Flash ide speed: %u MHz\r\n", ESP.getFlashChipSpeed() / 1000000);
+	Serial_Info->printf("Flash ide speed: %u MHz\r\n", (unsigned int)(ESP.getFlashChipSpeed() / 1000000));
 	Serial_Info->printf("Flash ide mode:  %s\r\n",
 			(ideMode == FM_QIO ? "QIO" : ideMode == FM_QOUT ? "QOUT" : ideMode == FM_DIO ? "DIO" :
 				ideMode == FM_DOUT ? "DOUT" : "UNKNOWN"));
@@ -211,10 +216,15 @@ void ESPinformations(void)
 
 	// Sketch
 	realSize = ESP.getSketchSize();
-	Serial_Info->printf("Sketch size: %u bytes (%s)\r\n", realSize, formatBytes(realSize, 0).c_str());
+	Serial_Info->printf("Sketch size: %u bytes (%s)\r\n", (unsigned int)realSize, formatBytes(realSize, 0).c_str());
 	realSize = ESP.getFreeSketchSpace();
-	Serial_Info->printf("Sketch free space: %u bytes (%s)\r\n\r\n", realSize,
+	Serial_Info->printf("Sketch free space: %u bytes (%s)\r\n\r\n", (unsigned int)realSize,
 			formatBytes(realSize, 0).c_str());
+
+	// IDF version
+#ifdef ESP32
+	Serial_Info->printf("IDF version: %s\r\n\r\n", esp_get_idf_version());
+#endif
 }
 
 size_t Partition_FreeSpace(void)

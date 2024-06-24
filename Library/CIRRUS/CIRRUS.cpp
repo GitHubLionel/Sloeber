@@ -86,12 +86,12 @@ static volatile bool Conversion_Running = false; // La conversion est-elle en co
 // Le nombre de Cirrus présent
 extern uint8_t CIRRUS_Number;
 
-// Référence de temps interne
-static volatile uint32_t csReferenceTime = 0;
-
-// Delay function
-static volatile uint16_t Delay_Counter = 0;
-static volatile bool Delay_Wait = false;
+//// Référence de temps interne
+//static volatile uint32_t csReferenceTime = 0;
+//
+//// Delay function
+//static volatile uint16_t Delay_Counter = 0;
+//static volatile bool Delay_Wait = false;
 
 static volatile bool csResponse = false;
 static volatile bool IS_READ_REG = false;
@@ -146,14 +146,14 @@ void select_register(uint8_t register_no, CIRRUS_Reg_Operation operation);
  * Reference time for TimeOut and Delay function
  * A mettre dans la callback HAL_SYSTICK_Callback()
  */
-void CIRRUS_UpdateTime(void)
-{
-	csReferenceTime++;
-	if (Delay_Wait)
-	{
-		Delay_Wait = (bool) ((--Delay_Counter) != 0);
-	}
-}
+//void CIRRUS_UpdateTime(void)
+//{
+//	csReferenceTime++;
+//	if (Delay_Wait)
+//	{
+//		Delay_Wait = (bool) ((--Delay_Counter) != 0);
+//	}
+//}
 
 void Cirrus_Delay(uint16_t delay_ms)
 {
@@ -633,7 +633,7 @@ void CIRRUS_print_str(const char *str)
 
 void CIRRUS_print_int(const char *str, uint32_t integer)
 {
-	sprintf(buffer, "%s : 0x%.6X = %d\r\n", str, integer, integer);
+	sprintf(buffer, "%s : 0x%.6X = %d\r\n", str, (unsigned int)integer, (unsigned int)integer);
 //  Print_Debug(buffer);
 	PrintTerminal(buffer);
 }
@@ -909,7 +909,8 @@ void CIRRUS_send(Bit_List *msg, uint8_t size)
     size += 1;
 #endif
 
-	if ((CIRRUS_Last_Error = Cirrus_Transmit((uint8_t*) msg, size)) != CIRRUS_OK)
+  CIRRUS_Last_Error = Cirrus_Transmit((uint8_t*) msg, size);
+	if (CIRRUS_Last_Error != CIRRUS_OK)
 		CIRRUS_print_str(CS_RES_HAL_ERROR);
 
 #ifdef DEBUG_CIRRUS
@@ -2128,10 +2129,10 @@ void do_dc_offset_calibration(bool only_I)
 
 	// print result
 	sprintf(buffer, "V1 DC OFFSET (V1_DCOFF): %.6f, (%d, %d, %d) = 0x%.6X\r\n", twoscompl_to_real(&v_off), v_off.LSB,
-			v_off.MSB, v_off.HSB, v_off.Bit32);
+			v_off.MSB, v_off.HSB, (unsigned int)v_off.Bit32);
 	CIRRUS_print_str(buffer);
 	sprintf(buffer, "I1 DC OFFSET (I1_DCOFF): %.6f, (%d, %d, %d) = 0x%.6X\r\n", twoscompl_to_real(&i_off), i_off.LSB,
-			i_off.MSB, i_off.HSB, i_off.Bit32);
+			i_off.MSB, i_off.HSB, (unsigned int)i_off.Bit32);
 	CIRRUS_print_str(buffer);
 
 	// Deuxième channel
@@ -2141,10 +2142,10 @@ void do_dc_offset_calibration(bool only_I)
 
 	// print result
 	sprintf(buffer, "V2 DC OFFSET (V2_DCOFF): %.6f, (%d, %d, %d) = 0x%.6X\r\n", twoscompl_to_real(&v_off), v_off.LSB,
-			v_off.MSB, v_off.HSB, v_off.Bit32);
+			v_off.MSB, v_off.HSB, (unsigned int)v_off.Bit32);
 	CIRRUS_print_str(buffer);
 	sprintf(buffer, "I2 DC OFFSET (I2_DCOFF): %.6f, (%d, %d, %d) = 0x%.6X\r\n", twoscompl_to_real(&i_off), i_off.LSB,
-			i_off.MSB, i_off.HSB, i_off.Bit32);
+			i_off.MSB, i_off.HSB, (unsigned int)i_off.Bit32);
 	CIRRUS_print_str(buffer);
 #endif
 
@@ -2196,7 +2197,7 @@ void do_ac_offset_calibration(void)
 
 	// print result
 	sprintf(buffer, "I1 AC OFFSET (I1_ACOFF): %.6f, (%d, %d, %d) = 0x%.6X\r\n", blist_to_int(&i_acoff) * over_pow2_24,
-			i_acoff.LSB, i_acoff.MSB, i_acoff.HSB, i_acoff.Bit32);
+			i_acoff.LSB, i_acoff.MSB, i_acoff.HSB, (unsigned int)i_acoff.Bit32);
 	CIRRUS_print_str(buffer);
 
 	// Configuration deuxième channel
@@ -2229,7 +2230,7 @@ void do_ac_offset_calibration(void)
 
 	// print result
 	sprintf(buffer, "I2 AC OFFSET (I2_ACOFF): %.6f, (%d, %d, %d) = 0x%.6X\r\n", blist_to_int(&i_acoff) * over_pow2_24,
-			i_acoff.LSB, i_acoff.MSB, i_acoff.HSB, i_acoff.Bit32);
+			i_acoff.LSB, i_acoff.MSB, i_acoff.HSB, (unsigned int)i_acoff.Bit32);
 	CIRRUS_print_str(buffer);
 #endif
 
@@ -2279,7 +2280,7 @@ void do_gain_calibration(float calib_vac, float calib_r)
 	init_scale_setting = 0.6 * calib_iac / (*I1_SCALE * 0.6);
 	real_to_twoscompl(init_scale_setting, &temp);
 
-	sprintf(buffer, "INIT_SCALE_SETTING:  %.4f = 0x%.6X \r\n", init_scale_setting, temp.Bit32);
+	sprintf(buffer, "INIT_SCALE_SETTING:  %.4f = 0x%.6X \r\n", init_scale_setting, (unsigned int)temp.Bit32);
 	CIRRUS_print_str(buffer);
 	write_register(P18_Scale, PAGE18, &temp);
 
@@ -2312,17 +2313,17 @@ void do_gain_calibration(float calib_vac, float calib_r)
 
 	// print result
 	sprintf(buffer, "V1 GAIN: %.6f, (%d, %d, %d) = 0x%.6X\r\n", blist_to_int(&v_gain) * over_pow2_22,
-			v_gain.LSB, v_gain.MSB, v_gain.HSB, v_gain.Bit32);
+			v_gain.LSB, v_gain.MSB, v_gain.HSB, (unsigned int)v_gain.Bit32);
 	CIRRUS_print_str(buffer);
 	sprintf(buffer, "I1 GAIN: %.6f, (%d, %d, %d) = 0x%.6X\r\n", blist_to_int(&i_gain) * over_pow2_22,
-			i_gain.LSB, i_gain.MSB, i_gain.HSB, i_gain.Bit32);
+			i_gain.LSB, i_gain.MSB, i_gain.HSB, (unsigned int)i_gain.Bit32);
 	CIRRUS_print_str(buffer);
 
 	// Update the I AC offset
 	// Get the old value ...
 	read_register(P16_I1_ACOFF, PAGE16, &i_acoff);
 	sprintf(buffer, "I1_ACOFF old: %.6f, (%d, %d, %d) = 0x%.6X\r\n", i_acoff.Bit32 * over_pow2_24,
-			i_acoff.LSB, i_acoff.MSB, i_acoff.HSB, i_acoff.Bit32);
+			i_acoff.LSB, i_acoff.MSB, i_acoff.HSB, (unsigned int)i_acoff.Bit32);
 	CIRRUS_print_str(buffer);
 
 	i_ac_offset = i_acoff.Bit32;
@@ -2334,7 +2335,7 @@ void do_gain_calibration(float calib_vac, float calib_r)
 	i_acoff.Bit32 = (uint32_t) (i_ac_offset);
 	write_register(P16_I1_ACOFF, PAGE16, &i_acoff);
 	sprintf(buffer, "I1_ACOFF new: %.6f, (%d, %d, %d) = 0x%.6X\r\n", i_acoff.Bit32 * over_pow2_24,
-			i_acoff.LSB, i_acoff.MSB, i_acoff.HSB, i_acoff.Bit32);
+			i_acoff.LSB, i_acoff.MSB, i_acoff.HSB, (unsigned int)i_acoff.Bit32);
 	CIRRUS_print_str(buffer);
 
 	// Deuxième channel
@@ -2344,10 +2345,10 @@ void do_gain_calibration(float calib_vac, float calib_r)
 
 	// print result
 	sprintf(buffer, "V2 GAIN: %.6f, (%d, %d, %d) = 0x%.6X\r\n", blist_to_int(&v_gain) * over_pow2_22,
-			v_gain.LSB, v_gain.MSB, v_gain.HSB, v_gain.Bit32);
+			v_gain.LSB, v_gain.MSB, v_gain.HSB, (unsigned int)v_gain.Bit32);
 	CIRRUS_print_str(buffer);
 	sprintf(buffer, "I2 GAIN: %.6f, (%d, %d, %d) = 0x%.6X\r\n", blist_to_int(&i_gain) * over_pow2_22,
-			i_gain.LSB, i_gain.MSB, i_gain.HSB, i_gain.Bit32);
+			i_gain.LSB, i_gain.MSB, i_gain.HSB, (unsigned int)i_gain.Bit32);
 	CIRRUS_print_str(buffer);
 #endif
 
@@ -2498,7 +2499,7 @@ void CIRRUS_Print_FullData()
 	CIRRUS_print_str(uart_Text);
 
 	CIRRUS_get_system_time(&cstime);
-	sprintf(uart_Text, "time : %d", cstime);
+	sprintf(uart_Text, "time : %d", (unsigned int)cstime);
 
 	sprintf(uart_Text, "Invalid command : %d", invalid_cmnd());
 	CIRRUS_print_str(uart_Text);
@@ -2523,19 +2524,20 @@ void CIRRUS_Print_Calib(CIRRUS_Calib_typedef *calib)
 	CIRRUS_print_str(uart_Text);
 	sprintf(uart_Text, "I1_MAX : %.2f", calib->I1_MAX);
 	CIRRUS_print_str(uart_Text);
-	sprintf(uart_Text, "V1GAIN : 0x%.6X", calib->V1GAIN);
+	sprintf(uart_Text, "V1GAIN : 0x%.6X", (unsigned int)calib->V1GAIN);
 	CIRRUS_print_str(uart_Text);
-	sprintf(uart_Text, "I1GAIN : 0x%.6X", calib->I1GAIN);
+	sprintf(uart_Text, "I1GAIN : 0x%.6X", (unsigned int)calib->I1GAIN);
 	CIRRUS_print_str(uart_Text);
-	sprintf(uart_Text, "I1ACOFF : 0x%.6X", calib->I1ACOFF);
+	sprintf(uart_Text, "I1ACOFF : 0x%.6X", (unsigned int)calib->I1ACOFF);
 	CIRRUS_print_str(uart_Text);
-	sprintf(uart_Text, "P1OFF : 0x%.6X", calib->P1OFF);
+	sprintf(uart_Text, "P1OFF : 0x%.6X", (unsigned int)calib->P1OFF);
 	CIRRUS_print_str(uart_Text);
-	sprintf(uart_Text, "Q1OFF : 0x%.6X", calib->Q1OFF);
+	sprintf(uart_Text, "Q1OFF : 0x%.6X", (unsigned int)calib->Q1OFF);
 	CIRRUS_print_str(uart_Text);
 
 	sprintf(uart_Text, "CS_Calib1 = {%.2f, %.2f, 0x%.6X, 0x%.6X, 0x%.6X, 0x%.6X, 0x%.6X}",
-			calib->V1_Calib, calib->I1_MAX, calib->V1GAIN, calib->I1GAIN, calib->I1ACOFF, calib->P1OFF, calib->Q1OFF);
+			calib->V1_Calib, calib->I1_MAX, (unsigned int) calib->V1GAIN, (unsigned int) calib->I1GAIN,
+			(unsigned int) calib->I1ACOFF, (unsigned int) calib->P1OFF, (unsigned int) calib->Q1OFF);
 	CIRRUS_print_str(uart_Text);
 
 	// Channel 2
@@ -2544,19 +2546,20 @@ void CIRRUS_Print_Calib(CIRRUS_Calib_typedef *calib)
   CIRRUS_print_str(uart_Text);
   sprintf(uart_Text,"I2_MAX : %.2f", calib->I2_MAX);
   CIRRUS_print_str(uart_Text);
-  sprintf(uart_Text,"V2GAIN : 0x%.6X", calib->V2GAIN);
+  sprintf(uart_Text,"V2GAIN : 0x%.6X", (unsigned int)calib->V2GAIN);
   CIRRUS_print_str(uart_Text);
-  sprintf(uart_Text,"I2GAIN : 0x%.6X", calib->I2GAIN);
+  sprintf(uart_Text,"I2GAIN : 0x%.6X", (unsigned int)calib->I2GAIN);
   CIRRUS_print_str(uart_Text);
-  sprintf(uart_Text,"I2ACOFF : 0x%.6X", calib->I2ACOFF);
+  sprintf(uart_Text,"I2ACOFF : 0x%.6X", (unsigned int)calib->I2ACOFF);
   CIRRUS_print_str(uart_Text);
-  sprintf(uart_Text,"P2OFF : 0x%.6X", calib->P2OFF);
+  sprintf(uart_Text,"P2OFF : 0x%.6X", (unsigned int)calib->P2OFF);
   CIRRUS_print_str(uart_Text);
-  sprintf(uart_Text,"Q2OFF : 0x%.6X", calib->Q2OFF);
+  sprintf(uart_Text,"Q2OFF : 0x%.6X", (unsigned int)calib->Q2OFF);
   CIRRUS_print_str(uart_Text);
 
 	sprintf(uart_Text, "CS_Calib2 = {%.2f, %.2f, 0x%.6X, 0x%.6X, 0x%.6X, 0x%.6X, 0x%.6X}",
-			calib->V2_Calib, calib->I2_MAX, calib->V2GAIN, calib->I2GAIN, calib->I2ACOFF, calib->P2OFF, calib->Q2OFF);
+			calib->V2_Calib, calib->I2_MAX, (unsigned int) calib->V2GAIN, (unsigned int) calib->I2GAIN,
+			(unsigned int) calib->I2ACOFF, (unsigned int) calib->P2OFF, (unsigned int) calib->Q2OFF);
 	CIRRUS_print_str(uart_Text);
 #endif
 
@@ -2569,17 +2572,17 @@ void CIRRUS_Print_Config(CIRRUS_Config_typedef *config)
 
 	CIRRUS_print_str("***** Cirrus Configuration data *****");
 
-	sprintf(uart_Text, "Config0 : 0x%.6X", config->config0);
+	sprintf(uart_Text, "Config0 : 0x%.6X", (unsigned int)config->config0);
 	CIRRUS_print_str(uart_Text);
-	sprintf(uart_Text, "Config1 : 0x%.6X", config->config1);
+	sprintf(uart_Text, "Config1 : 0x%.6X", (unsigned int)config->config1);
 	CIRRUS_print_str(uart_Text);
-	sprintf(uart_Text, "Config2 : 0x%.6X", config->config2);
+	sprintf(uart_Text, "Config2 : 0x%.6X", (unsigned int)config->config2);
 	CIRRUS_print_str(uart_Text);
-	sprintf(uart_Text, "Pulse width : 0x%.6X", config->P_width);
+	sprintf(uart_Text, "Pulse width : 0x%.6X", (unsigned int)config->P_width);
 	CIRRUS_print_str(uart_Text);
-	sprintf(uart_Text, "Pulse rate : 0x%.6X", config->P_rate);
+	sprintf(uart_Text, "Pulse rate : 0x%.6X", (unsigned int)config->P_rate);
 	CIRRUS_print_str(uart_Text);
-	sprintf(uart_Text, "Pulse control : 0x%.6X", config->P_control);
+	sprintf(uart_Text, "Pulse control : 0x%.6X", (unsigned int)config->P_control);
 	CIRRUS_print_str(uart_Text);
 
 	CIRRUS_print_str("****************************\r\n");

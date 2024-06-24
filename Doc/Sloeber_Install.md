@@ -85,7 +85,7 @@ recipe.hooks.prebuild.7.pattern.windows=cmd /c if not exist "{build.path}\file_o
 
 <b>Pour les librairies :</b><br>
 Menu : Sloeber/preferences/Library Manager
-  - sélectionner Communication/OneWire (Default) v2.3.7
+  - sélectionner Communication/OneWire (Default) v2.3.8
     - Apply et attendre (surveiller en bas à droite la progression)
   - sélectionner Sensors/DallasTemperature (Default) v3.9.0
     - Apply et attendre (surveiller en bas à droite la progression)

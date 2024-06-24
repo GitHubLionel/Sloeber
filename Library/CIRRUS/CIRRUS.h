@@ -365,7 +365,7 @@ void CIRRUS_Save_To_FLASH(CIRRUS_Cirrus cirrus, CIRRUS_Calib_typedef *calib,
 void CIRRUS_Register_To_FLASH(void);
 
 void CIRRUS_DO_Configuration(CIRRUS_DO_Struct DO_struct);
-void CIRRUS_UpdateTime(void);
+//void CIRRUS_UpdateTime(void);
 void CIRRUS_UART_Change_Baud(uint32_t baud);
 void CIRRUS_Select(CIRRUS_Cirrus cirrus, bool with_scale = true);
 void CIRRUS_UnSelect();
