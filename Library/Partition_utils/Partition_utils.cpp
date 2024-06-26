@@ -89,7 +89,7 @@ PART_TYPE *Data_Partition = FS_Partition;
  * Create and open a data partition
  * The partition "/data" must exist in the partitions.csv file
  */
-bool CreateOpenDataPartition(bool ForceFormat)
+bool CreateOpenDataPartition(bool ForceFormat, bool ShowInfo)
 {
 	Data_Partition = CreatePartition();
 
@@ -108,10 +108,13 @@ bool CreateOpenDataPartition(bool ForceFormat)
 #endif
 	{
 		print_debug(F("** Data partition open **"));
-		SelectPartitionForInfo(Data_Partition);
-		Partition_Info();
-		Partition_ListDir();
-		SelectPartitionForInfo(FS_Partition);
+		if (ShowInfo)
+		{
+			SelectPartitionForInfo(Data_Partition);
+			Partition_Info();
+			Partition_ListDir();
+			SelectPartitionForInfo(FS_Partition);
+		}
 		return true;
 	}
 	else
@@ -132,7 +135,12 @@ String getSketchName(const String the_path)
 	int slash_loc = the_path.lastIndexOf('/');
 	String the_cpp_name = the_path.substring(slash_loc + 1);
 	int dot_loc = the_cpp_name.lastIndexOf('.');
-	return the_cpp_name.substring(0, dot_loc);
+	String ino = the_cpp_name.substring(0, dot_loc);
+	// Add IDF version for ESP32
+#ifdef ESP32
+	ino += "\r\nIDF version: " + String(esp_get_idf_version()) + "\r\n";
+#endif
+	return ino;
 }
 
 // ********************************************************************************

@@ -52,7 +52,7 @@ extern volatile bool Lock_File;
 
 PART_TYPE* CreatePartition(void);
 void SelectPartitionForInfo(PART_TYPE *part);
-bool CreateOpenDataPartition(bool ForceFormat = false);
+bool CreateOpenDataPartition(bool ForceFormat, bool ShowInfo = false);
 
 String getSketchName(const String the_path);
 void CheckBeginSlash(String &path);

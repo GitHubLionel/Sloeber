@@ -18,9 +18,12 @@ TimerInterrupt Timer_SSR;
 #define ZCMUX_ENTER()	void()
 #define ZCMUX_EXIT()	void()
 #elif ESP32
-// Voir https://deepbluembedded.com/esp32-timers-timer-interrupt-tutorial-arduino-ide/
+// Voir https://deepbluembedded.com/esp32-timers-timer-interrupt-tutorial-arduino-ide/ pour ESP32 2.0.x
+// https://docs.espressif.com/projects/arduino-esp32/en/latest/api/timer.html pour ESP32 3.0.x
+#if defined(ESP_IDF_VERSION) && (ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)) // ESP32 2.0.x
 // Le numéro du timer utilisé [0..3]
 #define TIMER_NUM	0
+#endif
 hw_timer_t *Timer_SSR = NULL;
 portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 #define TIMERMUX_ENTER()	portENTER_CRITICAL_ISR(&timerMux)
@@ -28,8 +31,10 @@ portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 portMUX_TYPE ZCMux = portMUX_INITIALIZER_UNLOCKED;
 #define ZCMUX_ENTER()	portENTER_CRITICAL_ISR(&ZCMux)
 #define ZCMUX_EXIT()	portEXIT_CRITICAL_ISR(&ZCMux);
+#if defined(ESP_IDF_VERSION) && (ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)) // ESP32 2.0.x
 // Le channel pour la led SSR en PWM
 #define LED_CHANNEL	0
+#endif
 #endif
 
 #define DEBUG_SSR           0          // Affichage de P_100 et SSR_COUNT
@@ -161,10 +166,10 @@ void IRAM_ATTR onTimerSSR(void)
 #if defined(ESP_IDF_VERSION) && (ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)) // ESP32 2.0.x
 			timerAlarmWrite(Timer_SSR, SSR_TURN_ON_us, true);
 #else
-			timerAlarm(Timer_SSR, SSR_TURN_ON_us, true, SSR_TURN_ON_us);
+			timerAlarm(Timer_SSR, SSR_TURN_ON_us, true, 0);
 #endif
 			timerWrite(Timer_SSR, 0);
-//			timerRestart(Timer_SSR);
+//			timerRestart(Timer_SSR); // Not necessary
 #endif
 		}
 		else
@@ -229,7 +234,7 @@ void IRAM_ATTR onCirrusZC(void)
 #if defined(ESP_IDF_VERSION) && (ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)) // ESP32 2.0.x
 		timerAlarmWrite(Timer_SSR, SSR_COUNT, true);
 #else
-		timerAlarm(Timer_SSR, SSR_COUNT, true, SSR_COUNT);
+		timerAlarm(Timer_SSR, SSR_COUNT, true, 0);
 #endif
 		timerWrite(Timer_SSR, 0);
 #if defined(ESP_IDF_VERSION) && (ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)) // ESP32 2.0.x
@@ -237,7 +242,11 @@ void IRAM_ATTR onCirrusZC(void)
 #endif
 //		timerRestart(Timer_SSR);
 		if (LED_PIN != -1)
+#if defined(ESP_IDF_VERSION) && (ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)) // ESP32 2.0.x
 			ledcWrite(LED_CHANNEL, 1023 - SSR_COUNT / 9); // (int)(255*P_100/100.0)
+#else
+		ledcWrite(LED_PIN, 1023 - SSR_COUNT / 9); // (int)(255*P_100/100.0)
+#endif
 #endif
 	}
 	ZCMUX_EXIT();
@@ -262,7 +271,11 @@ void SetLedPinLow(void)
 #ifdef ESP8266
 		SET_PIN_LOW(LED_PIN);
 #else
+#if defined(ESP_IDF_VERSION) && (ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)) // ESP32 2.0.x
 		ledcWrite(LED_CHANNEL, 0);
+#else
+		ledcWrite(LED_PIN, 0);
+#endif
 #endif
 }
 
@@ -303,7 +316,7 @@ void SSR_Init(uint8_t ZC_Pin, uint8_t SSR_Pin, int8_t LED_Pin)
 #if defined(ESP_IDF_VERSION) && (ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)) // ESP32 2.0.x
 	Timer_SSR = timerBegin(TIMER_NUM, 80, true);  // Pour une clock de 80 MHz => tick de 1 us
 #else
-	Timer_SSR = timerBegin(80);
+	Timer_SSR = timerBegin(1000000); // Fixe la fréquence à 1 MHz => tick de 1 us
 #endif
 	if (Timer_SSR)
 	{
