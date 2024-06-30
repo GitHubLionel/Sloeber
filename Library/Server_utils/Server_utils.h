@@ -2,15 +2,19 @@
 
 /**
  * A list of basic functions used with web server
- * This unit create the ESP8266WebServer : server
+ * This unit create the ESP8266 or ESP32 WebServer : server
  * An exported variable Lock_File is defined. Put this variable to true when you access a file.
  * The function CheckUARTMessage() can be used to get message from UART. The message is stored in UART_Message_Buffer
  * CheckUARTMessage() need to be placed in the main loop
  * Define USE_RTCLocal for function with time
+ * Define USE_HTTPUPDATER to add firmware upload function
+ * Define USE_ASYNC_WEBSERVER for an asynchrone WebServer
+ *
+ * If yon don't want gz file, uncomment USE_ZG_FILE
  */
 
 // To allow HTTP updater
-#define USE_HTTPUPDATER
+//#define USE_HTTPUPDATER
 
 #include "Arduino.h"
 #ifdef ESP8266
@@ -20,13 +24,27 @@
 #include <ESP8266HTTPUpdateServer.h>
 #endif
 #endif
+
 #ifdef ESP32
 #include <WiFi.h>	// Include WiFi library
-#include <WebServer.h>	// Include WebServer library
+#ifdef USE_ASYNC_WEBSERVER
+	#include <ESPAsyncWebServer.h>
+	#define CB_SERVER_PARAM	AsyncWebServerRequest *pserver
+	#define SERVER_PARAM	pserver
+#else
+	#include <WebServer.h>	// Include WebServer library
+	#define CB_SERVER_PARAM void
+	#define SERVER_PARAM
+#endif
+
 #ifdef USE_HTTPUPDATER
-#include <HTTPUpdateServer.h>
+	#ifdef USE_ASYNC_WEBSERVER
+	#include <ESPAsyncHTTPUpdateServer.h>
+	#else
+	#include <HTTPUpdateServer.h>
+	#endif
 #endif
-#endif
+#endif // ESP32
 #include <Preferences.h> // For EEPROM access
 
 // If we have an RTC_Local instance of RTCLocal
@@ -47,12 +65,18 @@ extern ESP8266WebServer server;
 extern ESP8266HTTPUpdateServer httpUpdater;
 #endif
 #endif
+
 #ifdef ESP32
+#ifdef USE_ASYNC_WEBSERVER
+extern AsyncWebServer server;
+#else
 extern WebServer server;
+extern WebServer *pserver;
+#endif
 #ifdef USE_HTTPUPDATER
 // Set to true to send debug to Serial
 #define UPDATER_DEBUG	false
-extern HTTPUpdateServer httpUpdater;
+//extern HTTPUpdateServer httpUpdater;
 #endif
 #endif
 
@@ -258,18 +282,6 @@ void Auto_Reset(void);
 void SSIDToFile(const String &filename, const String &ssidpwd);
 void SSIDToEEPROM(const String &ssid, const String &pwd);
 void DeleteSSID(void);
-
-// Some handle common functions
-void handleDefaultAP(const String &path);
-bool handleReadFile(const String &path);
-void handleNotFound(const String &path);
-void handleGetFile(void);
-void handleDeleteFile(void);
-void handleUploadFile(void);
-void handleListFile(void);
-void handleCreateFile(void);
-void handleSetTime(void);
-void handleSetDHCPIP(void);
 const String getContentType(const String &filename);
 
 // UART functions

@@ -129,17 +129,23 @@ bool CreateOpenDataPartition(bool ForceFormat, bool ShowInfo)
 
 // ********************************************************************************
 // Function that extract the name of the ino sketch (or a filename)
+// extra : add extra info like IDF version (ESP32) and the reason of the restart (default false)
 // ********************************************************************************
-String getSketchName(const String the_path)
+String getSketchName(const String the_path, bool extra)
 {
 	int slash_loc = the_path.lastIndexOf('/');
 	String the_cpp_name = the_path.substring(slash_loc + 1);
 	int dot_loc = the_cpp_name.lastIndexOf('.');
-	String ino = the_cpp_name.substring(0, dot_loc);
-	// Add IDF version for ESP32
+	String ino = the_cpp_name.substring(0, dot_loc) + "\r\n";
+	if (extra)
+	{
+		esp_reset_reason_t reason = esp_reset_reason();
+		ino += "Restart reason: " + String(reason) + "\r\n";
+		// Add IDF version for ESP32
 #ifdef ESP32
-	ino += "\r\nIDF version: " + String(esp_get_idf_version()) + "\r\n";
+		ino += "IDF version: " + String(esp_get_idf_version()) + "\r\n";
 #endif
+	}
 	return ino;
 }
 

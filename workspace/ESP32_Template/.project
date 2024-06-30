@@ -107,14 +107,14 @@
 			<locationURI>USER_LIB/Debug_utils</locationURI>
 		</link>
 		<link>
-			<name>user_lib/Partition_utils</name>
-			<type>2</type>
-			<locationURI>USER_LIB/Partition_utils</locationURI>
-		</link>
-		<link>
 			<name>user_lib/Fonts</name>
 			<type>2</type>
 			<locationURI>USER_LIB/Fonts</locationURI>
+		</link>
+		<link>
+			<name>user_lib/Partition_utils</name>
+			<type>2</type>
+			<locationURI>USER_LIB/Partition_utils</locationURI>
 		</link>
 		<link>
 			<name>user_lib/RTCLocal</name>

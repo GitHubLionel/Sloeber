@@ -23,25 +23,33 @@
 ESP8266WebServer server(SERVER_PORT);
 #endif
 #ifdef ESP32
+#ifdef USE_ASYNC_WEBSERVER
+AsyncWebServer server(SERVER_PORT);
+#else
 WebServer server(SERVER_PORT);
+WebServer *pserver = &server;
+#endif
 #endif
 
 /**
  * Updater definitions
  * Note : there is 15 s for the reboot
  */
+#ifdef USE_HTTPUPDATER
 #ifdef ESP8266
-#ifdef USE_HTTPUPDATER
 ESP8266HTTPUpdateServer httpUpdater(UPDATER_DEBUG);
-const char* update_path = "/firmware";
 #endif
-#endif
+
 #ifdef ESP32
-#ifdef USE_HTTPUPDATER
+#ifdef USE_ASYNC_WEBSERVER
+ESPAsyncHTTPUpdateServer httpUpdater;
+#else
 HTTPUpdateServer httpUpdater(UPDATER_DEBUG);
+#endif
+#endif
 const char *update_path = "/firmware";
 #endif
-#endif
+
 const char *update_username = "admin";
 const char *update_password = "admin";
 
@@ -522,11 +530,15 @@ bool ServerConnexion::BasicAnalyseMessage(void)
 void Auto_Reset(void)
 {
 	print_debug(F("\r\nAuto reset : "));
+#ifdef USE_ASYNC_WEBSERVER
+	server.end();
+#else
 	server.client().stop();
+#endif
+	delay(100);
 	// End cleanly FileSystem partition and Data partition if exist
 	FS_Partition->end();
 	Data_Partition->end();
-	delay(100);
 #ifdef ESP8266
 	ESP.reset();
 #endif
@@ -538,6 +550,26 @@ void Auto_Reset(void)
 // ********************************************************************************
 // server events section
 // ********************************************************************************
+
+// Some handle common functions
+String GetURI(CB_SERVER_PARAM);
+void handleDefaultAP(CB_SERVER_PARAM);
+void handleDefaultFile(CB_SERVER_PARAM);
+bool handleReadFile(CB_SERVER_PARAM);
+void handleNotFound(CB_SERVER_PARAM);
+void handleGetFile(CB_SERVER_PARAM);
+void handleDeleteFile(CB_SERVER_PARAM);
+#ifdef USE_ASYNC_WEBSERVER
+void handleUploadFile(AsyncWebServerRequest *request, String thefile, size_t index, uint8_t *data, size_t len, bool final);
+#else
+void handleUploadFile();
+#endif
+void handleListFile(CB_SERVER_PARAM);
+void handleCreateFile(CB_SERVER_PARAM);
+void handleGetTime(CB_SERVER_PARAM);
+void handleSetTime(CB_SERVER_PARAM);
+void handleReset(CB_SERVER_PARAM);
+void handleSetDHCPIP(CB_SERVER_PARAM);
 
 /**
  * Just the basic events for the server :
@@ -558,10 +590,7 @@ void Server_CommonEvent(uint16_t event)
 	if (DefaultAP)
 	{
 		// Toutes les requêtes redirigées sur une seule réponse
-		server.onNotFound([]()
-		{
-			handleDefaultAP(server.uri());
-		});
+		server.onNotFound(handleDefaultAP);
 
 		// set DHCPIP
 		if ((event & Ev_SetDHCPIP) == Ev_SetDHCPIP)
@@ -572,13 +601,7 @@ void Server_CommonEvent(uint16_t event)
 
 	// default html file
 	if ((event & Ev_LoadPage) == Ev_LoadPage)
-	{
-		server.onNotFound([]()
-		{
-			if (!handleReadFile(server.uri()))
-			handleNotFound(server.uri());
-		});
-	}
+		server.onNotFound(handleDefaultFile);
 
 	// download file
 	if ((event & Ev_GetFile) == Ev_GetFile)
@@ -597,9 +620,9 @@ void Server_CommonEvent(uint16_t event)
 	// upload file
 	// reload if param is present
 	if ((event & Ev_UploadFile) == Ev_UploadFile)
-		server.on("/upload", HTTP_POST, []()
+		server.on("/upload", HTTP_POST, [](CB_SERVER_PARAM)
 		{
-			server.send(200, "text/plain", "");}, handleUploadFile);
+			pserver->send(200, "text/plain", "");}, handleUploadFile);
 
 	// list files in a directory
 	if ((event & Ev_ListFile) == Ev_ListFile)
@@ -614,13 +637,7 @@ void Server_CommonEvent(uint16_t event)
 	// xmlHttp.open("PUT","/resetESP",true);
 	// xmlHttp.send(null);
 	if ((event & Ev_ResetESP) == Ev_ResetESP)
-	{
-		server.on("/resetESP", HTTP_PUT, []()
-		{
-			server.send(204, "text/plain", "");
-			Auto_Reset();
-		});
-	}
+		server.on("/resetESP", HTTP_PUT, handleReset);
 
 	// set time
 	if ((event & Ev_SetTime) == Ev_SetTime)
@@ -631,14 +648,7 @@ void Server_CommonEvent(uint16_t event)
 	// xmlHttp.open("GET","/getTime",true);
 	// xmlHttp.send(null);
 	if ((event & Ev_GetTime) == Ev_GetTime)
-	{
-		server.on("/getTime", HTTP_GET, []()
-		{
-#ifdef USE_RTCLocal
-				server.send(200, "text/plain", (RTC_Local.the_time));
-#endif
-			});
-	}
+		server.on("/getTime", HTTP_GET, handleGetTime);
 
 	// set DHCPIP
 	if ((event & Ev_SetDHCPIP) == Ev_SetDHCPIP)
@@ -647,15 +657,17 @@ void Server_CommonEvent(uint16_t event)
 	// reset DHCPIP
 	if ((event & Ev_ResetDHCPIP) == Ev_ResetDHCPIP)
 	{
-		server.on("/resetDHCPIP", HTTP_GET, [&]()
+		server.on("/resetDHCPIP", HTTP_GET, [&](CB_SERVER_PARAM)
 		{
-			if ( !server.authenticate(update_username, update_password))
-			return server.requestAuthentication();
-			server.client().setNoDelay(true);
-			server.send_P(200, PSTR("text/html"), SSIDReset);
-			FS_Partition->remove("/SSID.txt");
-			Auto_Reset();
-		});
+			if ( !pserver->authenticate(update_username, update_password))
+			return pserver->requestAuthentication();
+#ifndef USE_ASYNC_WEBSERVER
+				pserver->client().setNoDelay(true);
+#endif
+				pserver->send_P(200, PSTR("text/html"), SSIDReset);
+				FS_Partition->remove("/SSID.txt");
+				Auto_Reset();
+			});
 	}
 }
 /**
@@ -666,27 +678,90 @@ bool CheckSSIDFileName(const String &path)
 {
 	if (path == "/" + SSID_FileName)
 	{
-		server.send(403, "text/plain", "403: Access not allowed.");
 		return true;
 	}
 	return false;
 }
 
 /**
+ *  return the url asked by the server
+ */
+String GetURI(CB_SERVER_PARAM)
+{
+#ifdef USE_ASYNC_WEBSERVER
+//	int start = pserver->url().lastIndexOf('/');
+//	return pserver->url().substring(start);
+	return pserver->url();
+#else
+	return server.uri();
+#endif
+}
+
+/**
+ * Send the file requested
+ */
+#ifdef USE_ASYNC_WEBSERVER
+void send_html(AsyncWebServerRequest *request, String filefs, String format, bool zipped)
+{
+	AsyncWebServerResponse *response = request->beginResponse(*FS_Partition, filefs, format);
+	if (zipped)
+	{
+		response->addHeader("Content-Encoding", "gzip");
+		response->addHeader("Cache-Control", "max-age=604800");
+	}
+	request->send(response);
+}
+#else
+void send_html(String filefs, String format)
+{
+	File file = FS_Partition->open(filefs, "r");	// Open the file
+	server.streamFile(file, format); 	            // then send it to the client
+	file.close();                                 // then close the file
+}
+#endif
+
+/**
  * handle the default AP configuration
  * When the SSID is stored in file and when the file is not found or
  * SSID is incorrect, we load a default page to get new SSID and password
  */
-void handleDefaultAP(const String &path)
+void handleDefaultAP(CB_SERVER_PARAM)
 {
+	String path = GetURI(SERVER_PARAM);
 	// Refuse la transmission du SSID
 	if (CheckSSIDFileName(path))
-		return;
+		return pserver->send(403, "text/plain", "403: Access not allowed.");
 
 	// Dans tous les cas, on envoie la page d'initialisation SSID
-	File file = FS_Partition->open("/config_SSID.html", "r");	// Open the file
-	server.streamFile(file, "text/html"); 	// then send it to the client
-	file.close();				                    // and close the file
+#ifdef USE_ASYNC_WEBSERVER
+	send_html(SERVER_PARAM, "/config_SSID.html", "text/html", false);
+#else
+	send_html("/config_SSID.html", "text/html");
+#endif
+}
+
+/**
+ * handle default file
+ */
+void handleDefaultFile(CB_SERVER_PARAM)
+{
+#ifdef USE_ASYNC_WEBSERVER
+	if (!handleReadFile(pserver))
+		handleNotFound(pserver);
+#else
+	if (!handleReadFile())
+		handleNotFound();
+#endif
+}
+
+/**
+ * Not found file message from the server
+ */
+void handleNotFound(CB_SERVER_PARAM)
+{
+	String path = GetURI(SERVER_PARAM);
+	// Send HTTP status 404 (Not Found) when there's no handler for the URI in the request
+	pserver->send(404, "text/plain", "404: Not found for " + path);
 }
 
 /**
@@ -700,8 +775,9 @@ void handleDefaultAP(const String &path)
  handleNotFound(server.uri());
  });
  */
-bool handleReadFile(const String &path)
+bool handleReadFile(CB_SERVER_PARAM)
 {
+	String path = GetURI(SERVER_PARAM);
 	File op_file;
 	String _path = path;
 
@@ -709,12 +785,19 @@ bool handleReadFile(const String &path)
 
 	// Refuse la transmission du SSID
 	if (CheckSSIDFileName(path))
+	{
+		pserver->send(403, "text/plain", "403: Access not allowed.");
 		return false;
+	}
 
 	// Les pages web
 	if (_path.endsWith("/"))
 		_path += "index.html";         		// If a folder is requested, send the index file
-	String contentType = getContentType(_path);	// Get the MIME type
+	String contentType;
+	if (pserver->hasArg("download"))
+		contentType = "application/octet-stream";
+	else
+		contentType = getContentType(_path);	// Get the MIME type
 	bool pathWithGz = false;
 #ifdef USE_ZG_FILE
 	if (FS_Partition->exists(_path + ".gz")) // If there's a compressed version available, use it
@@ -725,23 +808,16 @@ bool handleReadFile(const String &path)
 #endif
 	if (pathWithGz || FS_Partition->exists(_path))
 	{
-		File file = FS_Partition->open(_path, "r");	// Open the file
-		server.streamFile(file, contentType); 	// then send it to the client
-		file.close();				                    // and close the file
+#ifdef USE_ASYNC_WEBSERVER
+		send_html(SERVER_PARAM, _path, contentType, pathWithGz);
+#else
+		send_html(_path, contentType);
+#endif
 		return true;
 	}
 
 	print_debug(F("\tFile Not Found"));
 	return false;			// If the file doesn't exist, return false
-}
-
-/**
- * Not found file message from the server
- */
-void handleNotFound(const String &path)
-{
-	// Send HTTP status 404 (Not Found) when there's no handler for the URI in the request
-	server.send(404, "text/plain", "404: Not found for " + path);
 }
 
 /**
@@ -763,36 +839,37 @@ void handleNotFound(const String &path)
  * Server side :
  * 	server.on("/delfile", HTTP_GET, handleDeleteFile);
  */
-void handleDeleteFile()
+void handleDeleteFile(CB_SERVER_PARAM)
 {
-	if (server.args() == 0)
-		return server.send(500, "text/plain", "BAD ARGS");
+	// No file to delete
+	if (pserver->args() == 0)
+		return pserver->send(500, "text/plain", "BAD ARGS");
 
 	// The name of the file to delete is the first argument
-	String path = server.arg(0);
+	String path = pserver->arg((int) 0);
 
 	// Can not delete root !
 	if (path == "/")
-		return server.send(500, "text/plain", "BAD PATH");
+		return pserver->send(500, "text/plain", "BAD PATH");
 
 	// Add slash if necessary
 	CheckBeginSlash(path);
 
 	// Refuse la suppression du SSID
 	if (CheckSSIDFileName(path))
-		return;
+		return pserver->send(403, "text/plain", "403: Access not allowed.");
 
 	// File does not exist !
 	if (!FS_Partition->exists(path))
-		return handleNotFound(path);
+		return pserver->send(404, "text/plain", "404: Not found for " + path);
 
-	// Delete file
+	// Delete file, wait if Lock_File
 	while (Lock_File)
-		;
+		delay(10);
 	FS_Partition->remove(path);
 
 	print_debug("handleDeleteFile: " + path);
-	server.send(204, "text/plain", "");
+	pserver->send(204, "text/plain", "");
 }
 
 /**
@@ -804,33 +881,36 @@ void handleDeleteFile()
  * Server side :
  * 	server.on("/getfile", HTTP_POST, handleGetFile);
  */
-void handleGetFile()
+void handleGetFile(CB_SERVER_PARAM)
 {
-	if (server.args() == 0)
-		return server.send(500, "text/plain", "BAD ARGS");
+	// No file to get
+	if (pserver->args() == 0)
+		return pserver->send(500, "text/plain", "BAD ARGS");
 
 	// The name of the file to get is the first argument
-	String path = server.arg(0);
+	String path = pserver->arg((int) 0);
 	print_debug("handleGetFile: " + path);
 
 	// Refuse la transmission du SSID
 	if (CheckSSIDFileName(path))
-		return;
+		return pserver->send(403, "text/plain", "403: Access not allowed.");
 
 	PART_TYPE *partition = FS_Partition;
-	if (server.args() == 2)
+	if (pserver->args() == 2)
 		partition = Data_Partition;
 
 	if (partition->exists(path))
 	{
 		Lock_File = true;
-		File file = partition->open(path, "r");	// Open it
-		server.streamFile(file, "text/plain"); 	// And send it to the client
-		file.close();				// Then close the file
+#ifdef USE_ASYNC_WEBSERVER
+		send_html(SERVER_PARAM, path, "text/plain", false);
+#else
+		send_html(path, "text/plain");
+#endif
 		Lock_File = false;
 	}
 	else
-		return handleNotFound(path);
+		return pserver->send(404, "text/plain", "404: Not found for " + path);
 }
 
 /**
@@ -848,7 +928,53 @@ void handleGetFile()
  * Server side :
  * 	server.on("/", HTTP_POST, [](){ server.send(200, "text/plain", ""); }, handleUploadFile);
  */
-void handleUploadFile(void)
+#ifdef USE_ASYNC_WEBSERVER
+void handleUploadFile(AsyncWebServerRequest *request, String thefile, size_t index, uint8_t *data,
+		size_t len, bool final)
+{
+	String logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url();
+	print_debug(logmessage);
+	String filename = thefile;
+
+	if (!index)
+	{
+		CheckBeginSlash(filename);
+
+		if (request->hasArg("dir") && (request->arg("dir") != ""))
+		{
+			String dir = request->arg("dir");
+			CheckBeginSlash(dir);
+			if (!FS_Partition->exists(dir))
+				FS_Partition->mkdir(dir);
+			filename = dir + filename;
+		}
+
+		logmessage = "Upload Start: " + String(filename);
+		print_debug(logmessage);
+		// open the file on first call and store the file handle in the request object
+		request->_tempFile = FS_Partition->open(filename, "w");
+	}
+
+	if (len)
+	{
+		// stream the incoming chunk to the opened file
+		request->_tempFile.write(data, len);
+		logmessage = "Writing file: " + String(filename) + " index=" + String(index) + " len=" + String(len);
+		print_debug(logmessage);
+	}
+
+	if (final)
+	{
+		// close the file handle as the upload is now done
+		request->_tempFile.close();
+		logmessage = "Upload Complete: " + String(filename) + ",size: " + String(index + len);
+		print_debug(logmessage);
+		if (request->hasArg("reload"))
+			request->redirect("/");
+	}
+}
+#else
+void handleUploadFile(CB_SERVER_PARAM)
 {
 	HTTPUpload &upload = server.upload();
 
@@ -923,6 +1049,7 @@ void handleUploadFile(void)
 		}
 	}
 }
+#endif
 
 /**
  * Handle the list directory with GET method :
@@ -934,21 +1061,19 @@ void handleUploadFile(void)
  * Server side :
  * 	server.on("/listfile", HTTP_GET, handleListFile);
  */
-void handleListFile(void)
+void handleListFile(CB_SERVER_PARAM)
 {
-	if (!server.hasArg("DIR"))
-	{
-		server.send(500, "text/plain", "BAD ARGS");
-		return;
-	}
+	// DIR arg not found
+	if (!pserver->hasArg("DIR"))
+		return pserver->send(500, "text/plain", "BAD ARGS");
 
-	String path = server.arg("DIR");
+	String path = pserver->arg("DIR");
 	print_debug("handleListFile: " + path);
 	CheckBeginSlash(path);
 
 #ifdef USE_LITTLEFS
 	if (!FS_Partition->exists(path))
-		return handleNotFound(path);
+		return pserver->send(404, "text/plain", "404: Not found for " + path);
 #endif
 
 	String output = "[";
@@ -1017,7 +1142,7 @@ void handleListFile(void)
 #endif
 	output += "]";
 	print_debug(output);
-	server.send(200, "text/json", output);
+	pserver->send(200, "text/json", output);
 }
 
 /**
@@ -1028,28 +1153,38 @@ void handleListFile(void)
  * Server side :
  * 	server.on("/createfile", HTTP_GET, handleCreateFile);
  */
-void handleCreateFile(void)
+void handleCreateFile(CB_SERVER_PARAM)
 {
-	if (server.args() == 0)
-		return server.send(500, "text/plain", "BAD ARGS");
+	if (pserver->args() == 0)
+		return pserver->send(500, "text/plain", "BAD ARGS");
 
-	String path = server.arg(0);
+	String path = pserver->arg((int) 0);
 	print_debug("handleCreateFile: " + path);
 
 	if (path == "/")
-		return server.send(500, "text/plain", "BAD PATH");
+		return pserver->send(500, "text/plain", "BAD PATH");
 
 	CheckBeginSlash(path);
 	if (FS_Partition->exists(path))
-		return server.send(500, "text/plain", "FILE EXISTS");
+		return pserver->send(500, "text/plain", "FILE EXISTS");
 
 	File file = FS_Partition->open(path, "w");
 	if (file)
 		file.close();
 	else
-		return server.send(500, "text/plain", "CREATE FAILED");
+		return pserver->send(500, "text/plain", "CREATE FAILED");
 
-	server.send(200, "text/plain", "OK");
+	pserver->send(200, "text/plain", "OK");
+}
+
+/**
+ * Handle Get time
+ */
+void handleGetTime(CB_SERVER_PARAM)
+{
+#ifdef USE_RTCLocal
+	pserver->send(200, "text/plain", (RTC_Local.the_time));
+#endif
 }
 
 /**
@@ -1063,29 +1198,38 @@ void handleCreateFile(void)
  * Server side :
  * 	server.on("/setTime", HTTP_PUT, handleSetTime);
  */
-void handleSetTime(void)
+void handleSetTime(CB_SERVER_PARAM)
 {
-	if (server.args() == 0)
-		return server.send(500, "text/plain", "BAD ARGS");
+	if (pserver->args() == 0)
+		return pserver->send(500, "text/plain", "BAD ARGS");
 
-	if (server.hasArg("TIME"))
+	if (pserver->hasArg("TIME"))
 	{
 		// Mise à l'heure
-		String time = server.arg("TIME");
+		String time = pserver->arg("TIME");
 		print_debug("handleSetTime: " + time);
 #ifdef USE_RTCLocal
 		RTC_Local.setDateTime(time.c_str());
 		// Sauvegarde de l'heure
 		RTC_Local.saveDateTime(time.c_str());
 #endif
-		if (server.hasArg("UART"))
+		if (pserver->hasArg("UART"))
 		{
 			printf_message_to_UART("TIME=" + time);
 		}
-		server.send(200, "text/plain", "");
+		pserver->send(200, "text/plain", "");
 	}
 	else
-		return server.send(500, "text/plain", "TIME FAILED");
+		return pserver->send(500, "text/plain", "TIME FAILED");
+}
+
+/**
+ * Handle reset ESP
+ */
+void handleReset(CB_SERVER_PARAM)
+{
+	pserver->send(204, "text/plain", "");
+	Auto_Reset();
 }
 
 /**
@@ -1100,21 +1244,23 @@ void handleSetTime(void)
  * Server side :
  * 	server.on("/setDHCPIP", HTTP_POST, handleSetDHCPIP);
  */
-void handleSetDHCPIP(void)
+void handleSetDHCPIP(CB_SERVER_PARAM)
 {
-	if (server.args() == 0)
-		return server.send(500, "text/plain", "BAD ARGS");
+	if (pserver->args() == 0)
+		return pserver->send(500, "text/plain", "BAD ARGS");
 
 	if (SSID_FileName != "")
 	{
 		if (Use_EEPROM)
-			SSIDToEEPROM(server.arg(0), server.arg(1));
+			SSIDToEEPROM(pserver->arg((int) 0), pserver->arg((int) 1));
 		else
-			SSIDToFile(SSID_FileName, server.arg(0) + "#" + server.arg(1));
+			SSIDToFile(SSID_FileName, pserver->arg((int) 0) + "#" + pserver->arg((int) 1));
 	}
 
-	server.client().setNoDelay(true);
-	server.send_P(200, PSTR("text/html"), SSIDResponse);
+#ifndef USE_ASYNC_WEBSERVER
+	pserver->client().setNoDelay(true);
+#endif
+	pserver->send_P(200, PSTR("text/html"), SSIDResponse);
 
 	if (DefaultAP)
 		Auto_Reset();
@@ -1125,44 +1271,38 @@ void handleSetDHCPIP(void)
  */
 const String getContentType(const String &filename)
 {
-	if (server.hasArg("download"))
-		return "application/octet-stream";
+	if (filename.endsWith(".html") || filename.endsWith(".htm"))
+		return "text/html";
 	else
-		if (filename.endsWith(".htm"))
-			return "text/html";
+		if (filename.endsWith(".gz"))
+			return "application/x-gzip";
 		else
-			if (filename.endsWith(".html"))
-				return "text/html";
+			if (filename.endsWith(".css"))
+				return "text/css";
 			else
-				if (filename.endsWith(".gz"))
-					return "application/x-gzip";
+				if (filename.endsWith(".js"))
+					return "application/javascript";
 				else
-					if (filename.endsWith(".css"))
-						return "text/css";
+					if (filename.endsWith(".png"))
+						return "image/png";
 					else
-						if (filename.endsWith(".js"))
-							return "application/javascript";
+						if (filename.endsWith(".gif"))
+							return "image/gif";
 						else
-							if (filename.endsWith(".png"))
-								return "image/png";
+							if (filename.endsWith(".jpg"))
+								return "image/jpeg";
 							else
-								if (filename.endsWith(".gif"))
-									return "image/gif";
+								if (filename.endsWith(".ico"))
+									return "image/x-icon";
 								else
-									if (filename.endsWith(".jpg"))
-										return "image/jpeg";
+									if (filename.endsWith(".xml"))
+										return "text/xml";
 									else
-										if (filename.endsWith(".ico"))
-											return "image/x-icon";
+										if (filename.endsWith(".pdf"))
+											return "application/x-pdf";
 										else
-											if (filename.endsWith(".xml"))
-												return "text/xml";
-											else
-												if (filename.endsWith(".pdf"))
-													return "application/x-pdf";
-												else
-													if (filename.endsWith(".zip"))
-														return "application/x-zip";
+											if (filename.endsWith(".zip"))
+												return "application/x-zip";
 	return "text/plain";
 }
 
@@ -1243,6 +1383,7 @@ bool CheckUARTMessage(HardwareSerial *Serial_Message)
 	return false;
 }
 
+#ifndef USE_ASYNC_WEBSERVER
 /**
  * Function that receive a stream from UART and directly send it
  * to the server.
@@ -1335,6 +1476,7 @@ void SendDefaultXML(void)
 	server.sendContent("");
 	server.client().stop();
 }
+#endif
 
 // ********************************************************************************
 // Other utilitary function

@@ -69,19 +69,27 @@ Si on veut la version 2.0.14 (unofficial) de l'ESP32 : <br>
 Menu : Sloeber/preferences/Third party index url's
   - Rajouter la ligne : https://espressif.github.io/arduino-esp32/package_esp32_index.json
   - Apply et attendre la fin<br>
-
+  
+Sinon : <br>
 Menu : Sloeber/preferences/Platforms and boards
-  - Sélectionner esp32/esp32/2.0.11 (y a deux sections esp32, prendre la section avec la version 11)
+  - Sélectionner esp32/esp32/3.0.2 (s'y a deux sections esp32, prendre la section qui va bien)
   - Apply and close et attendre, c'est très long !! (surveiller en bas à droite la progression)
   - En cas d'erreur comme celle-ci : <br>
 ![ESP32_Problem](./ESP32_Problem.png "Error")<br>
 Faut aller chercher le fichier corrompu sur le site <a href="https://docs.espressif.com/projects/esp-idf/zh_CN/v4.4.3/esp32s2/api-guides/tools/idf-tools.html#riscv32-esp-elf" target="_blank">d'Espressif</a> (bien vérifier le sha après téléchargement). Puis copier ce fichier dans le dossier "arduinoPlugin\downloads" de Sloeber.<br>
 Refaire la manip d'installation en faisant en premier une désinstallation (décocher puis Apply and close).<br>
-  - Puis, y a un bug à corriger. Dans le dossier "arduinoPlugin\packages\esp32\hardware\esp32\2.0.11" (ou 2.0.14) de Sloeber :
+  - Pour les anciennes versions (exemple 2.0.11), y a un bug à corriger. Dans le dossier "arduinoPlugin\packages\esp32\hardware\esp32\2.0.11" (ou 2.0.14) de Sloeber :
     - Supprimer le fichier platform.sloeber.txt
     - Rajouter les deux lignes suivantes à la fin du fichier platform.txt :<br>
     recipe.hooks.prebuild.7.pattern=bash -c "[ -f "{build.path}"/file_opts ] || touch "{build.path}"/file_opts"<br>
 recipe.hooks.prebuild.7.pattern.windows=cmd /c if not exist "{build.path}\file_opts" type nul > "{build.path}\file_opts"
+  - Pour les versions 3.x, dans les projets il faut rajouter des variables dans l'environnement du build :
+    - Menu Project/Properties/"C/C++ Build"/Environment
+    - Ajouter : build.fqbn => \"ESP32:esp32:esp32\"
+    - Ajouter ou modifier : build.variant => \"esp32\"
+    - Ajouter : runtime.os => \"generic_os\"<br>
+
+<b>REMARQUE :</b> Si on met à jour une plateforme, le plus simple pour actualiser un projet est d'éditer le fichier ".project" et de mettre à jour le numéro de version. Ensuite dans les propriétés du projet, onglet Sloeber, mettre à jour "Platform folder".<br>
 
 <b>Pour les librairies :</b><br>
 Menu : Sloeber/preferences/Library Manager
@@ -91,7 +99,7 @@ Menu : Sloeber/preferences/Library Manager
     - Apply et attendre (surveiller en bas à droite la progression)
   - sélectionner Timing/NTPClient (Default) v3.2.1 (pour récupérer l'heure Internet)
     - Apply et attendre (surveiller en bas à droite la progression)
-  - sélectionner Other/EspSaveCrash (Default) v1.3.0 (uniquement ESP8266)
+  - sélectionner Other/EspSaveCrash (Default) v1.3.0 (uniquement <b>ESP8266</b>)
     - Apply et attendre (surveiller en bas à droite la progression)
   - sélectionner Device Control/Esp32TimerInterrupt v2.3.0
     - Apply et attendre (surveiller en bas à droite la progression)  
@@ -206,14 +214,14 @@ Dézipper et copier les dossiers (virer le mot master) dans le dossier "arduinoP
 
 OTA : Ajout de la librairie "ElegantOTA"
 - Menu Arduino/preferences/Library Manager
-  - sélectionner Communication/ElegantOTA v3.1.0
+  - sélectionner Communication/ElegantOTA v3.1.2
   - Apply and Close et attendre (surveiller en bas à droite la progression)
   - Dans le fichier ElegantOTA.h, corriger la ligne 52 : remplacer ESPAsyncWebServer par ESPAsyncWebSrv si nécessaire.
 
 Dans les projets avec ESPAsyncTCP et ESPAsyncWebServer, ajouter la librairie "Hash" au projet.
 
 ---
-### Création du filesystem LittleFS ou FatFS (dossier Data)
+### Création du filesystem LittleFS ou SPIFFS ou FatFS (dossier Data)
 Faut utiliser Arduino car c'est pas disponible dans Sloeber.<br>
 <b>Pour l'ESP8266 :</b><br>
 Dans Arduino, ajouter le plugin <a href="https://github.com/earlephilhower/arduino-esp8266littlefs-plugin" target="_blank">https://github.com/earlephilhower/arduino-esp8266littlefs-plugin</a><br>
@@ -237,22 +245,23 @@ Puis le dézipper dans le dossier tools de Arduino ("Emplacement du dossier de c
 
 ---
 ### Liste des directives
-Note : les directives ESP8266 ou ESP32 sont automatiquement définies suivant le type de carte qu'on a choisi pour le projet.
-Les directives sont à rajouter dans le menu Sloeber/"Compile Options" dans le champ "append to C and C++" sous la forme -Ddirective. Ne pas oublier d'attacher la librairie qui va bien dans Sloeber/"Add a library to the selected project")
+Note : les directives <b>ESP8266</b> ou <b>ESP32</b> sont automatiquement définies suivant le type de carte qu'on a choisi pour le projet.
+Les directives sont à rajouter dans le menu Sloeber/"Compile Options" dans le champ "append to C and C++" sous la forme -Ddirective. Ne pas oublier d'attacher la librairie qui va bien dans Sloeber/"Add a library to the selected project"
 - Général (librairie Debug_utils)
-  - USE_SAVE_CRASH pour sauvegarder le log du crash (Sloeber : EEPROM et EspSaveCrash pour ESP8266)
+  - USE_SAVE_CRASH pour sauvegarder le log du crash (Sloeber : EEPROM et EspSaveCrash pour <b>ESP8266</b>)
   - SERIAL_DEBUG pour avoir un debug console
   - LOG_DEBUG pour avoir un debug dans un fichier log "/log.txt"
 - Gestion des partitions dont le File System (data) (librairie Partition_utils). 
   - par défaut c'est LittleFS qui est utilisé (Sloeber : LittleFS)
   - USE_SPIFFS pour utiliser SPIFFS (Sloeber : SPIFFS)
-  - USE_FATFS pour utiliser FatFS (Sloeber : FFat). ESP32 seulement.
+  - USE_FATFS pour utiliser FatFS (Sloeber : FFat). <b>ESP32</b> seulement.
 - RTC (librairie RTCLocal). Permet de définir une RTC logiciel
   - USE_NTP_SERVER=1 pour récupérer l'heure par Internet (2 pour l'heure d'été) (Sloeber : NTPClient)
   - USE_CORRECTION pour corriger la dérive temporelle du ESP8266
 - Server (librairie Server_utils)
+  - USE_ASYNC_WEBSERVER pour avoir un serveur asynchrone. Uniquement <b>ESP32</b> (Sloeber : AsyncTCP et ESPAsyncWebServer, sinon WebServer pour la version synchrone) 
   - USE_RTCLocal (par défaut)
-  - USE_HTTPUPDATER (par défaut)
+  - USE_HTTPUPDATER pour l'upload du firwmare et du filesystem. <b>ESP8266</b> (Sloeber : ESP8266HTTPUpdateServer); <b>ESP32</b> (Sloeber : HTTPUpdateServer ou <a href="https://github.com/IPdotSetAF/ESPAsyncHTTPUpdateServer" target="_blank">ESPAsyncHTTPUpdateServer</a> pour la version asynchrone)
 - LCD, Oled, TFT (librairies Fonts avec SSD1306 ou SSD1327 ou SH1107 ou ST77xx) (Sloeber : Wire)
   - USE_LCD pour le lcd
   - OLED_SSD1306 pour le SSD1306. Ajouter en plus SSD1306_RAM_128 (par défaut) ou SSD1306_RAM_132 suivant le modèle

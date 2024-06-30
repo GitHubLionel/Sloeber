@@ -54,7 +54,7 @@ PART_TYPE* CreatePartition(void);
 void SelectPartitionForInfo(PART_TYPE *part);
 bool CreateOpenDataPartition(bool ForceFormat, bool ShowInfo = false);
 
-String getSketchName(const String the_path);
+String getSketchName(const String the_path, bool extra = false);
 void CheckBeginSlash(String &path);
 
 void ESPinformations(void);
