@@ -33,6 +33,70 @@ HardwareSerial *Serial_Info = &Serial; // Other choice Serial1
 #endif
 
 // ********************************************************************************
+// Initialization of Serial UART if directive USE_UART or SERIAL_DEBUG is defined
+// baud: default 115200, NB_BIT = 8, PARITY NONE, NB_STOP_BIT = 1
+// ********************************************************************************
+void SERIAL_Initialization(int baud)
+{
+#if (defined(SERIAL_DEBUG) || defined(USE_UART))
+	// On démarre le port série : NB_BIT = 8, PARITY NONE, NB_STOP_BIT = 1
+	Serial.begin(baud);
+	delay(100);  // Pour stabiliser UART
+#endif
+#ifdef SERIAL_DEBUG
+	// On attend 5 secondes pour stabiliser l'alimentation et pour lancer la console UART (debug)
+	delay(WAIT_SETUP);
+#endif
+}
+
+// ********************************************************************************
+// Function that explain the reason of reset
+// ********************************************************************************
+#ifdef ESP32
+String verbose_print_reset_reason(esp_reset_reason_t reason)
+{
+  switch (reason)
+  {
+    case ESP_RST_UNKNOWN  : return(" Reset reason can not be determined");
+    case ESP_RST_POWERON  : return("Reset due to power-on event");
+    case ESP_RST_EXT  : return("Reset by external pin (not applicable for ESP32)");
+    case ESP_RST_SW  : return("Software reset via esp_restart");
+    case ESP_RST_PANIC  : return("Software reset due to exception/panic");
+    case ESP_RST_INT_WDT  : return("Reset (software or hardware) due to interrupt watchdog");
+    case ESP_RST_TASK_WDT  : return("Reset due to task watchdog");
+    case ESP_RST_WDT  : return("Reset due to other watchdogs");
+    case ESP_RST_DEEPSLEEP : return("Reset after exiting deep sleep mode");
+    case ESP_RST_BROWNOUT : return("Brownout reset (software or hardware)");
+    case ESP_RST_SDIO : return("Reset over SDIO");
+    default : return("NO_MEAN");
+  }
+}
+#endif
+
+// ********************************************************************************
+// Function that extract the name of the ino sketch (or a filename)
+// extra : add extra info like IDF version (ESP32) and the reason of the restart (default false)
+// ********************************************************************************
+String getSketchName(const String the_path, bool extra)
+{
+	int slash_loc = the_path.lastIndexOf('/');
+	String the_cpp_name = the_path.substring(slash_loc + 1);
+	int dot_loc = the_cpp_name.lastIndexOf('.');
+	String ino = the_cpp_name.substring(0, dot_loc) + "\r\n";
+	if (extra)
+	{
+#ifdef ESP32
+		esp_reset_reason_t reason = esp_reset_reason();
+		ino += "Restart reason: " + String(reason) + "\r\n";
+		ino += verbose_print_reset_reason(reason) + "\r\n";
+		// Add IDF version for ESP32
+		ino += "IDF version: " + String(esp_get_idf_version()) + "\r\n";
+#endif
+	}
+	return ino;
+}
+
+// ********************************************************************************
 // Print functions
 // ********************************************************************************
 void print_debug(String mess, bool ln)
@@ -83,6 +147,7 @@ void print_millis(void)
 	print_debug((String) millis());
 }
 
+// Crash functions
 #ifdef USE_SAVE_CRASH
 void init_and_print_crash(void)
 {
@@ -237,7 +302,8 @@ esp_err_t esp_core_dump_image_erase_2()
 
 	return err;
 }
-#endif
+#endif // USE_SAVE_CRASH
+
 #endif
 
 // ********************************************************************************

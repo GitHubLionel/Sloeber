@@ -10,20 +10,24 @@
  * Define USE_HTTPUPDATER to add firmware upload function
  * Define USE_ASYNC_WEBSERVER for an asynchrone WebServer
  *
- * If yon don't want gz file, uncomment USE_ZG_FILE
+ * If you don't want gz file, uncomment USE_ZG_FILE
  */
 
 // To allow HTTP updater
 //#define USE_HTTPUPDATER
 
 #include "Arduino.h"
+
 #ifdef ESP8266
 #include <ESP8266WiFi.h>	// Include WiFi library
 #include <ESP8266WebServer.h>	// Include WebServer library
+#undef USE_ASYNC_WEBSERVER // No async server
+#define CB_SERVER_PARAM void
+#define SERVER_PARAM
 #ifdef USE_HTTPUPDATER
 #include <ESP8266HTTPUpdateServer.h>
 #endif
-#endif
+#endif // ESP8266
 
 #ifdef ESP32
 #include <WiFi.h>	// Include WiFi library
@@ -39,12 +43,22 @@
 
 #ifdef USE_HTTPUPDATER
 	#ifdef USE_ASYNC_WEBSERVER
-	#include <ESPAsyncHTTPUpdateServer.h>
+    #ifdef USE_FATFS
+			#warning "HTTPUpdateServer not available"
+		#else
+			#ifndef USE_SPIFFS
+			  #ifndef ESPASYNCHTTPUPDATESERVER_LITTLEFS
+				#error "ESPASYNCHTTPUPDATESERVER_LITTLEFS must be defined."
+				#endif
+			#endif
+			#include <ESPAsyncHTTPUpdateServer.h>
+		#endif
 	#else
 	#include <HTTPUpdateServer.h>
 	#endif
 #endif
 #endif // ESP32
+
 #include <Preferences.h> // For EEPROM access
 
 // If we have an RTC_Local instance of RTCLocal
@@ -64,7 +78,7 @@ extern ESP8266WebServer server;
 #define UPDATER_DEBUG	false
 extern ESP8266HTTPUpdateServer httpUpdater;
 #endif
-#endif
+#endif // ESP8266
 
 #ifdef ESP32
 #ifdef USE_ASYNC_WEBSERVER
@@ -73,12 +87,7 @@ extern AsyncWebServer server;
 extern WebServer server;
 extern WebServer *pserver;
 #endif
-#ifdef USE_HTTPUPDATER
-// Set to true to send debug to Serial
-#define UPDATER_DEBUG	false
-//extern HTTPUpdateServer httpUpdater;
-#endif
-#endif
+#endif // ESP32
 
 // Default SSID file name
 #define SSID_FILE	"/SSID.txt"

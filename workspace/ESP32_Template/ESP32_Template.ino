@@ -71,7 +71,6 @@
  * ATTENTION : Si on défini en même temps SERIAL_DEBUG, on peut avoir des comportements indéfinis.
  */
 //#define USE_UART
-#define UART_BAUD	115200
 
 /*********************************************************************************
  *                    *****  DEFINE NETWORK  *****
@@ -139,19 +138,8 @@ void setup()
 	// To know the time required for the setup
 	uint32_t start_time = millis();
 
-	// Small delay to stabilise
-	delay(1000);
-
 	// **** 0- initialisation Serial, debug ou pas ****
-#if (defined(SERIAL_DEBUG) || defined(USE_UART))
-	// On démarre le port série : NB_BIT = 8, PARITY NONE, NB_STOP_BIT = 1
-	Serial.begin(UART_BAUD);
-	delay(100);  // Pour stabiliser UART
-#endif
-#ifdef SERIAL_DEBUG
-	// On attend 5 secondes pour stabiliser l'alimentation et pour lancer la console UART (debug)
-	delay(WAIT_SETUP);
-#endif
+	SERIAL_Initialization();
 
 	// **** 1- initialisation LittleFS ****
 	// Start the SPI Flash Files System, abort if not success

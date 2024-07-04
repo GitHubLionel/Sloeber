@@ -21,6 +21,7 @@
  */
 #ifdef ESP8266
 ESP8266WebServer server(SERVER_PORT);
+ESP8266WebServer *pserver = &server;
 #endif
 #ifdef ESP32
 #ifdef USE_ASYNC_WEBSERVER
@@ -701,9 +702,9 @@ String GetURI(CB_SERVER_PARAM)
  * Send the file requested
  */
 #ifdef USE_ASYNC_WEBSERVER
-void send_html(AsyncWebServerRequest *request, String filefs, String format, bool zipped)
+void send_html(AsyncWebServerRequest *request, String filefs, String format, bool zipped, PART_TYPE &partition)
 {
-	AsyncWebServerResponse *response = request->beginResponse(*FS_Partition, filefs, format);
+	AsyncWebServerResponse *response = request->beginResponse(partition, filefs, format);
 	if (zipped)
 	{
 		response->addHeader("Content-Encoding", "gzip");
@@ -712,9 +713,9 @@ void send_html(AsyncWebServerRequest *request, String filefs, String format, boo
 	request->send(response);
 }
 #else
-void send_html(String filefs, String format)
+void send_html(String filefs, String format, PART_TYPE &partition)
 {
-	File file = FS_Partition->open(filefs, "r");	// Open the file
+	File file = partition.open(filefs, "r");	// Open the file
 	server.streamFile(file, format); 	            // then send it to the client
 	file.close();                                 // then close the file
 }
@@ -734,9 +735,9 @@ void handleDefaultAP(CB_SERVER_PARAM)
 
 	// Dans tous les cas, on envoie la page d'initialisation SSID
 #ifdef USE_ASYNC_WEBSERVER
-	send_html(SERVER_PARAM, "/config_SSID.html", "text/html", false);
+	send_html(SERVER_PARAM, "/config_SSID.html", "text/html", false, *FS_Partition);
 #else
-	send_html("/config_SSID.html", "text/html");
+	send_html("/config_SSID.html", "text/html", *FS_Partition);
 #endif
 }
 
@@ -809,9 +810,9 @@ bool handleReadFile(CB_SERVER_PARAM)
 	if (pathWithGz || FS_Partition->exists(_path))
 	{
 #ifdef USE_ASYNC_WEBSERVER
-		send_html(SERVER_PARAM, _path, contentType, pathWithGz);
+		send_html(SERVER_PARAM, _path, contentType, pathWithGz, *FS_Partition);
 #else
-		send_html(_path, contentType);
+		send_html(_path, contentType, *FS_Partition);
 #endif
 		return true;
 	}
@@ -896,16 +897,17 @@ void handleGetFile(CB_SERVER_PARAM)
 		return pserver->send(403, "text/plain", "403: Access not allowed.");
 
 	PART_TYPE *partition = FS_Partition;
-	if (pserver->args() == 2)
+	// In case of requested file is on the data partition
+	if ((pserver->args() == 2) && (pserver->hasArg("DATA_PART")))
 		partition = Data_Partition;
 
 	if (partition->exists(path))
 	{
 		Lock_File = true;
 #ifdef USE_ASYNC_WEBSERVER
-		send_html(SERVER_PARAM, path, "text/plain", false);
+		send_html(SERVER_PARAM, path, "text/plain", false, *partition);
 #else
-		send_html(path, "text/plain");
+		send_html(path, "text/plain", *partition);
 #endif
 		Lock_File = false;
 	}

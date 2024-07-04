@@ -85,9 +85,9 @@ Refaire la manip d'installation en faisant en premier une désinstallation (déc
 recipe.hooks.prebuild.7.pattern.windows=cmd /c if not exist "{build.path}\file_opts" type nul > "{build.path}\file_opts"
   - Pour les versions 3.x, dans les projets il faut rajouter des variables dans l'environnement du build :
     - Menu Project/Properties/"C/C++ Build"/Environment
-    - Ajouter : build.fqbn => \"ESP32:esp32:esp32\"
-    - Ajouter ou modifier : build.variant => \"esp32\"
-    - Ajouter : runtime.os => \"generic_os\"<br>
+    - Ajouter : build.fqbn => \\"ESP32:esp32:esp32\\"
+    - Ajouter ou modifier (rajouter des \\") : build.variant => \\"esp32\\"
+    - Ajouter : runtime.os => \\"generic_os\\"<br>
 
 <b>REMARQUE :</b> Si on met à jour une plateforme, le plus simple pour actualiser un projet est d'éditer le fichier ".project" et de mettre à jour le numéro de version. Ensuite dans les propriétés du projet, onglet Sloeber, mettre à jour "Platform folder".<br>
 
@@ -221,7 +221,7 @@ OTA : Ajout de la librairie "ElegantOTA"
 Dans les projets avec ESPAsyncTCP et ESPAsyncWebServer, ajouter la librairie "Hash" au projet.
 
 ---
-### Création du filesystem LittleFS ou SPIFFS ou FatFS (dossier Data)
+### Création du filesystem LittleFS ou SPIFFS ou FatFS (dossier Data du projet)
 Faut utiliser Arduino car c'est pas disponible dans Sloeber.<br>
 <b>Pour l'ESP8266 :</b><br>
 Dans Arduino, ajouter le plugin <a href="https://github.com/earlephilhower/arduino-esp8266littlefs-plugin" target="_blank">https://github.com/earlephilhower/arduino-esp8266littlefs-plugin</a><br>
@@ -248,17 +248,20 @@ Puis le dézipper dans le dossier tools de Arduino ("Emplacement du dossier de c
 Note : les directives <b>ESP8266</b> ou <b>ESP32</b> sont automatiquement définies suivant le type de carte qu'on a choisi pour le projet.
 Les directives sont à rajouter dans le menu Sloeber/"Compile Options" dans le champ "append to C and C++" sous la forme -Ddirective. Ne pas oublier d'attacher la librairie qui va bien dans Sloeber/"Add a library to the selected project"
 - Général (librairie Debug_utils)
-  - USE_SAVE_CRASH pour sauvegarder le log du crash (Sloeber : EEPROM et EspSaveCrash pour <b>ESP8266</b>)
-  - SERIAL_DEBUG pour avoir un debug console
+  - USE_UART pour initialiser UART (Serial) pour un périphérique. Attention, si on utilise en même temps SERIAL_DEBUG, on peut avoir un comportement inattendu.
+  - USE_SAVE_CRASH pour sauvegarder le log du crash (Sloeber : EEPROM et EspSaveCrash pour <b>ESP8266</b>). Utiliser l'utilitaire <a href="https://github.com/me-no-dev/EspExceptionDecoder" target="_blank">EspExceptionDecoder</a>.
+  - SERIAL_DEBUG pour avoir un debug console. Note : démarre automatiquement UART
   - LOG_DEBUG pour avoir un debug dans un fichier log "/log.txt"
 - Gestion des partitions dont le File System (data) (librairie Partition_utils). 
   - par défaut c'est LittleFS qui est utilisé (Sloeber : LittleFS)
   - USE_SPIFFS pour utiliser SPIFFS (Sloeber : SPIFFS)
   - USE_FATFS pour utiliser FatFS (Sloeber : FFat). <b>ESP32</b> seulement.
 - RTC (librairie RTCLocal). Permet de définir une RTC logiciel
-  - USE_NTP_SERVER=1 pour récupérer l'heure par Internet (2 pour l'heure d'été) (Sloeber : NTPClient)
+  - USE_NTP_SERVER=1 pour récupérer l'heure par Internet (2 pour l'heure d'été) (Sloeber : NTPClient et Network)
   - USE_CORRECTION pour corriger la dérive temporelle du ESP8266
 - Server (librairie Server_utils)
+  - Utilise la librairie Preferences pour sauvegarder le SSID dans la flash (Sloeber : EEPROM, Preferences)
+  - Utilise la librairie Update pour l'upload des fichiers (Sloeber : Update)
   - USE_ASYNC_WEBSERVER pour avoir un serveur asynchrone. Uniquement <b>ESP32</b> (Sloeber : AsyncTCP et ESPAsyncWebServer, sinon WebServer pour la version synchrone) 
   - USE_RTCLocal (par défaut)
   - USE_HTTPUPDATER pour l'upload du firwmare et du filesystem. <b>ESP8266</b> (Sloeber : ESP8266HTTPUpdateServer); <b>ESP32</b> (Sloeber : HTTPUpdateServer ou <a href="https://github.com/IPdotSetAF/ESPAsyncHTTPUpdateServer" target="_blank">ESPAsyncHTTPUpdateServer</a> pour la version asynchrone)
