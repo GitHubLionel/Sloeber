@@ -178,6 +178,7 @@ void setup()
 	// **** 3- Initialisation du display
 	if (IHM_Initialization(I2C_ADDRESS, true))
 		print_debug(F("Display Ok"));
+	IHM_TimeOut_Display(OLED_TIMEOUT);
 
 	// **** FIN- Attente connexion réseau
 
@@ -216,7 +217,7 @@ void loop()
 	{
 		IHM_Print0(RTC_Local.the_time);
 		// Test extinction de l'écran
-		IHM_TurnOff();
+		IHM_CheckTurnOff();
 	}
 
 	// Listen for HTTP requests from clients
@@ -290,7 +291,6 @@ void handleOperation(CB_SERVER_PARAM)
 	if (pserver->hasArg("Toggle_Oled"))
 	{
 		IHM_ToggleDisplay();
-		IHM_TimeOut_Display(OLED_TIMEOUT);
 	}
 #endif
 

@@ -1,4 +1,4 @@
-#include "Clavier.h"
+#include "Keyboard.h"
 
 const char *Btn_Texte[BTN_MAX] = {"NO btn pressed", "K1 pressed", "K2 pressed", "K3 pressed",
 		"K4 pressed"};
@@ -6,9 +6,9 @@ const char *Btn_Texte[BTN_MAX] = {"NO btn pressed", "K1 pressed", "K2 pressed", 
 // Variables clavier
 static uint16_t Low_sampling[BTN_MAX];  // tableau de stockage des valeurs basses
 
-static uint8_t Clavier_Channel;
+static uint8_t Keyboard_Channel;
 static uint8_t Btn_Count = 0;
-static bool Clavier_Initialized = false;
+static bool Keyboard_Initialized = false;
 volatile uint32_t Start_click = 0;
 volatile Btn_Action Btn_Clicked = Btn_NOP;
 volatile uint16_t last_ADC = 0;
@@ -38,12 +38,12 @@ void __attribute__((weak)) print_debug(const char *mess, bool ln = true)
  * channel : ADC pin
  * nbButton : number of button, between 1 to 4
  * sampling : 10, 12 or 16 bits
- * Ne pas oublier de mettre la fonction Clavier_UpdateTime() dans le loop principal
+ * Ne pas oublier de mettre la fonction Keyboard_UpdateTime() dans le loop principal
  */
-void Clavier_Init(uint8_t channel, uint8_t nbButton, ADC_Sampling sampling)
+void Keyboard_Init(uint8_t channel, uint8_t nbButton, ADC_Sampling sampling)
 {
-	Clavier_Channel = channel;
-	Clavier_Initialized = false;
+	Keyboard_Channel = channel;
+	Keyboard_Initialized = false;
 	Btn_Count = nbButton;
 
 	switch (sampling)
@@ -84,12 +84,12 @@ void Clavier_Init(uint8_t channel, uint8_t nbButton, ADC_Sampling sampling)
  * channel : ADC pin
  * nbButton : number of button, max 4
  * interval : intervals to be considered, max to min : nbButton + 1 values
- * Ne pas oublier de mettre la fonction Clavier_UpdateTime() dans le loop principal
+ * Ne pas oublier de mettre la fonction Keyboard_UpdateTime() dans le loop principal
  */
-void Clavier_Init(uint8_t channel, uint8_t nbButton, uint16_t interval[])
+void Keyboard_Init(uint8_t channel, uint8_t nbButton, const uint16_t interval[])
 {
-	Clavier_Channel = channel;
-	Clavier_Initialized = false;
+	Keyboard_Channel = channel;
+	Keyboard_Initialized = false;
 	Btn_Count = nbButton;
 
 	ADC_res = interval[0];
@@ -97,20 +97,20 @@ void Clavier_Init(uint8_t channel, uint8_t nbButton, uint16_t interval[])
 	{
 		Low_sampling[i] = interval[i + 1];
 	}
-	Clavier_Initialized = true;
+	Keyboard_Initialized = true;
 }
 
 /**
  * Fonction d'actualisation de l'état du clavier
  * Doit être mise dans la boucle principale
  */
-void Clavier_UpdateTime()
+void Keyboard_UpdateTime()
 {
 	static uint32_t lastTimeRead = 0;
 	uint32_t deltaT;
 	Btn_Action Btn_test;
 
-	if (Clavier_Initialized)
+	if (Keyboard_Initialized)
 	{
 		deltaT = millis() - lastTimeRead;
 		if (deltaT > 0)
@@ -137,7 +137,7 @@ void Clavier_UpdateTime()
  * Btn : le numéro du bouton
  * Fonction à tester régulièrement dans la boucle principale
  */
-bool Check_Clavier(Btn_Action *Btn)
+bool Check_Keyboard(Btn_Action *Btn)
 {
 	*Btn = Btn_Clicked;
 	Btn_Clicked = Btn_NOP;  // On "mange" la valeur
@@ -156,7 +156,7 @@ void Btn_Definition_1B()
 
 	Low_sampling[0] = 90 * (ADC_res / 100);  //1000;
 
-	Clavier_Initialized = true;
+	Keyboard_Initialized = true;
 }
 
 void Btn_Definition_2B()
@@ -168,7 +168,7 @@ void Btn_Definition_2B()
 	Low_sampling[0] = 90 * (ADC_res / 100); // 920;
 	Low_sampling[1] = 60 * (ADC_res / 100); // 600;
 
-	Clavier_Initialized = true;
+	Keyboard_Initialized = true;
 }
 
 void Btn_Definition_3B()
@@ -182,7 +182,7 @@ void Btn_Definition_3B()
 	Low_sampling[1] = 60 * (ADC_res / 100); // 650;
 	Low_sampling[2] = 40 * (ADC_res / 100); // 450;
 
-	Clavier_Initialized = true;
+	Keyboard_Initialized = true;
 }
 
 void Btn_Definition_4B()
@@ -198,14 +198,14 @@ void Btn_Definition_4B()
 	Low_sampling[2] = 40 * (ADC_res / 100); // 450;
 	Low_sampling[3] = 30 * (ADC_res / 100); // 300;
 
-	Clavier_Initialized = true;
+	Keyboard_Initialized = true;
 }
 
 Btn_Action Btn_Click()
 {
 	uint8_t i;
 	Btn_Action btn = Btn_NOP;
-	uint16_t val = analogRead(Clavier_Channel);
+	uint16_t val = analogRead(Keyboard_Channel);
 	yield();
 
 	// On a appuyé sur un bouton
@@ -231,11 +231,11 @@ const char* Btn_Click_Name()
 
 uint16_t Btn_Click_Val()
 {
-	return analogRead(Clavier_Channel);
+	return analogRead(Keyboard_Channel);
 }
 
 /**
- * Test de l'intervalle de détection des boutons
+ * Test de l'interval de détection des boutons
  * Relevé de mesures pendant 10 secondes (défaut) ou boucle infinie (infinite = true)
  */
 void Btn_Check_Config(bool infinite)
@@ -244,7 +244,7 @@ void Btn_Check_Config(bool infinite)
 	char buffer[50] = {0};
 	uint32_t Check_count = 0;
 
-	print_debug("\r\n ** Info Clavier **");
+	print_debug("\r\n ** Info Keyboard **");
 	sprintf(buffer_deb, "[%d - ", (unsigned int)ADC_res);
 	for (uint8_t i = 0; i < Btn_Count; i++)
 	{

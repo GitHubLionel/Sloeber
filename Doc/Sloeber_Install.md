@@ -87,9 +87,7 @@ recipe.hooks.prebuild.7.pattern.windows=cmd /c if not exist "{build.path}\file_o
     - Menu Project/Properties/"C/C++ Build"/Environment
     - Ajouter : build.fqbn => \\"ESP32:esp32:esp32\\"
     - Ajouter ou modifier (rajouter des \\") : build.variant => \\"esp32\\"
-    - Ajouter : runtime.os => \\"generic_os\\"<br>
-
-<b>REMARQUE :</b> Si on met à jour une plateforme, le plus simple pour actualiser un projet est d'éditer le fichier ".project" et de mettre à jour le numéro de version. Ensuite dans les propriétés du projet, onglet Sloeber, mettre à jour "Platform folder".<br>
+    - Ajouter : runtime.os => \\"FreeRTOS\\"<br>
 
 <b>Pour les librairies :</b><br>
 Menu : Sloeber/preferences/Library Manager
@@ -99,17 +97,28 @@ Menu : Sloeber/preferences/Library Manager
     - Apply et attendre (surveiller en bas à droite la progression)
   - sélectionner Timing/NTPClient (Default) v3.2.1 (pour récupérer l'heure Internet)
     - Apply et attendre (surveiller en bas à droite la progression)
+  - sélectionner Communication/AsyncTCP (Default) v1.1.4 (pour le serveur asynchrone)
+    - Apply et attendre (surveiller en bas à droite la progression)
+  - sélectionner Communication/ESPAsyncWebServer (Default) v3.1.0 (pour le serveur asynchrone)
+    - Apply et attendre (surveiller en bas à droite la progression)
+  - sélectionner Other/ESPAsyncHTTPUpdateServer (Default) v1.1.0 (pour le upload avec le serveur asynchrone)
+    - Apply et attendre (surveiller en bas à droite la progression)
   - sélectionner Other/EspSaveCrash (Default) v1.3.0 (uniquement <b>ESP8266</b>)
     - Apply et attendre (surveiller en bas à droite la progression)
   - sélectionner Device Control/Esp32TimerInterrupt v2.3.0
     - Apply et attendre (surveiller en bas à droite la progression)  
   - Apply and close et attendre (surveiller en bas à droite la progression)
 
+<b>REMARQUES :</b><br>
+  - Si on met à jour une plateforme ou une librairie, le plus simple pour actualiser un projet est d'éditer le fichier ".project" et de mettre à jour le numéro de version. Ensuite dans les propriétés du projet, onglet Sloeber, mettre à jour "Platform folder".
+  - Souvent Sloeber rajoute automatiquement la librairie FreeRTOS au projet. Il faut la supprimer (menu Sloeber/"Add a library to the selected project").<br>
+
 ---
 ### Pour ajouter des directives au projet
 Project/Properties/Sloeber onglet "Compile Options" :
 - Rajouter les directives dans "append to C and C++" sous la forme : -Ddirective.
 Exemple : -DOLED_SSD1327
+- Voir en fin de page la liste des directives pour les librairies perso.
 
 ---
 ### Pour les librairies perso

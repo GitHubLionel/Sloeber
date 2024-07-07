@@ -1,0 +1,15 @@
+eclipse.preferences.version=1
+environment/project/io.sloeber.core.sketch.0/append=true
+environment/project/io.sloeber.core.sketch.0/appendContributed=true
+environment/project/io.sloeber.core.sketch.0/build.fqbn/delimiter=;
+environment/project/io.sloeber.core.sketch.0/build.fqbn/operation=append
+environment/project/io.sloeber.core.sketch.0/build.fqbn/value=\\"ESP32\:esp32\:esp32\\"
+environment/project/io.sloeber.core.sketch.0/build.variant/delimiter=;
+environment/project/io.sloeber.core.sketch.0/build.variant/operation=replace
+environment/project/io.sloeber.core.sketch.0/build.variant/value=\\"uPesy_esp32_wroom_devkit\\"
+environment/project/io.sloeber.core.sketch.0/runtime.os/delimiter=;
+environment/project/io.sloeber.core.sketch.0/runtime.os/operation=append
+environment/project/io.sloeber.core.sketch.0/runtime.os/value=\\"FreeRTOS\\"
+environment/project/io.sloeber.core.sketch.0/version/delimiter=;
+environment/project/io.sloeber.core.sketch.0/version/operation=replace
+environment/project/io.sloeber.core.sketch.0/version/value=

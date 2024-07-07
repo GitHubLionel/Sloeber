@@ -22,12 +22,12 @@ typedef enum
 extern const char *Btn_Texte[BTN_MAX];
 
 // Initialisation du clavier à faire APRES l'initialisation ADC
-void Clavier_Init(uint8_t channel, uint8_t nbButton, ADC_Sampling sampling = ADC_10bits);
-void Clavier_Init(uint8_t channel, uint8_t nbButton, uint16_t interval[]);
+void Keyboard_Init(uint8_t channel, uint8_t nbButton, ADC_Sampling sampling = ADC_10bits);
+void Keyboard_Init(uint8_t channel, uint8_t nbButton, const uint16_t interval[]);
 // La mise à jour en fond de tache à mettre dans l'évènement HAL_SYSTICK_Callback()
-void Clavier_UpdateTime();
+void Keyboard_UpdateTime();
 // La fonction de test pour voir si on appuyé sur le clavier
-bool Check_Clavier(Btn_Action *Btn);
+bool Check_Keyboard(Btn_Action *Btn);
 
 // fonctions annexes
 Btn_Action Btn_Click();

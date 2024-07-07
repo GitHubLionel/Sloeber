@@ -176,6 +176,7 @@ void DeleteSSID(void)
 	{
 		SSIDToEEPROM("", "");
 	}
+	print_debug(F("SSID reset"));
 }
 
 String macToString(const unsigned char *mac)
@@ -261,7 +262,26 @@ bool ServerConnexion::Connexion(bool toUART)
 		}
 		print_debug(F(""));
 		if (WiFi.status() != WL_CONNECTED)
+		{
+			switch (WiFi.status())
+			{
+				case WL_NO_SSID_AVAIL:
+					print_debug("SSID is not available");
+					break;
+				case WL_CONNECT_FAILED:
+					print_debug("The connection fails for all the attempts");
+					break;
+				case WL_CONNECTION_LOST:
+					print_debug("The connection is lost");
+					break;
+				case WL_DISCONNECTED:
+					print_debug("Disconnected from the network");
+					break;
+				default:
+					break;
+			}
 			return false;
+		}
 		_IPaddress = "IP=" + WiFi.localIP().toString();
 	}
 

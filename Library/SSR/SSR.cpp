@@ -195,7 +195,8 @@ void IRAM_ATTR onTimerSSR(void)
 // Toutes les secondes, on allume la led pendant 100 ms
 void IRAM_ATTR onCirrusZC(void)
 {
-	Count_CS_ZC++;
+	Count_CS_ZC = Count_CS_ZC + 1; // ++ deprecated
+	// Comptage des ZC pour calculer le top 200 ms (donc 20 ZC)
 	if (!Top_200ms)
 		Top_200ms = (Count_CS_ZC % 20 == 0);
 
@@ -216,6 +217,7 @@ void IRAM_ATTR onCirrusZC(void)
 {
 	ZCMUX_ENTER();
 	Count_CS_ZC = Count_CS_ZC + 1; // ++ deprecated
+	// Comptage des ZC pour calculer le top 200 ms (donc 20 ZC)
 	if (!Top_200ms)
 		Top_200ms = (Count_CS_ZC % 20 == 0);
 
@@ -258,6 +260,10 @@ uint32_t ZC_Get_Count(void)
 	return Count_CS_ZC;
 }
 
+/**
+ * Cette fonction retourne true si 200 ms se sont écoulé depuis sa dernière interrogation
+ * Les 200 ms sont calculés par le comptage des tops zéro cross du cirrus, callback onCirrusZC()
+ */
 bool ZC_Top200ms(void)
 {
 	bool top = Top_200ms;

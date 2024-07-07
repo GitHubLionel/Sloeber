@@ -208,7 +208,7 @@ void loop()
 	{
 		IHM_Print0(RTC_Local.the_time);
 		// Test extinction de l'écran
-		IHM_TurnOff();
+		IHM_CheckTurnOff();
 	}
 
 	// Listen for HTTP requests from clients

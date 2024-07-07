@@ -15,6 +15,8 @@
 
 volatile uint8_t Display_offset_line = 0;
 uint32_t Oled_timeout = 600; // 10 minutes
+int Oled_timeout_count = 600; // 10 minutes
+bool TurnOff = false;
 
 /* Private function prototypes -----------------------------------------------*/
 
@@ -145,9 +147,10 @@ void IHM_Display(void)
 }
 
 /**
- * Clear the device
+ * Clear the memory device but not the display.
+ * Call IHM_Display() to refresh the display or set refresh to true (default false).
  */
-void IHM_Clear(void)
+void IHM_Clear(bool refresh)
 {
   // Efface la mémoire de l'écran mais ne rafraichit pas le oled
 #ifdef USE_LCD
@@ -162,43 +165,83 @@ void IHM_Clear(void)
 #ifdef OLED_SH1107
   SH1107_Fill(0x0, 0);
 #endif
+  if (refresh)
+  	IHM_Display();
 }
 
 /**
- * Display managment on/off
+ * Display managment on/off : set the timeout
  */
 void IHM_TimeOut_Display(uint32_t time)
 {
 	Oled_timeout = time;
+	Oled_timeout_count = time;
+	TurnOff = false;
 }
 
+/**
+ * toggle On/Off the display
+ */
 void IHM_ToggleDisplay(void)
 {
 #ifdef OLED_SSD1306
-		SSD1306_ToggleOnOff();
+	SSD1306_ToggleOnOff();
 #endif
 #ifdef OLED_SSD1327
-		SSD1327_ToggleOnOff();
+	SSD1327_ToggleOnOff();
 #endif
 #ifdef OLED_SH1107
-		SH1107_ToggleOnOff();
+	SH1107_ToggleOnOff();
 #endif
+	// Re-init timeout
+	IHM_TimeOut_Display(Oled_timeout);
 }
 
-void IHM_TurnOff(void)
+/**
+ * Check if timeout is raised to turn off the display
+ */
+void IHM_CheckTurnOff(void)
+{
+	if (!TurnOff)
+	{
+		TurnOff = (Oled_timeout_count-- == 0);
+		if (TurnOff)
+			IHM_DisplayOff();
+	}
+}
+
+/**
+ * Turn On the display and re-init the timeout
+ */
+void IHM_DisplayOn(void)
 {
 #ifdef OLED_SSD1306
-	if (Oled_timeout-- == 0)
-    SSD1306_OFF();
+	SSD1306_ON();
 #endif
 #ifdef OLED_SSD1327
-	if (Oled_timeout-- == 0)
-		SSD1327_OFF();
+	SSD1327_ON();
 #endif
 #ifdef OLED_SH1107
-	if (Oled_timeout-- == 0)
-		SH1107_OFF();
+	SH1107_ON();
 #endif
+	IHM_TimeOut_Display(Oled_timeout);
+}
+
+/**
+ * Turn off the display
+ */
+void IHM_DisplayOff(void)
+{
+#ifdef OLED_SSD1306
+	SSD1306_OFF();
+#endif
+#ifdef OLED_SSD1327
+	SSD1327_OFF();
+#endif
+#ifdef OLED_SH1107
+	SH1107_OFF();
+#endif
+	TurnOff = true;
 }
 
 /**

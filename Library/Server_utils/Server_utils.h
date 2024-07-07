@@ -55,6 +55,7 @@
 		#endif
 	#else
 	#include <HTTPUpdateServer.h>
+	#define UPDATER_DEBUG false
 	#endif
 #endif
 #endif // ESP32
