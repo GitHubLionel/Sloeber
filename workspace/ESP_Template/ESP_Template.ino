@@ -174,6 +174,7 @@ void setup()
 	// **** 3- Initialisation du display
 	if (IHM_Initialization(I2C_ADDRESS, true))
 		print_debug(F("Display Ok"));
+	IHM_TimeOut_Display(OLED_TIMEOUT);
 
 	// **** FIN- Attente connexion réseau
 	IHM_Print0("Connexion .....");
@@ -212,7 +213,9 @@ void loop()
 	}
 
 	// Listen for HTTP requests from clients
+#ifndef USE_ASYNC_WEBSERVER
 	server.handleClient();
+#endif
 
 	// Temporisation à adapter
 	delay(100);
@@ -234,12 +237,12 @@ void OnAfterConnexion(void)
 			Ev_ListFile | Ev_ResetESP | Ev_SetTime | Ev_GetTime | Ev_SetDHCPIP | Ev_ResetDHCPIP);
 
 	// Server specific events (voir le javascript)
-	server.on("/getUARTData", HTTP_GET, []()
+	server.on("/getUARTData", HTTP_GET, [](CB_SERVER_PARAM)
 	{
 		server.send(200, "text/plain", UART_Message);
 	});
 
-	server.on("/getLastData", HTTP_GET, []()
+	server.on("/getLastData", HTTP_GET, [](CB_SERVER_PARAM)
 	{
 		server.send(200, "text/plain", (String(RTC_Local.the_time) + '#' + UART_Message));
 	});
@@ -252,7 +255,7 @@ void OnAfterConnexion(void)
 
 	// Affichage ip adresse
 	IHM_IPAddress(myServer.IPaddress().c_str());
-	}
+}
 
 // ********************************************************************************
 // Web/UART functions
@@ -274,13 +277,12 @@ void handleOperation(void)
 	if (server.args() == 0)
 		return server.send(500, "text/plain", "BAD ARGS");
 
-	print_debug("Operation: " + server.argName(0) + "=" +  server.arg(0));
+	print_debug("Operation: " + server.arg((int) 0) + "=" +  server.arg((int) 0));
 
 #if defined(OLED_DEFINED)
 	if (server.hasArg("Toggle_Oled"))
 	{
 		IHM_ToggleDisplay();
-		IHM_TimeOut_Display(OLED_TIMEOUT);
 	}
 #endif
 
