@@ -132,6 +132,11 @@ void print_debug(const char *mess, bool ln)
 	print_debug(String(mess), ln);
 }
 
+void print_debug(char val, bool ln)
+{
+	print_debug((String) val, ln);
+}
+
 void print_debug(int val, bool ln)
 {
 	print_debug((String) val, ln);

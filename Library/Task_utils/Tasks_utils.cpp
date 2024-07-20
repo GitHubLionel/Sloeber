@@ -11,9 +11,6 @@ TaskList_c TaskList = TaskList_c(RUN_TASK_MEMORY);
 #define NO_MEMORY_TASK
 #endif
 
-uint32_t count_Idle0 = 0;
-uint32_t count_Idle1 = 0;
-
 // Function for debug message, may be redefined elsewhere
 void __attribute__((weak)) print_debug(const String mess, bool ln = true)
 {
@@ -21,9 +18,6 @@ void __attribute__((weak)) print_debug(const String mess, bool ln = true)
 	(void) mess;
 	(void) ln;
 }
-
-// Function to print the free memory stack
-//void Task_Memory(void *parameter);
 
 // Function to test cpu load
 // see https://esp32.com/viewtopic.php?t=3536
@@ -37,28 +31,29 @@ void Task_Memory_code_local(void *parameter)
 	TaskList.Task_Memory_code(parameter);
 }
 
-const TaskData_t TaskZero = {false, "zero", 1024, 0, 1000, 5000, CoreAny, NULL};
-const TaskData_t TaskIdle0 = {true, "Idle0", 1024, tskIDLE_PRIORITY, 10, 5000, Core0,
-		Task_Idle0_code};
-const TaskData_t TaskIdle1 = {true, "Idle1", 1024, tskIDLE_PRIORITY, 10, 5000, Core1,
-		Task_Idle1_code};
-const TaskData_t TaskIdleSecond = {true, "IdleSecond", 4096, 10, 1000, 5000, CoreAny,
-		Task_IdleSecond_code};
+const TaskData_t TaskZero = {false, "zero", 1024, 0, 1000, CoreAny, NULL};
+const TaskData_t TaskIdle0 = {true, "Idle0", 1024, tskIDLE_PRIORITY, 10, Core0, Task_Idle0_code};
+const TaskData_t TaskIdle1 = {true, "Idle1", 1024, tskIDLE_PRIORITY, 10, Core1, Task_Idle1_code};
+const TaskData_t TaskIdleSecond = {true, "IdleSecond", 4096, 10, 1000, CoreAny, Task_IdleSecond_code};
 
+static portMUX_TYPE Idlelock = portMUX_INITIALIZER_UNLOCKED;
+static uint32_t count_Idle0 = 0;
+static uint32_t count_Idle1 = 0;
 static String Idle_str = "";
 static String Memory_str = "";
 
 /**
  * TaskList_c constructor
- * with_memory: add memory task (default false) if RUN_TASK_MEMORY == true
+ * with_memory: add memory task (default false)
+ * Global instance TaskList of TaskList_c use RUN_TASK_MEMORY as parameter
  */
 TaskList_c::TaskList_c(bool with_memory)
 {
 	if (with_memory)
 	{
 #if (RUN_TASK_MEMORY == true) && !defined(NO_MEMORY_TASK)
-		TaskMemory = {true, "Memory", 4096, 2, 10000, 5000, CoreAny, Task_Memory_code_local};
-		Add_Task(TaskMemory);
+		TaskMemory = {true, "Memory", TASK_MEMORY_STACK, 2, 10000, CoreAny, Task_Memory_code_local};
+		AddTask(TaskMemory);
 #endif
 	}
 	task_created = false;
@@ -66,6 +61,8 @@ TaskList_c::TaskList_c(bool with_memory)
 
 /**
  * Create all the tasks.
+ * If param with_idle_task == true (default false) then we also create tasks to measure idle percent of each core.
+ * Call TaskList.GetIdleStr() to print the percent of each core.
  * Typically, this method should be call at the end of setup and only once
  * Return true if all tasks are created
  */
@@ -145,22 +142,21 @@ bool TaskList_c::Create(bool with_idle_task)
  * in the code of the function.
  * Example:
  *
-void Task_Function(void *parameter)
-{
-	TaskData_t *td = TaskList.GetTaskByName("Task_Name");
-	int sleep = pdMS_TO_TICKS(td->Sleep_ms);
-	for (EVER)
-	{
-    ... code
-    if (condition)
-    {
-      vTaskDelete(td->Handle);
-		  td->Handle = NULL;
-		}
-    else
-		  vTaskDelay(sleep);
-	}
-}
+ void Task_Function(void *parameter)
+ {
+	 BEGIN_TASK_CODE("Task_Name");
+	 for (EVER)
+	 {
+		 ... code
+		 if (condition)
+		 {
+			 vTaskDelete(td->Handle);
+			 td->Handle = NULL;
+		 }
+		 else
+		 	 END_TASK_CODE();
+	 }
+ }
  */
 void TaskList_c::AddTask(const TaskData_t task)
 {
@@ -170,12 +166,14 @@ void TaskList_c::AddTask(const TaskData_t task)
 /**
  * Delete a task
  * The task is only deleded to the process but stay in the task list
+ * It is probably better to use UserParam to send a message to the task to self delete
  */
 void TaskList_c::DeleteTask(const String &name)
 {
 	TaskData_t *td = GetTaskByName(name);
 	if ((td != NULL) && (td->Handle != NULL))
 	{
+		vTaskSuspend(td->Handle);
 		vTaskDelete(td->Handle);
 		td->Handle = NULL;
 	}
@@ -195,6 +193,7 @@ bool TaskList_c::CreateTask(const String &name, bool force, void *param)
 		// If task exist and force = true, then delete the task
 		if ((td->Handle != NULL) && force)
 		{
+			vTaskSuspend(td->Handle);
 			vTaskDelete(td->Handle);
 			td->Handle = NULL;
 		}
@@ -230,6 +229,30 @@ bool TaskList_c::CreateTask(const String &name, bool force, void *param)
 		}
 	}
 	return (xReturned == pdPASS);
+}
+
+/**
+ * Suspend a task
+ */
+void TaskList_c::SuspendTask(const String &name)
+{
+	TaskData_t *td = GetTaskByName(name);
+	if (td != NULL)
+	{
+		vTaskSuspend(td->Handle);
+	}
+}
+
+/**
+ * Resume a task
+ */
+void TaskList_c::ResumeTask(const String &name)
+{
+	TaskData_t *td = GetTaskByName(name);
+	if (td != NULL)
+	{
+		vTaskResume(td->Handle);
+	}
 }
 
 /**
@@ -282,6 +305,20 @@ int TaskList_c::GetTaskSleep(const String &name, bool to_ticks)
 	return -1;    // Not found
 }
 
+/**
+ * Get the handle of a task
+ */
+TaskHandle_t TaskList_c::GetTaskHandle(const String &name)
+{
+	TaskData_t *td = GetTaskByName(name);
+	if (td != NULL)
+	{
+		return td->Handle;
+	}
+	else
+		return NULL;
+}
+
 // ********************************************************************************
 // The purpose of this section is to evaluate the memory used by each task
 // ********************************************************************************
@@ -297,7 +334,7 @@ void TaskList_c::Task_Memory_code(void *parameter)
 		for (int i = 0; i < Tasks.size(); i++)
 		{
 			if (Tasks[i].Handle != NULL)
-			  Memory_str += String(Tasks[i].Name) + ": " + String(Tasks[i].Memory) + "\r\n";
+				Memory_str += String(Tasks[i].Name) + ": " + String(Tasks[i].Memory) + "\r\n";
 		}
 
 		print_debug(Memory_str, false);
@@ -351,9 +388,11 @@ void Task_Idle1_code(void *parameter)
  */
 String Get_Idle_Counter(void)
 {
+	taskENTER_CRITICAL(&Idlelock);
 	String count = String(count_Idle0) + " " + String(count_Idle1);
 	count_Idle0 = 0;
 	count_Idle1 = 0;
+	taskEXIT_CRITICAL(&Idlelock);
 	return count;
 }
 

@@ -27,6 +27,7 @@ void SERIAL_Initialization(int baud = UART_BAUD);
 // Pour le debug dans le log
 void print_debug(String mess, bool ln = true);
 void print_debug(const char *mess, bool ln = true);
+void print_debug(char val, bool ln = true);
 void print_debug(int val, bool ln = true);
 void print_debug(float val, bool ln = true);
 void print_millis(void);
