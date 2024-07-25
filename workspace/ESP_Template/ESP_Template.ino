@@ -274,8 +274,7 @@ bool UserAnalyseMessage(void)
 void handleOperation(void)
 {
 	// Default
-	if (server.args() == 0)
-		return server.send(500, "text/plain", "BAD ARGS");
+	RETURN_BAD_ARGUMENT();
 
 	print_debug("Operation: " + server.arg((int) 0) + "=" +  server.arg((int) 0));
 

@@ -282,8 +282,7 @@ bool UserAnalyseMessage(void)
 void handleOperation(CB_SERVER_PARAM)
 {
 	// Default
-	if (pserver->args() == 0)
-		return pserver->send(500, "text/plain", "BAD ARGS");
+	RETURN_BAD_ARGUMENT();
 
 	print_debug("Operation: " + pserver->arg((int) 0) + "=" +  pserver->arg((int) 0));
 

@@ -151,6 +151,15 @@ typedef enum
 typedef void (*onConnexionEvent)();
 typedef void (*onTimeOut)();
 
+// Typical bad argument response
+#ifdef USE_ASYNC_WEBSERVER
+#define	RETURN_BAD_ARGUMENT()	if (pserver->args() == 0) \
+		return pserver->send(500, "text/plain", "BAD ARGS");
+#else
+#define	RETURN_BAD_ARGUMENT()	if (server.args() == 0) \
+		return server.send(500, "text/plain", "BAD ARGS");
+#endif
+
 class ServerSettings
 {
 	public:

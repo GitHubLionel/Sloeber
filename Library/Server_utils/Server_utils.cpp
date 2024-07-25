@@ -200,6 +200,98 @@ void onWifiDisconnected(const WiFiEventStationModeDisconnected &evt)
 }
 #endif
 
+#ifdef ESP32
+void WiFiEvent(WiFiEvent_t event)
+{
+//	Serial.printf("[WiFi-event] event: %d\n", event);
+
+	switch (event)
+	{
+		case ARDUINO_EVENT_WIFI_READY:
+			print_debug("WiFi interface ready");
+			break;
+		case ARDUINO_EVENT_WIFI_SCAN_DONE:
+			print_debug("Completed scan for access points");
+			break;
+		case ARDUINO_EVENT_WIFI_STA_START:
+			print_debug("WiFi client started");
+			break;
+		case ARDUINO_EVENT_WIFI_STA_CONNECTED:
+			print_debug("WiFi clients stopped");
+			break;
+		case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
+			print_debug("Disconnected from WiFi access point");
+			break;
+		case ARDUINO_EVENT_WIFI_STA_AUTHMODE_CHANGE:
+			print_debug("Authentication mode of access point has changed");
+			break;
+		case ARDUINO_EVENT_WIFI_STA_GOT_IP:
+			print_debug("Obtained IP address: ", false);
+			print_debug(WiFi.localIP().toString());
+			break;
+		case ARDUINO_EVENT_WIFI_STA_LOST_IP:
+			print_debug("Lost IP address and IP address is reset to 0");
+			break;
+		case ARDUINO_EVENT_WPS_ER_SUCCESS:
+			print_debug("WiFi Protected Setup (WPS): succeeded in enrollee mode");
+			break;
+		case ARDUINO_EVENT_WPS_ER_FAILED:
+			print_debug("WiFi Protected Setup (WPS): failed in enrollee mode");
+			break;
+		case ARDUINO_EVENT_WPS_ER_TIMEOUT:
+			print_debug("WiFi Protected Setup (WPS): timeout in enrollee mode");
+			break;
+		case ARDUINO_EVENT_WPS_ER_PIN:
+			print_debug("WiFi Protected Setup (WPS): pin code in enrollee mode");
+			break;
+		case ARDUINO_EVENT_WIFI_AP_START:
+			print_debug("WiFi access point started");
+			break;
+		case ARDUINO_EVENT_WIFI_AP_STOP:
+			print_debug("WiFi access point  stopped");
+			break;
+		case ARDUINO_EVENT_WIFI_AP_STACONNECTED:
+			print_debug("Client connected");
+			break;
+		case ARDUINO_EVENT_WIFI_AP_STADISCONNECTED:
+			print_debug("Client disconnected");
+			break;
+		case ARDUINO_EVENT_WIFI_AP_STAIPASSIGNED:
+			print_debug("Assigned IP address to client");
+			break;
+		case ARDUINO_EVENT_WIFI_AP_PROBEREQRECVED:
+			print_debug("Received probe request");
+			break;
+		case ARDUINO_EVENT_WIFI_AP_GOT_IP6:
+			print_debug("AP IPv6 is preferred");
+			break;
+		case ARDUINO_EVENT_WIFI_STA_GOT_IP6:
+			print_debug("STA IPv6 is preferred");
+			break;
+		case ARDUINO_EVENT_ETH_GOT_IP6:
+			print_debug("Ethernet IPv6 is preferred");
+			break;
+		case ARDUINO_EVENT_ETH_START:
+			print_debug("Ethernet started");
+			break;
+		case ARDUINO_EVENT_ETH_STOP:
+			print_debug("Ethernet stopped");
+			break;
+		case ARDUINO_EVENT_ETH_CONNECTED:
+			print_debug("Ethernet connected");
+			break;
+		case ARDUINO_EVENT_ETH_DISCONNECTED:
+			print_debug("Ethernet disconnected");
+			break;
+		case ARDUINO_EVENT_ETH_GOT_IP:
+			print_debug("Obtained IP address");
+			break;
+		default:
+			break;
+	}
+}
+#endif
+
 ServerConnexion::~ServerConnexion()
 {
 	if (credential)
@@ -252,6 +344,7 @@ bool ServerConnexion::Connexion(bool toUART)
 #else
 		if ((!_ip.toString().equals("0.0.0.0")) && (!_gateway.toString().equals("0.0.0.0")))
 			WiFi.config(_ip, _gateway, subnet);
+		WiFi.onEvent(WiFiEvent);
 #endif
 		WiFi.begin(_SSID, _PWD);
 		delay(100);  // small delay
@@ -863,8 +956,7 @@ bool handleReadFile(CB_SERVER_PARAM)
 void handleDeleteFile(CB_SERVER_PARAM)
 {
 	// No file to delete
-	if (pserver->args() == 0)
-		return pserver->send(500, "text/plain", "BAD ARGS");
+	RETURN_BAD_ARGUMENT();
 
 	// The name of the file to delete is the first argument
 	String path = pserver->arg((int) 0);
@@ -905,8 +997,7 @@ void handleDeleteFile(CB_SERVER_PARAM)
 void handleGetFile(CB_SERVER_PARAM)
 {
 	// No file to get
-	if (pserver->args() == 0)
-		return pserver->send(500, "text/plain", "BAD ARGS");
+	RETURN_BAD_ARGUMENT();
 
 	// The name of the file to get is the first argument
 	String path = pserver->arg((int) 0);
@@ -1177,8 +1268,7 @@ void handleListFile(CB_SERVER_PARAM)
  */
 void handleCreateFile(CB_SERVER_PARAM)
 {
-	if (pserver->args() == 0)
-		return pserver->send(500, "text/plain", "BAD ARGS");
+	RETURN_BAD_ARGUMENT();
 
 	String path = pserver->arg((int) 0);
 	print_debug("handleCreateFile: " + path);
@@ -1222,8 +1312,7 @@ void handleGetTime(CB_SERVER_PARAM)
  */
 void handleSetTime(CB_SERVER_PARAM)
 {
-	if (pserver->args() == 0)
-		return pserver->send(500, "text/plain", "BAD ARGS");
+	RETURN_BAD_ARGUMENT();
 
 	if (pserver->hasArg("TIME"))
 	{
@@ -1268,8 +1357,7 @@ void handleReset(CB_SERVER_PARAM)
  */
 void handleSetDHCPIP(CB_SERVER_PARAM)
 {
-	if (pserver->args() == 0)
-		return pserver->send(500, "text/plain", "BAD ARGS");
+	RETURN_BAD_ARGUMENT();
 
 	if (SSID_FileName != "")
 	{
