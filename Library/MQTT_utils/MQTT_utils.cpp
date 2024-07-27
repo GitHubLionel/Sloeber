@@ -16,7 +16,8 @@ MQTTClient::MQTTClient()
 {
 	MQTT_client = new PubSubClient(wifiClient);
 
-	using namespace std::placeholders; //for _1, _2, _3
+	// for the tree parameters topic, payload and length
+	using namespace std::placeholders;
 	auto callback = std::bind(&MQTTClient::mqttCallback, this, _1, _2, _3);
 
 	MQTT_client->setCallback(callback);
@@ -26,7 +27,8 @@ MQTTClient::MQTTClient()
 	xSemaphoreGive(sema_MQTT_KeepAlive);
 }
 
-MQTTClient::MQTTClient(const MQTT_Credential_t mqtt):MQTTClient()
+MQTTClient::MQTTClient(const MQTT_Credential_t mqtt) :
+		MQTTClient()
 {
 	SetCredential(mqtt);
 }
@@ -46,7 +48,7 @@ void MQTTClient::mqttCallback(char *topic, uint8_t *payload, unsigned int length
 	// print_debug
 	print_debug("Message arrived in topic: ", false);
 	print_debug(topic);
-	print_debug("Message:", false);
+	print_debug("Message: ", false);
 	print_debug(String(Message.payload));
 	print_debug("-----------------------");
 }
@@ -96,7 +98,7 @@ bool MQTTClient::Connexion(int trycount)
 		if (MQTT_client->connect(client_id.c_str(), Credential.username.c_str(),
 				Credential.password.c_str()))
 		{
-			print_debug("Public MQTT broker connected to Mosquitto");
+			print_debug("Public MQTT broker connected");
 			return true;
 		}
 		else
@@ -113,7 +115,7 @@ bool MQTTClient::Connexion(int trycount)
 /**
  * Publish text in the topic
  */
-void MQTTClient::Publish(const String topic, const String text, bool subscribe)
+void MQTTClient::Publish(const String &topic, const String &text, bool subscribe)
 {
 	// Publish and subscribe
 	if (MQTT_client->connected())
@@ -123,13 +125,28 @@ void MQTTClient::Publish(const String topic, const String text, bool subscribe)
 		if (subscribe)
 			MQTT_client->subscribe(topic.c_str());
 		xSemaphoreGive(sema_MQTT_KeepAlive);
+		LastTopic = topic;
+	}
+}
+
+/**
+ * Publish text in the last topic used
+ */
+void MQTTClient::Publish(const String &text)
+{
+	// Publish
+	if (MQTT_client->connected())
+	{
+		xSemaphoreTake(sema_MQTT_KeepAlive, portMAX_DELAY);
+		MQTT_client->publish(LastTopic.c_str(), text.c_str());
+		xSemaphoreGive(sema_MQTT_KeepAlive);
 	}
 }
 
 /**
  * Subscribe to topic if subscribe == true else unsubscribe
  */
-void MQTTClient::Subscribe(const String topic, bool subscribe)
+void MQTTClient::Subscribe(const String &topic, bool subscribe)
 {
 	if (MQTT_client->connected())
 	{

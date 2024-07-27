@@ -294,15 +294,16 @@ TaskData_t* TaskList_c::GetTaskByName(const String &name)
  */
 int TaskList_c::GetTaskSleep(const String &name, bool to_ticks)
 {
-	for (int i = 0; i < Tasks.size(); i++)
-		if (strcmp(Tasks[i].Name, name.c_str()) == 0)
-		{
-			if (to_ticks)
-				return pdMS_TO_TICKS(Tasks[i].Sleep_ms);
-			else
-				return Tasks[i].Sleep_ms;
-		}
-	return -1;    // Not found
+	TaskData_t *td = GetTaskByName(name);
+	if (td != NULL)
+	{
+		if (to_ticks)
+			return pdMS_TO_TICKS(td->Sleep_ms);
+		else
+			return td->Sleep_ms;
+	}
+	else
+		return -1;    // Not found
 }
 
 /**
@@ -324,10 +325,11 @@ TaskHandle_t TaskList_c::GetTaskHandle(const String &name)
 // ********************************************************************************
 
 /**
- * Print memory used by task. For debug purpose.
+ * Print memory used by tasks. For debug purpose.
  */
 void TaskList_c::Task_Memory_code(void *parameter)
 {
+	int sleep = pdMS_TO_TICKS(TaskMemory.Sleep_ms);
 	for (EVER)
 	{
 		Memory_str = "";
@@ -338,10 +340,10 @@ void TaskList_c::Task_Memory_code(void *parameter)
 		}
 
 		print_debug(Memory_str, false);
-		GetTaskByName("Memory")->Memory = uxTaskGetStackHighWaterMark(NULL);
+		TaskMemory.Memory = uxTaskGetStackHighWaterMark(NULL);
 
 		// Sleep for 10 seconds, avant de refaire une analyse
-		vTaskDelay(pdMS_TO_TICKS(TaskMemory.Sleep_ms));
+		vTaskDelay(sleep);
 	}
 }
 
@@ -364,10 +366,11 @@ String TaskList_c::GetIdleStr(void) const
  */
 void Task_Idle0_code(void *parameter)
 {
+	int sleep = pdMS_TO_TICKS(TaskIdle0.Sleep_ms);
 	for (EVER)
 	{
 		count_Idle0++;
-		vTaskDelay(pdMS_TO_TICKS(TaskIdle0.Sleep_ms));
+		vTaskDelay(sleep);
 	}
 }
 
@@ -376,10 +379,11 @@ void Task_Idle0_code(void *parameter)
  */
 void Task_Idle1_code(void *parameter)
 {
+	int sleep = pdMS_TO_TICKS(TaskIdle1.Sleep_ms);
 	for (EVER)
 	{
 		count_Idle1++;
-		vTaskDelay(pdMS_TO_TICKS(TaskIdle1.Sleep_ms));
+		vTaskDelay(sleep);
 	}
 }
 
@@ -403,6 +407,7 @@ String Get_Idle_Counter(void)
  */
 void Task_IdleSecond_code(void *parameter)
 {
+	int sleep = pdMS_TO_TICKS(TaskIdleSecond.Sleep_ms);
 	TickType_t xLastWakeTime;
 //	BaseType_t xWasDelayed;
 
@@ -411,7 +416,7 @@ void Task_IdleSecond_code(void *parameter)
 	for (EVER)
 	{
 		// Wait for the next cycle.
-		/*xWasDelayed = */xTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(TaskIdleSecond.Sleep_ms));
+		/*xWasDelayed = */xTaskDelayUntil(&xLastWakeTime, sleep);
 
 		// Perform action here. xWasDelayed value can be used to determine
 		// whether a deadline was missed if the code here took too long.

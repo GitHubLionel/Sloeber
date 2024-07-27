@@ -4,9 +4,11 @@
  *
  * USAGE :
  * Just create an MQTTClient instance in your main program
- * You must have somewhere a Wifi_Connexion() function that provide a wifi connexion
+ * You must have somewhere a Wifi_Connexion() function that provide a wifi connexion for keep alive task
+ *
+ * If you use task for keep alive, use the define WRAPPER_STATIC_TASK(your_MQTT) to have the
+ * static code of the task
  */
-
 #pragma once
 
 #include "Arduino.h"
@@ -53,10 +55,7 @@ extern void Wifi_Connexion(void);
  * called : StaticKeepalive_Task()
  */
 #define WRAPPER_STATIC_TASK(mqttclient) \
-void StaticKeepalive_Task(void *parameter) \
-{ \
-	mqttclient.Keepalive_Task(parameter); \
-}
+	void StaticKeepalive_Task(void *parameter) { (mqttclient).Keepalive_Task(parameter); }
 
 /**
  * A name for the keep alive task
@@ -83,13 +82,24 @@ class MQTTClient
 
 		void SetCredential(const MQTT_Credential_t mqtt);
 
-		void Publish(const String topic, const String text, bool subscribe = false);
-		void Subscribe(const String topic, bool subscribe);
+		void Publish(const String &topic, const String &text, bool subscribe = false);
+		void Publish(const String &text);
+		void Subscribe(const String &topic, bool subscribe);
 		bool Loop(void);
 
 		bool Connected()
 		{
 			return wifiClient.connected();
+		}
+
+		String GetLastTopic(void) const
+		{
+			return LastTopic;
+		}
+
+		void SetLastTopic(const String &topic)
+		{
+			LastTopic = topic;
 		}
 
 		MQTT_Message_cb_t GetMessage()
@@ -104,7 +114,7 @@ class MQTTClient
 		}
 
 	protected:
-		void mqttCallback(char *topic, uint8_t *payload, unsigned int length);
+		void IRAM_ATTR mqttCallback(char *topic, uint8_t *payload, unsigned int length);
 
 	private:
 		WiFiClient wifiClient;
@@ -116,6 +126,7 @@ class MQTTClient
 		MQTT_Message_cb_t Message;
 
 		bool MQTT_Connected = false;
+		String LastTopic = "";
 
 		bool Connexion(int trycount = 10);
 };

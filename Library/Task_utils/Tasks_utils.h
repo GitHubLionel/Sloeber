@@ -67,8 +67,8 @@
 // For infinite loop : for (EVER)
 #define EVER ;;
 
-// Two defines to simplify task code. This define create a pointer to the struct TaskData_t
-// of the task that can used in the code.
+// Some defines to simplify task code.
+// This define create a pointer to the struct TaskData_t of the task that can used in the code.
 #define BEGIN_TASK_CODE(name)	TaskData_t *td = TaskList.GetTaskByName(name); \
 		int sleep = pdMS_TO_TICKS(td->Sleep_ms);
 
@@ -77,6 +77,18 @@
 		vTaskDelay(sleep); }
 #else
 #define END_TASK_CODE()	vTaskDelay(sleep);
+#endif
+
+// The same couple of define to use with DelayUntil
+#define BEGIN_TASK_CODE_UNTIL(name)	TaskData_t *td = TaskList.GetTaskByName(name); \
+		int sleep = pdMS_TO_TICKS(td->Sleep_ms); \
+		TickType_t xLastWakeTime;
+
+#if RUN_TASK_MEMORY == true
+#define END_TASK_CODE_UNTIL()	{ td->Memory = uxTaskGetStackHighWaterMark(NULL); \
+		xTaskDelayUntil(&xLastWakeTime, sleep); }
+#else
+#define END_TASK_CODE_UNTIL()	xTaskDelayUntil(&xLastWakeTime, sleep);
 #endif
 
 // Core used by a task
