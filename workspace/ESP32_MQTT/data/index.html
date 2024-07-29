@@ -34,7 +34,7 @@
       <span id="MQTT_Etat"></span>
       <br>
       
-      <label for="topicMQTT">Publier MQTT : Topic = </label>
+      <label for="topicMQTT"><b>Publier MQTT :</b> Topic = </label>
       <input type="text" name="TOPIC" id="topicMQTT" value="ESP32_MQTT">
       <label for="messageMQTT">Message = </label>
       <input type="text" name="MESSAGE" id="messageMQTT" value="Hello world">
@@ -44,10 +44,15 @@
       <br>
       
       <label for="subscribeMQTT">Souscrire MQTT : </label>
-      <input type="text" name="TOPIC" id="subscribeMQTT" value="DS18B20">
+      <input type="text" name="TOPIC_sub" id="subscribeMQTT" value="DS18B20">
       <button class="myButton" id="bSubscribeMQTT" onclick="MQTT_Request('Subscribe')">Souscrire</button>
       <br>
       
+      <label for="unsubscribeMQTT">Dé-Souscrire MQTT : </label>
+      <input type="text" name="TOPIC_unsub" id="unsubscribeMQTT" value="DS18B20">
+      <button class="myButton" id="bUnSubscribeMQTT" onclick="MQTT_Request('UnSubscribe')">Dé-Souscrire</button>
+      <br>
+
       <span>Données reçues de MQTT : </span>
       <span id="MQTT_data"></span>
     </div>

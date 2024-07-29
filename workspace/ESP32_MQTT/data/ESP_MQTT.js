@@ -131,7 +131,7 @@ function ESP_Request(send_request, params = null) {
           if (xmlResponse === "Connected") {
             document.getElementById("bConnectMQTT").disabled = true;
             // Start process to get message of the MQTT callback
-            setInterval('process_MQTT()', 500);
+            setInterval('process_MQTT()', 650); // Pas un multiple de 1000 !
           }
         }
 
@@ -353,6 +353,12 @@ function MQTT_Request(obj) {
     request += "&Topic=" + topic;
   }
 
+  if (obj === "UnSubscribe")
+  {
+    let topic = document.getElementById("unsubscribeMQTT").value;
+    request += "&Topic=" + topic;
+  }
+  
   ESP_Request("MQTT_Request", [obj, request]);
   
 //  alert(obj + "   " + request);
