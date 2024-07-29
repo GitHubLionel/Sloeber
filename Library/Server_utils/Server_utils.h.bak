@@ -16,10 +16,6 @@
 // To allow HTTP updater
 //#define USE_HTTPUPDATER
 
-#ifdef USE_CONFIG_LIB_FILE
-#include "config_lib.h"
-#endif
-
 #include "Arduino.h"
 
 #ifdef ESP8266
@@ -67,15 +63,13 @@
 #include <Preferences.h> // For EEPROM access
 
 // If we have an RTC_Local instance of RTCLocal
-//#define USE_RTCLocal
+#define USE_RTCLocal
 
 // If we want to use gz file if available
-//#define USE_GZ_FILE
+#define USE_ZG_FILE
 
-// The port for the server, default 80
-#ifndef SERVER_PORT
+// The port for the server
 #define SERVER_PORT	80
-#endif
 
 // The web server
 #ifdef ESP8266
@@ -97,14 +91,10 @@ extern WebServer *pserver;
 #endif // ESP32
 
 // Default SSID file name
-#ifndef SSID_FILE
 #define SSID_FILE	"/SSID.txt"
-#endif
 
 // Default name for SoftAP connexion
-#ifndef DEFAULT_SOFTAP
 #define DEFAULT_SOFTAP	"DefaultAP"
-#endif
 
 // For CheckUARTMessage
 // The char that begin a message

@@ -169,7 +169,7 @@ Dans Project/Properties/"C/C++ General"/"Paths and Symbols"/Includes :
 - OK
 
 ---
-### Import/export d'un projet
+### Import/export, dupliquer un projet
 Click droit sur l'exploreur de projet ou menu File. <br>
 #### <b>Export</b>
 - General/Archive File
@@ -191,6 +191,18 @@ NOTE : si le dossier "Release" existe dans l'ancien projet, le supprimer avant l
   - A vérifier également que dans les propriétés du projet/Resource/"Linked Resource", onglet "Linked Resource" tous les chemins soient en "Variable Relative Location".
   - Si la platform du projet n'est pas défini, le faire dans les propriétés du projet/Sloeber onglet "Arduino Board Selection"
   - Faire un Rebuilt index peut aussi aider
+#### <b>Dupliquer</b>
+- Ouvrir le projet qu'on veut dupliquer
+- Click droit dessus, Copy
+- Click droit dans le "Project Explorer", Paste et donner un nouveau nom au projet
+- Fermer le projet d'origine
+- Dans le nouveau projet, click droit sur le fichier ino et renommer avec le nom du projet
+- Faire un clean project et supprimer le dossier release s'il est présent
+- Normalement, tout devrait être bon mais Sloeber ne fait pas correctement le changement de nom. Il faut donc en plus :
+  - Fermer le projet
+  - Avec un éditeur de texte, ouvrir le fichier .cproject
+  - Remplacer les anciens noms du projet par le nouveau nom
+  - Sauver, fermer et rouvrir le projet dans Sloeber. Normalement, y aplus d'erreur.
 
 ---
 ### Configuration ESP8266 Arduino/Sloeber
@@ -255,7 +267,8 @@ Puis le dézipper dans le dossier tools de Arduino ("Emplacement du dossier de c
 ---
 ### Liste des directives
 Note : les directives <b>ESP8266</b> ou <b>ESP32</b> sont automatiquement définies suivant le type de carte qu'on a choisi pour le projet.
-Les directives sont à rajouter dans le menu Sloeber/"Compile Options" dans le champ "append to C and C++" sous la forme -Ddirective. Ne pas oublier d'attacher la librairie qui va bien dans Sloeber/"Add a library to the selected project"
+Les directives sont à rajouter dans le menu Sloeber/"Compile Options" dans le champ "append to C and C++" sous la forme -Ddirective. Ne pas oublier d'attacher la librairie qui va bien dans Sloeber/"Add a library to the selected project".<br>
+Une alternative est de juste définir la directive USE_CONFIG_LIB_FILE et de copier le le fichier config_lib.h en l'adaptant à ses besoins. <br>
 - Général (librairie Debug_utils)
   - USE_UART pour initialiser UART (Serial) pour un périphérique. Attention, si on utilise en même temps SERIAL_DEBUG, on peut avoir un comportement inattendu.
   - USE_SAVE_CRASH pour sauvegarder le log du crash (Sloeber : EEPROM et EspSaveCrash pour <b>ESP8266</b>). Utiliser l'utilitaire <a href="https://github.com/me-no-dev/EspExceptionDecoder" target="_blank">EspExceptionDecoder</a>.
@@ -273,7 +286,11 @@ Les directives sont à rajouter dans le menu Sloeber/"Compile Options" dans le c
   - Utilise la librairie Update pour l'upload des fichiers (Sloeber : Update)
   - USE_ASYNC_WEBSERVER pour avoir un serveur asynchrone. Uniquement <b>ESP32</b> (Sloeber : AsyncTCP et ESPAsyncWebServer, sinon WebServer pour la version synchrone) 
   - USE_RTCLocal (par défaut)
+  - USE_GZ_FILE pour utiliser les fichiers zippés (.gz)
   - USE_HTTPUPDATER pour l'upload du firwmare et du filesystem. <b>ESP8266</b> (Sloeber : ESP8266HTTPUpdateServer); <b>ESP32</b> (Sloeber : HTTPUpdateServer ou <a href="https://github.com/IPdotSetAF/ESPAsyncHTTPUpdateServer" target="_blank">ESPAsyncHTTPUpdateServer</a> pour la version asynchrone)
+- Task (librairie Task_utils) : gestion d'une liste de taches
+  - RUN_TASK_MEMORY=true pour utiliser la tache "Memory" permettant de surveiller la stack des taches
+- MQTT (librairie MQTT_utils) : gestion d'un client MQTT
 - LCD, Oled, TFT (librairies Fonts avec SSD1306 ou SSD1327 ou SH1107 ou ST77xx) (Sloeber : Wire)
   - USE_LCD pour le lcd
   - OLED_SSD1306 pour le SSD1306. Ajouter en plus SSD1306_RAM_128 (par défaut) ou SSD1306_RAM_132 suivant le modèle

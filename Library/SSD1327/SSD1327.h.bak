@@ -10,11 +10,6 @@
  Please use progressive scanning to generate images or fonts
  ******************************************************************************/
 #pragma once
-
-#ifdef USE_CONFIG_LIB_FILE
-#include "config_lib.h"
-#endif
-
 #include "Arduino.h"
 #include "stdint.h"
 #include "fonts_8_24.h"  // For GUI part

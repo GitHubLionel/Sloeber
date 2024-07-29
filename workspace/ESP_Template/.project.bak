@@ -72,11 +72,6 @@
 			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp8266/hardware/esp8266/3.1.2/libraries/LittleFS</locationURI>
 		</link>
 		<link>
-			<name>libraries/NTPClient</name>
-			<type>2</type>
-			<locationURI>ECLIPSE_HOME/arduinoPlugin/libraries/NTPClient/3.2.1</locationURI>
-		</link>
-		<link>
 			<name>libraries/Preferences</name>
 			<type>2</type>
 			<locationURI>ECLIPSE_HOME/arduinoPlugin/libraries/Preferences/2.1.0</locationURI>

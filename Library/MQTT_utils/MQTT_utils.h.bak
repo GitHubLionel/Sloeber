@@ -11,10 +11,6 @@
  */
 #pragma once
 
-#ifdef USE_CONFIG_LIB_FILE
-#include "config_lib.h"
-#endif
-
 #include "Arduino.h"
 #ifdef ESP8266
 #include <ESP8266WiFi.h>	// Include WiFi library
@@ -25,27 +21,17 @@
 #include <PubSubClient.h>
 
 /**
- * The max length of the payload message and topic in the MQTT callback
+ * The max length of the payload message in the MQTT callback
  */
-#ifndef TOPIC_MAXSIZE
-#define TOPIC_MAXSIZE	100
-#endif
-#ifndef PAYLOAD_MAXSIZE
 #define PAYLOAD_MAXSIZE	250
-#endif
-
-// Default MQTT port
-#ifndef MQTT_PORT
-#define MQTT_PORT	1883
-#endif
 
 /**
- * Structure for the message of the MQTT callback
+ * Structure for the MQTT callback
  */
 typedef struct
 {
 		char payload[PAYLOAD_MAXSIZE] = {'\0'};
-		char topic[TOPIC_MAXSIZE] = {'\0'};
+		String topic;
 } MQTT_Message_cb_t;
 
 /**
@@ -56,7 +42,7 @@ typedef struct
 		String username;		// Username
 		String password;		// Password of the username
 		String broker;			// Machine IP on which the broker is
-		int port = MQTT_PORT;		// Port of the broker (don't forget to open this port in your firewall !)
+		int port = 1883;		// Port of the broker (don't forget to open this port in your firewall !)
 } MQTT_Credential_t;
 
 /**
@@ -66,25 +52,21 @@ extern void Wifi_Connexion(void);
 
 /**
  * Define a static function for xTaskCreate for mqttclient instance
- * called : StaticKeepalive_Task() for keep alive task
- * called : StaticParseMessage_Task() for parse message in the queue
+ * called : StaticKeepalive_Task()
  */
 #define WRAPPER_STATIC_TASK(mqttclient) \
-	void StaticKeepalive_Task(void *parameter) { (mqttclient).Keepalive_Task(parameter); } \
-	void StaticParseMessage_Task(void *parameter) { (mqttclient).ParseMessage_Task(parameter); }
+	void StaticKeepalive_Task(void *parameter) { (mqttclient).Keepalive_Task(parameter); }
 
 /**
- * A name for the keep alive and parse message task
+ * A name for the keep alive task
  */
 #define MQTT_KEEPALIVE_TASK_NAME	"MQTT_Keepalive"
-#define MQTT_PARSEMESSAGE_TASK_NAME	"MQTT_ParseMess"
 
 /**
  * A standard definition of a keep alive task
  * Set create to true to create the task at beginning of task list
  */
 #define MQTT_STANDARD_KEEPALIVE_TASK_DATA(create)	{create, MQTT_KEEPALIVE_TASK_NAME, 5000, 6, 10, CoreAny, StaticKeepalive_Task}
-#define MQTT_STANDARD_PARSEMESSAGE_TASK_DATA(create)	{create, MQTT_PARSEMESSAGE_TASK_NAME, 10000, 6, 10, CoreAny, StaticParseMessage_Task}
 
 /**
  * class MQTTClient
@@ -105,8 +87,10 @@ class MQTTClient
 		void Subscribe(const String &topic, bool subscribe);
 		bool Loop(void);
 
-		bool WifiConnected(void);
-		bool MQTTConnected(void);
+		bool Connected()
+		{
+			return wifiClient.connected();
+		}
 
 		String GetLastTopic(void) const
 		{
@@ -129,26 +113,19 @@ class MQTTClient
 			return MQTT_KEEPALIVE_TASK_NAME;
 		}
 
-		void ParseMessage_Task(void *pvParameters);
-		const String GetParseMessageTaskName(void)
-		{
-			return MQTT_PARSEMESSAGE_TASK_NAME;
-		}
-
 	protected:
-		void IRAM_ATTR mqttCallback(char *topic, unsigned char *payload, unsigned int length);
+		void IRAM_ATTR mqttCallback(char *topic, uint8_t *payload, unsigned int length);
 
 	private:
-		WiFiClient wifiClient; // @suppress("Type cannot be resolved")
+		WiFiClient wifiClient;
 		PubSubClient *MQTT_client;
 		SemaphoreHandle_t sema_MQTT_KeepAlive;
-		QueueHandle_t QMessage;
 		String client_id = "";
 
 		MQTT_Credential_t Credential;
 		MQTT_Message_cb_t Message;
 
-		bool AddToQueue = true;
+		bool MQTT_Connected = false;
 		String LastTopic = "";
 
 		bool Connexion(int trycount = 10);

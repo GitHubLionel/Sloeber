@@ -11,16 +11,10 @@
 
 #pragma once
 
-#ifdef USE_CONFIG_LIB_FILE
-#include "config_lib.h"
-#endif
-
 #include "Arduino.h"
 
 // Baud par défaut
-#ifndef UART_BAUD
 #define UART_BAUD	115200
-#endif
 
 // Délai de 5 s avant de démarrer, permet de lancer la console UART quand on debogue
 #define	WAIT_SETUP	5000

@@ -109,12 +109,10 @@ void OnAfterConnexion(void);
 // ********************************************************************************
 
 // Définition de l'adresse du port I2C
+#ifndef I2C_ADDRESS
 #define I2C_ADDRESS	0x3C // ou 0x78
-String UART_Message = "";
-#if defined(OLED_DEFINED)
-// Delay d'extinction du Oled en seconde
-#define OLED_TIMEOUT	600	// 10 minutes
 #endif
+String UART_Message = "";
 
 // The Pico MQTT serveur
 PicoMQTT::Server mqtt;
@@ -210,6 +208,7 @@ void setup()
 
   // Start the broker
   mqtt.begin();
+  print_debug(F("==> MQTT started <=="));
 }
 
 // The loop function is called in an endless loop

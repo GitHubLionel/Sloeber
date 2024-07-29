@@ -913,7 +913,7 @@ bool handleReadFile(CB_SERVER_PARAM)
 	else
 		contentType = getContentType(_path);	// Get the MIME type
 	bool pathWithGz = false;
-#ifdef USE_GZ_FILE
+#ifdef USE_ZG_FILE
 	if (FS_Partition->exists(_path + ".gz")) // If there's a compressed version available, use it
 	{
 		_path += ".gz";

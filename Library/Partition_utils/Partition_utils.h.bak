@@ -5,10 +5,6 @@
  * Ne pas oublier d'ajouter la librairie adéquate au projet
  */
 
-#ifdef USE_CONFIG_LIB_FILE
-#include "config_lib.h"
-#endif
-
 #include "Arduino.h"
 
 #ifdef ESP8266

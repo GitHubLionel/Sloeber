@@ -22,10 +22,6 @@
  */
 #pragma once
 
-#ifdef USE_CONFIG_LIB_FILE
-#include "config_lib.h"
-#endif
-
 /**
  * This SSD1306 LCD uses I2C for communication
  *
@@ -46,6 +42,7 @@ SDA        |PB9          |Serial data line
 #include "Arduino.h"
 #include "stdint.h"
 #include "fonts.h"
+
 
 /**
  * Hardware option

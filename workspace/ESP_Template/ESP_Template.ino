@@ -102,12 +102,10 @@ void OnAfterConnexion(void);
 // ********************************************************************************
 
 // Définition de l'adresse du port I2C
+#ifndef I2C_ADDRESS
 #define I2C_ADDRESS	0x3C // ou 0x78
-String UART_Message = "";
-#if defined(OLED_DEFINED)
-// Delay d'extinction du Oled en seconde
-#define OLED_TIMEOUT	600	// 10 minutes
 #endif
+String UART_Message = "";
 
 // ********************************************************************************
 // Functions prototype

@@ -53,10 +53,6 @@
 #ifndef TASKS_UTILS
 #define TASKS_UTILS
 
-#ifdef USE_CONFIG_LIB_FILE
-#include "config_lib.h"
-#endif
-
 #include <Arduino.h>
 #include <vector>
 
@@ -65,7 +61,7 @@
 #define RUN_TASK_MEMORY	false
 #endif
 
-// The stack size for the task "Memory". You may increase this value if you have a lot of tasks
+// The stack size for the task "Memory". You may increase this value if you have a lot of task
 #define TASK_MEMORY_STACK	4096
 
 // For infinite loop : for (EVER)
