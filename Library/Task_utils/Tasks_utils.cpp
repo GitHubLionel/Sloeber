@@ -52,7 +52,7 @@ TaskList_c::TaskList_c(bool with_memory)
 	if (with_memory)
 	{
 #if (RUN_TASK_MEMORY == true) && !defined(NO_MEMORY_TASK)
-		TaskMemory = {true, "Memory", TASK_MEMORY_STACK, 2, 10000, CoreAny, Task_Memory_code_local};
+		TaskMemory = {true, "Memory_Task", TASK_MEMORY_STACK, 2, 10000, CoreAny, Task_Memory_code_local};
 		AddTask(TaskMemory);
 #endif
 	}
@@ -332,15 +332,17 @@ void TaskList_c::Task_Memory_code(void *parameter)
 	int sleep = pdMS_TO_TICKS(TaskMemory.Sleep_ms);
 	for (EVER)
 	{
-		Memory_str = "";
+		Memory_str = "--- Memory free stack ---\r\n";
 		for (int i = 0; i < Tasks.size(); i++)
 		{
-			if (Tasks[i].Handle != NULL)
-				Memory_str += String(Tasks[i].Name) + ": " + String(Tasks[i].Memory) + "\r\n";
+			TaskData_t *td = &Tasks[i];
+			if (td->Handle != NULL)
+				Memory_str += String(td->Name) + ": " + String(td->Memory) + " / " + String(td->StackSize) + "\r\n";
 		}
 
 		print_debug(Memory_str, false);
-		TaskMemory.Memory = uxTaskGetStackHighWaterMark(NULL);
+//		TaskMemory.Memory = uxTaskGetStackHighWaterMark(NULL);
+		TaskList.GetTaskByName("Memory_Task")->Memory = uxTaskGetStackHighWaterMark(NULL);
 
 		// Sleep for 10 seconds, avant de refaire une analyse
 		vTaskDelay(sleep);

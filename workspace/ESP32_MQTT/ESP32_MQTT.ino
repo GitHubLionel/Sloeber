@@ -75,6 +75,7 @@
  * ATTENTION : Si on défini en même temps SERIAL_DEBUG, on peut avoir des comportements indéfinis.
  */
 //#define USE_UART
+
 /*********************************************************************************
  *                    *****  DEFINE NETWORK  *****
  *********************************************************************************
@@ -116,7 +117,7 @@ String UART_Message = "";
 
 // MQTT Broker
 MQTTClient MQTTTest;
-// NOTE : suppress the duplicated declaration in sloeber.ino.cpp !
+// NOTE : SUPPRESS THE DUPLICATED DECLARATION IN sloeber.ino.cpp !
 WRAPPER_STATIC_TASK(MQTTTest)
 
 MQTT_Credential_t mqtt = {"", "", "192.168.1.103", 1883};
@@ -252,7 +253,7 @@ void loop()
 	// Exemple analyse d'un message UART
 	if (CheckUARTMessage())
 	{
-		if (!myServer.BasicAnalyseMessage())
+		if (! BasicAnalyseMessage())
 			UserAnalyseMessage();
 	}
 

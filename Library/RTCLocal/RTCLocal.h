@@ -9,14 +9,14 @@
 // Si on utilise le server NTP (include la librairie NTPClient)
 //#define USE_NTP_SERVER=1  // 2 pour l'heure d'été
 #ifdef USE_NTP_SERVER
-#warning Using NTP SERVER, you must include NTPClient library
+#warning "Using NTP SERVER, you must include NTPClient library"
 #endif
 
 // Nombre maximum de top qu'on peut définir
 #define MAX_TOP	5
 
 // Si on veut corriger la dérive
-//#define USE_CORRECTION
+//#define RTC_USE_CORRECTION
 
 // La longueur max d'un nom de fichier LittleFS
 #define LITTLEFS_MAX_LEN	32
@@ -27,6 +27,12 @@
 
 // Callback pour le changement de jour : pour minuit et la mise à jour date
 typedef void (*RTC_daychange_cb)(uint8_t year, uint8_t month, uint8_t day);
+
+// To use RTCLocal in a task
+#ifdef RTC_USE_TASK
+#define RTC_DATA_TASK	{true, "RTC_Task", 4096, 10, 100, CoreAny, RTC_Task_code}
+void RTC_Task_code(void *parameter);
+#endif
 
 class RTCLocal
 {
@@ -50,7 +56,7 @@ class RTCLocal
 
 		bool lockUpdate = false;
 
-#ifdef USE_CORRECTION
+#ifdef RTC_USE_CORRECTION
 		// Time start Settings:
 		uint8_t startingHour = hours; // This ensures accurate daily correction of time
 

@@ -8,6 +8,10 @@ WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org");
 #endif
 
+#ifdef RTC_USE_TASK
+#include "Tasks_utils.h"
+#endif
+
 //#define RTC_DEBUG
 
 // Function for debug message, may be redefined elsewhere
@@ -102,7 +106,7 @@ bool RTCLocal::update()
 					}
 				}
 			}
-#ifdef USE_CORRECTION
+#ifdef RTC_USE_CORRECTION
 			else
 			{
 				//every time 24 hours have passed since the initial starting time and it has not been reset this day before,
@@ -163,7 +167,7 @@ void RTCLocal::StartTime()
 	// On initialise le compteur pour avoir des tops à la minute
 	this->seconds_count = this->seconds;
 	this->_IsTimeUpToDate = true;
-#ifdef USE_CORRECTION
+#ifdef RTC_USE_CORRECTION
 	this->startingHour = this->hours;
 	this->correctedToday = true;
 #endif
@@ -466,6 +470,18 @@ char* RTCLocal::getFormatedDateTime(char *datetime) const
  */
 #if !defined(NO_GLOBAL_INSTANCES) && !defined(NO_GLOBAL_RTCLocal)
 RTCLocal RTC_Local = RTCLocal();
+
+#ifdef RTC_USE_TASK
+void RTC_Task_code(void *parameter)
+{
+	BEGIN_TASK_CODE_UNTIL("RTC_Task");
+	for (EVER)
+	{
+		RTC_Local.update();
+		END_TASK_CODE_UNTIL();
+	}
+}
+#endif
 
 // Calcul UNIX timestamp : Nombre de secondes depuis le 1er janvier 1970 00:00:00 UTC
 time_t RTC_Local_Callback()

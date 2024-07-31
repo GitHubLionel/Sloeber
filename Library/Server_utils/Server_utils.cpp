@@ -4,7 +4,7 @@
 #ifdef USE_RTCLocal
 #include "RTCLocal.h"		      // A pseudo RTC software library
 #endif
-
+#include "Debug_utils.h"		  // Some utils functions for debug
 /**
  * Samples on :
  * https://github.com/esp8266/Arduino/tree/master/libraries/ESP8266WiFi/examples
@@ -59,14 +59,6 @@ const char *update_password = "admin";
 
 // The buffer for the received message from UART
 volatile char UART_Message_Buffer[BUFFER_SIZE] = {0};
-
-// Function for debug message, may be redefined elsewhere
-void __attribute__((weak)) print_debug(String mess, bool ln = true)
-{
-	// Just to avoid compile warning
-	(void) mess;
-	(void) ln;
-}
 
 // Private variables
 // holds the current upload
@@ -573,64 +565,122 @@ bool ServerConnexion::ExtractSSID_Password(void)
 }
 
 /**
- * Check the UART UART_Message_Buffer to get basic message :
- * - GET_IP: Send current IP
- * - GET_TIME: Send Time
- * - RESET_ESP: Reset ESP
- * then send back the responce to UART
+ * Return string IP=ipaddress
  */
-bool ServerConnexion::BasicAnalyseMessage(void)
+String GetIPaddress(void)
 {
-	char datetime[30] = {0};
-	char *date = NULL;
+	return "IP=" + WiFi.softAPIP().toString();
+}
 
-	if (strcmp((char*) UART_Message_Buffer, "GET_IP") == 0)
+// ********************************************************************************
+// UART section
+// ********************************************************************************
+
+/**
+ * Function that receive a stream from UART and directly send it
+ * to the server.
+ * By default, use Serial for UART
+ */
+void ServerConnexion::StreamUARTMessage(const String &ContentType, const onTimeOut &TimeOut_cb, uint32_t timeout,
+		HardwareSerial *Serial_Message)
+{
+#ifndef USE_ASYNC_WEBSERVER
+	static char Stream_Buffer1[STREAM_BUFFER_SIZE] = {0};
+	static char Stream_Buffer2[STREAM_BUFFER_SIZE] = {0};
+	unsigned long currentTime = 0;
+	uint32_t count = 0;
+	uint8_t buffer_index = 1;
+	char *pXML_Buffer = &Stream_Buffer1[0];
+	int data = 0;
+	bool IsTimeOut = true;
+
+	// Récupération des données. La fin est marquée par le caractère END_DATA.
+	// On a un timeout ms pour recevoir les données
+	// Les données sont renvoyées par paquet de STREAM_BUFFER_SIZE octets
+	// Je sais pas si c'est utile mais on utilise deux buffers en alternance, un réception, un envoie
+	server.setContentLength(CONTENT_LENGTH_UNKNOWN);
+	server.send(200, ContentType, "");
+	currentTime = millis();
+
+	while (millis() - currentTime < timeout)
 	{
-		printf_message_to_UART(IPaddress());
-		return true;
-	}
-	else
-		if (strcmp((char*) UART_Message_Buffer, "GET_TIME") == 0)
+		if (Serial_Message->available())
 		{
-#ifdef USE_RTCLocal
-			printf_message_to_UART("TIME=" + String(RTC_Local.getFormatedDateTime(datetime)));
-#endif
-			return true;
-		}
-		else
-			if (strcmp((char*) UART_Message_Buffer, "GET_DATE=") == 0)
+			data = Serial_Message->read();
+			if (data != END_DATA)
 			{
-#ifdef USE_RTCLocal
-				printf_message_to_UART(
-						String(RTC_Local.getDateTime(datetime, false, '#')) + "#END_DATE\r\n", false);
-#endif
-				return true;
+				*pXML_Buffer++ = (char) data;
+				count++;
+				// Buffer is full : send it
+				if (count == STREAM_BUFFER_SIZE)
+				{
+					if (buffer_index == 1)
+					{
+						server.sendContent(Stream_Buffer1, STREAM_BUFFER_SIZE);
+						count = 0;
+						pXML_Buffer = &Stream_Buffer2[0];
+						// On passe sur le deuxième buffer
+						buffer_index = 2;
+					}
+					else
+					{
+						// Deuxième buffer
+						server.sendContent(Stream_Buffer2, STREAM_BUFFER_SIZE);
+						count = 0;
+						pXML_Buffer = &Stream_Buffer1[0];
+						// On repasse sur le premier buffer
+						buffer_index = 1;
+					}
+				}
 			}
 			else
-				if ((date = strstr((char*) UART_Message_Buffer, "DATE=")) != NULL)
-				{
-#ifdef USE_RTCLocal
-					// Format DD/MM/YY#hh:mm:ss
-					date += 5;
-					strncpy(datetime, date, 17);
-					datetime[18] = 0;
-					RTC_Local.setDateTime(datetime, false, false);
-					// Sauvegarde de l'heure
-					RTC_Local.saveDateTime();
-					// Renvoie la nouvelle heure
-					printf_message_to_UART(
-							String(RTC_Local.getDateTime(datetime, false, '#')) + "#END_DATE\r\n", false);
+			{
+				*pXML_Buffer = 0;
+				IsTimeOut = false;
+				// break while timeout loop
+				break;
+			}
+		}
+		yield();  // Background operation
+	}
+	// S'il reste des données à envoyer
+	if (count > 0)
+	{
+		if (buffer_index == 1)
+			server.sendContent(Stream_Buffer1, count);
+		else
+			server.sendContent(Stream_Buffer2, count);
+	}
+
+	if (IsTimeOut && (TimeOut_cb != NULL))
+		TimeOut_cb();
+	else
+	{
+		server.sendContent("");
+		server.client().stop();
+	}
+
+	//  print_debug("Count : " +  String(count) + "  Time : " + String(millis() - currentTime) + " ms");
 #endif
-					return true;
-				}
-				else
-					if (strcmp((char*) UART_Message_Buffer, "RESET_ESP") == 0)
-					{
-						Auto_Reset();
-						return true;
-					}
-	return false;
 }
+
+#ifdef USE_ASYNC_WEBSERVER
+void ServerConnexion::SendDefaultXML(AsyncWebServerRequest *request)
+{
+	AsyncResponseStream *response = request->beginResponseStream("text/plain; charset=iso-8859-1");
+
+	response->print(F("<?xml version=\"1.0\" encoding=\"iso-8859-1\" ?>\r\n<empty></empty>\r\n"));
+	response->print("");
+	request->send(response);
+}
+#else
+void ServerConnexion::SendDefaultXML(void)
+{
+	server.sendContent(F("<?xml version=\"1.0\" encoding=\"iso-8859-1\" ?>\r\n<empty></empty>\r\n"));
+	server.sendContent("");
+	server.client().stop();
+}
+#endif
 
 // ********************************************************************************
 // Miscellaneous section
@@ -1415,178 +1465,6 @@ const String getContentType(const String &filename)
 												return "application/x-zip";
 	return "text/plain";
 }
-
-// ********************************************************************************
-// UART section
-// ********************************************************************************
-
-/**
- * Function that send to UART a formated message with BEGIN_DATA and END_DATA
- * All requests to UART must use this function.
- * If balise is true (default) then message is enclosed by BEGIN_DATA and END_DATA.
- * By default, use Serial for UART
- */
-void printf_message_to_UART(const char *mess, bool balise, HardwareSerial *Serial_Message)
-{
-	if (balise)
-		Serial_Message->printf("%c%s%c", BEGIN_DATA, mess, END_DATA);
-	else
-		Serial_Message->printf("%s", mess);
-	Serial_Message->flush();
-}
-
-/**
- * Function that send to UART a formated message with BEGIN_DATA and END_DATA
- * All requests to UART must use this function.
- * If balise is true (default) then message is enclosed by BEGIN_DATA and END_DATA.
- * By default, use Serial for UART
- */
-void printf_message_to_UART(const String &mess, bool balise, HardwareSerial *Serial_Message)
-{
-	if (balise)
-		Serial_Message->printf("%c%s%c", BEGIN_DATA, mess.c_str(), END_DATA);
-	else
-		Serial_Message->printf("%s", mess.c_str());
-	Serial_Message->flush();
-}
-
-/**
- * Function that read incoming formated message from UART.
- * The message is stored in UART_Message_Buffer and 0 is add to the end
- * By default, use Serial for UART
- */
-bool CheckUARTMessage(HardwareSerial *Serial_Message)
-{
-	bool StartMessage = false;
-	volatile char *pMessage_Buffer;
-	uint8_t data;
-
-	while (Serial_Message->available())
-	{
-		data = Serial_Message->read();
-		if (StartMessage)
-		{
-			if (data == END_DATA)
-			{
-				// End the string
-				*pMessage_Buffer = 0;
-				return true;
-			}
-			else
-			{
-				*pMessage_Buffer++ = (char) data;
-				// Check the buffer size. If true, message is lost
-				if (pMessage_Buffer - UART_Message_Buffer == BUFFER_SIZE)
-				{
-					StartMessage = false;
-				}
-			}
-		}
-		else
-			if (data == BEGIN_DATA)
-			{
-				StartMessage = true;
-				pMessage_Buffer = &UART_Message_Buffer[0];
-				*pMessage_Buffer = 0;
-			}
-	}
-	return false;
-}
-
-#ifndef USE_ASYNC_WEBSERVER
-/**
- * Function that receive a stream from UART and directly send it
- * to the server.
- * By default, use Serial for UART
- */
-void StreamUARTMessage(const String &ContentType, const onTimeOut &TimeOut_cb, uint32_t timeout,
-		HardwareSerial *Serial_Message)
-{
-	static char Stream_Buffer1[STREAM_BUFFER_SIZE] = {0};
-	static char Stream_Buffer2[STREAM_BUFFER_SIZE] = {0};
-	unsigned long currentTime = 0;
-	uint32_t count = 0;
-	uint8_t buffer_index = 1;
-	char *pXML_Buffer = &Stream_Buffer1[0];
-	int data = 0;
-	bool IsTimeOut = true;
-
-	// Récupération des données. La fin est marquée par le caractère END_DATA.
-	// On a un timeout ms pour recevoir les données
-	// Les données sont renvoyées par paquet de STREAM_BUFFER_SIZE octets
-	// Je sais pas si c'est utile mais on utilise deux buffers en alternance, un réception, un envoie
-	server.setContentLength(CONTENT_LENGTH_UNKNOWN);
-	server.send(200, ContentType, "");
-	currentTime = millis();
-
-	while (millis() - currentTime < timeout)
-	{
-		if (Serial_Message->available())
-		{
-			data = Serial_Message->read();
-			if (data != END_DATA)
-			{
-				*pXML_Buffer++ = (char) data;
-				count++;
-				// Buffer is full : send it
-				if (count == STREAM_BUFFER_SIZE)
-				{
-					if (buffer_index == 1)
-					{
-						server.sendContent(Stream_Buffer1, STREAM_BUFFER_SIZE);
-						count = 0;
-						pXML_Buffer = &Stream_Buffer2[0];
-						// On passe sur le deuxième buffer
-						buffer_index = 2;
-					}
-					else
-					{
-						// Deuxième buffer
-						server.sendContent(Stream_Buffer2, STREAM_BUFFER_SIZE);
-						count = 0;
-						pXML_Buffer = &Stream_Buffer1[0];
-						// On repasse sur le premier buffer
-						buffer_index = 1;
-					}
-				}
-			}
-			else
-			{
-				*pXML_Buffer = 0;
-				IsTimeOut = false;
-				// break while timeout loop
-				break;
-			}
-		}
-		yield();  // Background operation
-	}
-	// S'il reste des données à envoyer
-	if (count > 0)
-	{
-		if (buffer_index == 1)
-			server.sendContent(Stream_Buffer1, count);
-		else
-			server.sendContent(Stream_Buffer2, count);
-	}
-
-	if (IsTimeOut && (TimeOut_cb != NULL))
-		TimeOut_cb();
-	else
-	{
-		server.sendContent("");
-		server.client().stop();
-	}
-
-	//  print_debug("Count : " +  String(count) + "  Time : " + String(millis() - currentTime) + " ms");
-}
-
-void SendDefaultXML(void)
-{
-	server.sendContent(F("<?xml version=\"1.0\" encoding=\"iso-8859-1\" ?>\r\n<empty></empty>\r\n"));
-	server.sendContent("");
-	server.client().stop();
-}
-#endif
 
 // ********************************************************************************
 // Other utilitary function

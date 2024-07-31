@@ -106,18 +106,6 @@ extern WebServer *pserver;
 #define DEFAULT_SOFTAP	"DefaultAP"
 #endif
 
-// For CheckUARTMessage
-// The char that begin a message
-#define BEGIN_DATA	0x02
-// The char that end a message
-#define END_DATA	0x03
-// The size of the buffer for the message received
-#define BUFFER_SIZE	1024
-// The buffer that contain the message received
-extern volatile char UART_Message_Buffer[];
-// End Text string
-#define LOG_ETX_STR  	"\03"
-
 // For StreamUARTMessage
 #define STREAM_BUFFER_SIZE	1024
 // Default TimeOut for the stream
@@ -304,7 +292,19 @@ class ServerConnexion
 			return SSID_File;
 		}
 		void setSSID_FileName(const String &name);
+
+// UART functions
+		void StreamUARTMessage(const String &ContentType, const onTimeOut &TimeOut_cb = NULL,
+				uint32_t timeout = STREAM_TIMEOUT, HardwareSerial *Serial_Message = &Serial);
+
+#ifdef USE_ASYNC_WEBSERVER
+		void SendDefaultXML(AsyncWebServerRequest *request);
+#else
+		void SendDefaultXML(void);
+#endif
 };
+
+String GetIPaddress(void);
 
 void Server_CommonEvent(uint16_t event);
 void Auto_Reset(void);
@@ -313,14 +313,7 @@ void SSIDToEEPROM(const String &ssid, const String &pwd);
 void DeleteSSID(void);
 const String getContentType(const String &filename);
 
-// UART functions
-bool CheckUARTMessage(HardwareSerial *Serial_Message = &Serial);
-void StreamUARTMessage(const String &ContentType, const onTimeOut &TimeOut_cb = NULL,
-		uint32_t timeout = STREAM_TIMEOUT, HardwareSerial *Serial_Message = &Serial);
-void printf_message_to_UART(const char *mess, bool balise = true, HardwareSerial *Serial_Message = &Serial);
-void printf_message_to_UART(const String &mess, bool balise = true, HardwareSerial *Serial_Message = &Serial);
-void SendDefaultXML(void);
-
+// Other utilitary function
 char* Search_Balise(uint8_t *data, const char *B_Begin, const char *B_end, char *value,
 		uint16_t *len);
 

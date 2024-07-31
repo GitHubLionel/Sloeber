@@ -7,7 +7,7 @@
  */
 
 /**********************************************************
- * Debug define : Debug_utils library
+ * Debug and UART define : Debug_utils library
  **********************************************************/
 #define SERIAL_DEBUG
 #define LOG_DEBUG
@@ -15,6 +15,8 @@
 #define UART_BAUD	115200
 
 //#define USE_SAVE_CRASH
+
+//#define UART_USE_TASK
 
 /**********************************************************
  * Partition define : Partition_utils library
@@ -52,7 +54,8 @@
  * RTC define : RTCLocal library
  **********************************************************/
 #define USE_NTP_SERVER	2 // 1 or 2 for summer time
-//#define USE_CORRECTION
+//#define RTC_USE_CORRECTION
+//#define RTC_USE_TASK
 
 /**********************************************************
  * LCD, Oled, TFT define

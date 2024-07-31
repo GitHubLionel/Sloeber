@@ -78,9 +78,9 @@
 
 #if RUN_TASK_MEMORY == true
 #define END_TASK_CODE()	{ td->Memory = uxTaskGetStackHighWaterMark(NULL); \
-		vTaskDelay(sleep); }
+		if (sleep != 0) vTaskDelay(sleep); }
 #else
-#define END_TASK_CODE()	vTaskDelay(sleep);
+#define END_TASK_CODE()	if (sleep != 0) vTaskDelay(sleep);
 #endif
 
 // The same couple of define to use with DelayUntil
@@ -123,7 +123,7 @@ typedef struct
 		Task_Core Core;													 // Core where is running the task
 		TaskFunction_t TaskCode;								 // The code of the task
 		void *Param = NULL;											 // The parameter passed to the code function
-		int Memory = 5000;                       // Task stack staying memory (used by the "Memory" task)
+		int Memory = 0;                          // Task stack staying memory (used by the "Memory" task)
 		void *UserParam = NULL;						  		 // A parameter that can be used in the code function
 		TaskHandle_t Handle = NULL;							 // The handle of the task
 } TaskData_t;

@@ -221,7 +221,7 @@ void loop()
 	// Exemple analyse d'un message UART
 	if (CheckUARTMessage())
 	{
-		if (! myServer.BasicAnalyseMessage())
+		if (! BasicAnalyseMessage())
 			UserAnalyseMessage();
 	}
 

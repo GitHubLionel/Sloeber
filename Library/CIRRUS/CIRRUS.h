@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef USE_CONFIG_LIB_FILE
+#include "config_lib.h"
+#endif
+
 #include "CIRRUS_define.h"
 
 #include "Arduino.h"
@@ -31,7 +35,6 @@
  */
 //#define CIRRUS_CS5480
 //#define CIRRUS_USE_UART
-//#undef CIRRUS_USE_UART
 
 // If not cs5480 then only uart is possible for cs5490
 #ifndef CIRRUS_CS5480
@@ -62,14 +65,14 @@
 
 // ******************************************************************
 // Ne pas modifier ci-dessous
-#if CIRRUS_UART_HARD == 1
-#define CIRRUS_SERIAL_MODE	HardwareSerial
-#else
+	#if CIRRUS_UART_HARD == 1
+	#define CIRRUS_SERIAL_MODE	HardwareSerial
+	#else
 	#include <SoftwareSerial.h>
 	#define CIRRUS_SERIAL_MODE	SoftwareSerial
 	#endif
 
-#else
+#else // CIRRUS_USE_UART
 #include "SPI.h"
 #endif
 

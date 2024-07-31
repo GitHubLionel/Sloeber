@@ -198,7 +198,7 @@ void loop()
 	// Exemple analyse d'un message UART
 	if (CheckUARTMessage())
 	{
-		if (! myServer.BasicAnalyseMessage())
+		if (! BasicAnalyseMessage())
 			UserAnalyseMessage();
 	}
 
@@ -213,10 +213,10 @@ void loop()
 	// Listen for HTTP requests from clients
 #ifndef USE_ASYNC_WEBSERVER
 	server.handleClient();
-#endif
-
+#else
 	// Temporisation à adapter
-	delay(100);
+	delay(10);
+#endif
 }
 
 // ********************************************************************************

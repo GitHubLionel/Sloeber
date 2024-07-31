@@ -1,5 +1,8 @@
 #include "Debug_utils.h"
 #include "Partition_utils.h"		// Some utils functions for LittleFS/SPIFFS/FatFS
+#ifdef USE_RTCLocal
+#include "RTCLocal.h"		      // A pseudo RTC software library
+#endif
 
 #ifdef USE_SAVE_CRASH
 #ifdef ESP8266
@@ -7,6 +10,10 @@
 #else
 #include "esp_core_dump.h"
 #endif
+#endif
+
+#ifdef UART_USE_TASK
+#include "Tasks_utils.h"
 #endif
 
 // data Log dans un fichier
@@ -309,6 +316,188 @@ esp_err_t esp_core_dump_image_erase_2()
 }
 #endif // USE_SAVE_CRASH
 
+#endif
+
+// ********************************************************************************
+// UART section
+// ********************************************************************************
+
+/**
+ * Function that read incoming formated message from UART.
+ * The message is stored in UART_Message_Buffer and 0 is add to the end
+ * By default, use Serial for UART
+ */
+bool CheckUARTMessage(HardwareSerial *Serial_Message)
+{
+	bool StartMessage = false;
+	volatile char *pMessage_Buffer;
+	uint8_t data;
+
+	while (Serial_Message->available())
+	{
+		data = Serial_Message->read();
+		if (StartMessage)
+		{
+			if (data == END_DATA)
+			{
+				// End the string
+				*pMessage_Buffer = 0;
+				return true;
+			}
+			else
+			{
+				*pMessage_Buffer++ = (char) data;
+				// Check the buffer size. If true, message is lost
+				if (pMessage_Buffer - UART_Message_Buffer == BUFFER_SIZE)
+				{
+					StartMessage = false;
+				}
+			}
+		}
+		else
+			if (data == BEGIN_DATA)
+			{
+				StartMessage = true;
+				pMessage_Buffer = &UART_Message_Buffer[0];
+				*pMessage_Buffer = 0;
+			}
+	}
+	return false;
+}
+
+/**
+ * A minimal auto reset function
+ */
+void __attribute__((weak)) Auto_Reset(void)
+{
+#ifdef ESP8266
+	ESP.reset();
+#endif
+#ifdef ESP32
+	ESP.restart();
+#endif
+}
+
+/**
+ * should be redefined elsewhere
+ */
+String __attribute__((weak)) GetIPaddress(void)
+{
+	return "";
+}
+
+/**
+ * Check the UART UART_Message_Buffer to get basic message :
+ * - GET_IP: Send current IP
+ * - GET_TIME: Send Time
+ * - RESET_ESP: Reset ESP
+ * then send back the responce to UART
+ */
+bool BasicAnalyseMessage(void)
+{
+	char datetime[30] = {0};
+	char *date = NULL;
+
+	if (strcmp((char*) UART_Message_Buffer, "GET_IP") == 0)
+	{
+		printf_message_to_UART(GetIPaddress());
+		return true;
+	}
+	else
+		if (strcmp((char*) UART_Message_Buffer, "GET_TIME") == 0)
+		{
+#ifdef USE_RTCLocal
+			printf_message_to_UART("TIME=" + String(RTC_Local.getFormatedDateTime(datetime)));
+#endif
+			return true;
+		}
+		else
+			if (strcmp((char*) UART_Message_Buffer, "GET_DATE=") == 0)
+			{
+#ifdef USE_RTCLocal
+				printf_message_to_UART(
+						String(RTC_Local.getDateTime(datetime, false, '#')) + "#END_DATE\r\n", false);
+#endif
+				return true;
+			}
+			else
+				if ((date = strstr((char*) UART_Message_Buffer, "DATE=")) != NULL)
+				{
+#ifdef USE_RTCLocal
+					// Format DD/MM/YY#hh:mm:ss
+					date += 5;
+					strncpy(datetime, date, 17);
+					datetime[18] = 0;
+					RTC_Local.setDateTime(datetime, false, false);
+					// Sauvegarde de l'heure
+					RTC_Local.saveDateTime();
+					// Renvoie la nouvelle heure
+					printf_message_to_UART(
+							String(RTC_Local.getDateTime(datetime, false, '#')) + "#END_DATE\r\n", false);
+#endif
+					return true;
+				}
+				else
+					if (strcmp((char*) UART_Message_Buffer, "RESET_ESP") == 0)
+					{
+						Auto_Reset();
+						return true;
+					}
+	return false;
+}
+
+/**
+ * Function that send to UART a formated message with BEGIN_DATA and END_DATA
+ * All requests to UART must use this function.
+ * If balise is true (default) then message is enclosed by BEGIN_DATA and END_DATA.
+ * By default, use Serial for UART
+ */
+void printf_message_to_UART(const char *mess, bool balise, HardwareSerial *Serial_Message)
+{
+	if (balise)
+		Serial_Message->printf("%c%s%c", BEGIN_DATA, mess, END_DATA);
+	else
+		Serial_Message->printf("%s", mess);
+	Serial_Message->flush();
+}
+
+/**
+ * Function that send to UART a formated message with BEGIN_DATA and END_DATA
+ * All requests to UART must use this function.
+ * If balise is true (default) then message is enclosed by BEGIN_DATA and END_DATA.
+ * By default, use Serial for UART
+ */
+void printf_message_to_UART(const String &mess, bool balise, HardwareSerial *Serial_Message)
+{
+	if (balise)
+		Serial_Message->printf("%c%s%c", BEGIN_DATA, mess.c_str(), END_DATA);
+	else
+		Serial_Message->printf("%s", mess.c_str());
+	Serial_Message->flush();
+}
+
+/**
+ * A basic Task to analyse UART message
+ */
+#ifdef UART_USE_TASK
+bool __attribute__((weak)) UserAnalyseMessage(void)
+{
+  return true;
+}
+
+void UART_Task_code(void *parameter)
+{
+	BEGIN_TASK_CODE("UART_Task");
+	for (EVER)
+	{
+		if (CheckUARTMessage())
+		{
+			if (! BasicAnalyseMessage())
+				UserAnalyseMessage();
+		}
+		END_TASK_CODE();
+	}
+}
 #endif
 
 // ********************************************************************************
