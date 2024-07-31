@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="fr-fr">
+<head>
+  <title>ESP Task Template</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8">
+  <link href="ESPTemplate.css" rel="stylesheet">
+  <link rel="shortcut icon" href="favicon.ico">
+  <script src="FileSaver.min.js"></script>
+  <script src="ESPTemplate.js"></script>
+</head>
+<body>
+
+  <div class="header">
+    <span>ESP Task Template</span>
+    <span id="time" class="right">12:00:00</span>
+  </div>
+  <div style="margin-bottom: 54px;">
+    <button class="tablink" onclick="openPage('m_Config', this, '#cd11e8')" id="defaultOpen">Config</button>
+    <button class="tablink" style="cursor:default" onmouseover="this.style.background='black'" > &nbsp; </button>
+  </div>
+
+  <noscript>
+    <strong>JavaScript est nécessaire ...</strong>
+  </noscript>
+
+  <div id="m_Config" class="tabcontent">
+    <div class="div_space">
+      <button class="myButton" onclick="sendDateTime()">Mettre l'heure à jour</button>
+    </div>
+
+    <div class="div_space odd">
+      <button class="myButton" onclick="loadLOG()">Télécharger fichier log</button>
+      <button class="myButton" onclick="deleteLOG()">Supprimer fichier log</button>
+    </div>
+
+    <div class="div_space">
+      <form method="GET" action="/delfile">
+        <label for="delfile">Fichier à supprimer : </label>
+        <input type="text" name="delfile" id="delfile">
+        <input class="myButton" type="submit" value="Supprimer">
+      </form>
+    </div>
+
+    <div class="div_space odd">
+      <button class="myButton" onclick="resetESP()">RESET ESP</button>
+    </div>
+
+    <div class="div_space">
+      <fieldset>
+        <form method="POST" enctype="multipart/form-data" action="/upload">
+          <span>ATTENTION : pas d'espace, pas d'accent !</span>
+          <br>
+          <label for="dir">Dir : </label>
+          <input type="text" name="dir" size="30" placeholder="Répertoire destination, vide = /"><br>
+          <input type="checkbox" name="reload" checked>
+          <label for="reload">Reload page</label>
+          <input type="file" name="the_filename">
+          <input type="submit" value="Téléverser">
+        </form>
+        <br>
+        <form class="flash" method="GET" enctype="multipart/form-data" action="/firmware">
+          <input class="myButton" type="submit" value="Flash ESP">
+        </form>
+      </fieldset>
+    </div>
+
+    <div class="div_space odd">
+      <button class="myButton" onclick="listDir()">List dir</button>
+      <br>
+      <span id="data_json"></span>
+    </div>
+
+    <div class="div_space">
+      <span>Données reçues de UART : </span>
+      <span id="data_uart"></span>
+    </div>
+
+    <div class="div_space odd">
+      <button class="myButton" onclick="toggleOled()">Toggle Oled</button>
+    </div>
+
+  </div>
+
+  <!-- Message d'attente -->
+  <div class="loader_gif" id="loading"> </div>
+<!-- autre alternative pour l'attente
+      <div class="loader_txt" id="loading">Chargement ...</div>
+-->
+</body>
+</html>
