@@ -64,6 +64,10 @@
 #endif
 #endif // ESP32
 
+#ifdef USE_MDNS
+#include <ESPmDNS.h>
+#endif
+
 #include <Preferences.h> // For EEPROM access
 
 // If we have an RTC_Local instance of RTCLocal
@@ -196,6 +200,7 @@ class ServerConnexion
 		bool _IsSoftAP = true;
 		String _SSID = "";
 		String _PWD = "";
+		String _mDNSHostName = "ESP_DNS";
 		IPAddress _ip;
 		IPAddress _gateway;
 		IPAddress subnet = IPAddress(255, 255, 255, 0);
@@ -218,18 +223,15 @@ class ServerConnexion
 			_onAfterConnexion = afterConnexion_cb;
 		}
 		ServerConnexion(bool IsSoftAP, const String &ssid, const String &pwd,
-				const onConnexionEvent &afterConnexion_cb = NULL)
+				const onConnexionEvent &afterConnexion_cb = NULL) :
+				ServerConnexion(IsSoftAP, afterConnexion_cb)
 		{
-			_IsSoftAP = IsSoftAP;
-			_onAfterConnexion = afterConnexion_cb;
 			setSSID_PWD(ssid, pwd);
 		}
 		ServerConnexion(bool IsSoftAP, const String &ssid, const String &pwd, const IPAddress &ip,
-				const IPAddress &gateway, const onConnexionEvent &afterConnexion_cb = NULL)
+				const IPAddress &gateway, const onConnexionEvent &afterConnexion_cb = NULL) :
+				ServerConnexion(IsSoftAP, ssid, pwd, afterConnexion_cb)
 		{
-			_IsSoftAP = IsSoftAP;
-			_onAfterConnexion = afterConnexion_cb;
-			setSSID_PWD(ssid, pwd);
 			_ip = ip;
 			_gateway = gateway;
 		}
@@ -259,6 +261,11 @@ class ServerConnexion
 		{
 			_SSID = ssid;
 			_PWD = pwd;
+		}
+
+		void setMDNSHostName(const String &name)
+		{
+			_mDNSHostName = name;
 		}
 
 		bool SSIDFromFile(const String &filename);
@@ -312,8 +319,4 @@ void SSIDToFile(const String &filename, const String &ssidpwd);
 void SSIDToEEPROM(const String &ssid, const String &pwd);
 void DeleteSSID(void);
 const String getContentType(const String &filename);
-
-// Other utilitary function
-char* Search_Balise(uint8_t *data, const char *B_Begin, const char *B_end, char *value,
-		uint16_t *len);
 

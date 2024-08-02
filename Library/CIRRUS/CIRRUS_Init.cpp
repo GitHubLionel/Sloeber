@@ -75,7 +75,7 @@ Cirrus_Flash Flash_data;
 #endif
 
 #ifdef LOG_CIRRUS_CONNECT
-#include "Server_utils.h"
+#include "Debug_utils.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>

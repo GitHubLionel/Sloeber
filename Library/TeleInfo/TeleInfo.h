@@ -1,9 +1,20 @@
 #pragma once
+
+#ifdef USE_CONFIG_LIB_FILE
+#include "config_lib.h"
+#endif
+
 #include "Arduino.h"
 #ifdef ESP8266
 #include <SoftwareSerial.h>
 #elif ESP32
 #include <HardwareSerial.h>
+#endif
+
+// To create a basic task to check TeleInfo every 1 s
+#ifdef TELEINFO_USE_TASK
+#define TELEINFO_DATA_TASK(start)	{(start), "TELEINFO_Task", 1024, 5, 1000, CoreAny, TELEINFO_Task_code}
+void TELEINFO_Task_code(void *parameter);
 #endif
 
 #define LABEL_MAX_SIZE     9  // Maximum 8 caractères pour MOTDETAT

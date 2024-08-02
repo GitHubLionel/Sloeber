@@ -269,7 +269,7 @@ Puis le dézipper dans le dossier tools de Arduino ("Emplacement du dossier de c
 Note : les directives <b>ESP8266</b> ou <b>ESP32</b> sont automatiquement définies suivant le type de carte qu'on a choisi pour le projet.
 Les directives sont à rajouter dans le menu Sloeber/"Compile Options" dans le champ "append to C and C++" sous la forme -Ddirective. Ne pas oublier d'attacher la librairie qui va bien dans Sloeber/"Add a library to the selected project".<br>
 Une alternative est de juste définir la directive USE_CONFIG_LIB_FILE et de copier le le fichier config_lib.h en l'adaptant à ses besoins. <br>
-- Général (librairie Debug_utils)
+- Général et gestion messages UART (librairie Debug_utils)
   - USE_UART pour initialiser UART (Serial) pour un périphérique. Attention, si on utilise en même temps SERIAL_DEBUG, on peut avoir un comportement inattendu.
   - USE_SAVE_CRASH pour sauvegarder le log du crash (Sloeber : EEPROM et EspSaveCrash pour <b>ESP8266</b>). Utiliser l'utilitaire <a href="https://github.com/me-no-dev/EspExceptionDecoder" target="_blank">EspExceptionDecoder</a>.
   - SERIAL_DEBUG pour avoir un debug console. Note : démarre automatiquement UART
@@ -280,7 +280,7 @@ Une alternative est de juste définir la directive USE_CONFIG_LIB_FILE et de cop
   - USE_FATFS pour utiliser FatFS (Sloeber : FFat). <b>ESP32</b> seulement.
 - RTC (librairie RTCLocal). Permet de définir une RTC logiciel
   - USE_NTP_SERVER=1 pour récupérer l'heure par Internet (2 pour l'heure d'été) (Sloeber : NTPClient et Network)
-  - USE_CORRECTION pour corriger la dérive temporelle du ESP8266
+  - RTC_USE_CORRECTION pour corriger la dérive temporelle du ESP8266  
 - Server (librairie Server_utils)
   - Utilise la librairie Preferences pour sauvegarder le SSID dans la flash (Sloeber : EEPROM, Preferences)
   - Utilise la librairie Update pour l'upload des fichiers (Sloeber : Update)
@@ -290,6 +290,12 @@ Une alternative est de juste définir la directive USE_CONFIG_LIB_FILE et de cop
   - USE_HTTPUPDATER pour l'upload du firwmare et du filesystem. <b>ESP8266</b> (Sloeber : ESP8266HTTPUpdateServer); <b>ESP32</b> (Sloeber : HTTPUpdateServer ou <a href="https://github.com/IPdotSetAF/ESPAsyncHTTPUpdateServer" target="_blank">ESPAsyncHTTPUpdateServer</a> pour la version asynchrone)
 - Task (librairie Task_utils) : gestion d'une liste de taches
   - RUN_TASK_MEMORY=true pour utiliser la tache "Memory" permettant de surveiller la stack des taches
+  - Il y a plusieurs define permettant d'effectuer des taches de base dans ceraine librairie :
+  - UART_USE_TASK pour l'analyse d'un message UART dans une tache (ajouter librairie Task_utils)
+  - RTC_USE_TASK pour mettre la RTC dans une tache (ajouter librairie Task_utils)
+  - DS18B20_USE_TASK pour mesurer la température DS18B20 toutes les 2 secondes
+  - TELEINFO_USE_TASK pour récupérer les infos TeleInfo toutes les 1 seconde
+  - CIRRUS_USE_TASK pour récupérer les données Cirrus toute les 200 ms
 - MQTT (librairie MQTT_utils) : gestion d'un client MQTT
 - LCD, Oled, TFT (librairies Fonts avec SSD1306 ou SSD1327 ou SH1107 ou ST77xx) (Sloeber : Wire)
   - USE_LCD pour le lcd

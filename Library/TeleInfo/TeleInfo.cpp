@@ -2,6 +2,10 @@
 
 //#define TI_DEBUG
 
+#ifdef TELEINFO_USE_TASK
+#include "Tasks_utils.h"
+#endif
+
 #define TRUE 1
 #define FALSE 0
 
@@ -615,6 +619,30 @@ bool TeleInfo::get_Structure_Data(uint8_t id, char *result)
 	}
 	return false;
 }
+
+// ********************************************************************************
+// Basic Task function to check TeleInfo
+// ********************************************************************************
+/**
+ * A basic Task to check TeleInfo
+ */
+#ifdef TELEINFO_USE_TASK
+
+/**
+ * We assume that TeleInfo instance is called TI
+ */
+extern TeleInfo TI;
+
+void TELEINFO_Task_code(void *parameter)
+{
+	BEGIN_TASK_CODE("TELEINFO_Task");
+	for (EVER)
+	{
+		TI.Process();
+		END_TASK_CODE();
+	}
+}
+#endif
 
 // ********************************************************************************
 // End of file

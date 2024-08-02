@@ -476,10 +476,58 @@ void printf_message_to_UART(const String &mess, bool balise, HardwareSerial *Ser
 	Serial_Message->flush();
 }
 
+// ********************************************************************************
+// Other utilitary function
+// ********************************************************************************
+
+/**
+ * Recherche de données entre deux expressions dans une chaine de caractère
+ * data : la chaine de caractère
+ * B_Begin : la balise de début
+ * B_End : la balise de fin
+ * value : renvoie la chaine entre les balises (l'espace mémoire doit exister)
+ * len : longueur de la chaine trouvée
+ * Le fonction retourne un pointeur sur la balise de début si elle est trouvée, NULL sinon
+ */
+char* Search_Balise(uint8_t *data, const char *B_Begin, const char *B_end, char *value,
+		uint16_t *len)
+{
+	char *pos_B_Begin;
+	char *pos_B_end;
+	char *result = NULL;
+
+	*len = 0;
+	if ((pos_B_Begin = strstr((char*) data, B_Begin)) != NULL)
+	{
+		pos_B_Begin += strlen(B_Begin);
+
+		if ((pos_B_end = strstr((char*) pos_B_Begin, B_end)) != NULL)
+		{
+			*len = (uint16_t) (pos_B_end - pos_B_Begin);
+			if (*len != 0)
+			{
+				strncpy((char*) value, (char*) pos_B_Begin, *len);
+				value[*len] = 0;
+			}
+			else
+				value[0] = 0;
+			result = pos_B_Begin;
+		}
+	}
+	return result;
+}
+
+// ********************************************************************************
+// Basic Task function to analyse UART message
+// ********************************************************************************
 /**
  * A basic Task to analyse UART message
  */
 #ifdef UART_USE_TASK
+
+/**
+ * This functions should be redefined elsewhere with your analyse
+ */
 bool __attribute__((weak)) UserAnalyseMessage(void)
 {
   return true;

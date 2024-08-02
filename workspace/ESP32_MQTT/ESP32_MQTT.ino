@@ -128,7 +128,7 @@ bool MQTT_Connected = false;
 #define USE_TASK_FOR_LOOP
 
 // Ajoute la task idle et publie les mesures idle
-#define RUN_TASK_IDLE	false
+#define RUN_TASK_IDLE	true
 void Task_ShowIdle(void *parameter)
 {
 	BEGIN_TASK_CODE("ShowIdle");
@@ -223,7 +223,12 @@ void setup()
 	IHM_Print0("Connexion .....");
 	print_debug(F("==> Wait for network <=="));
 	if (!myServer.WaitForConnexion((Conn_typedef) SSID_CONNEXION))
+	{
 		print_debug(F("==> Connected to network <=="));
+
+		// Affichage ip adresse
+		IHM_IPAddress(myServer.IPaddress().c_str());
+	}
 	else
 	{
 		IHM_Print0("Failed !   ");
@@ -317,12 +322,6 @@ void OnAfterConnexion(void)
 
 	// MQTT
 	server.on("/MQTT_Request", HTTP_POST, handleMQTTRequest);
-
-	// Begin the server
-	server.begin();
-
-	// Affichage ip adresse
-	IHM_IPAddress(myServer.IPaddress().c_str());
 }
 
 // ********************************************************************************

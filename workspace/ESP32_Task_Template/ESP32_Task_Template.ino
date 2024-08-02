@@ -125,7 +125,9 @@ void handleOperation(CB_SERVER_PARAM);
 // Task functions
 // ********************************************************************************
 
-void Task_Display_code(void *parameter)
+#define USE_IDLE_TASK	true
+
+void Display_Task_code(void *parameter)
 {
 	BEGIN_TASK_CODE("Display_Task");
 	for (EVER)
@@ -133,14 +135,16 @@ void Task_Display_code(void *parameter)
 		IHM_Print0(RTC_Local.the_time);
 
 		// Afficher Idle
+#if USE_IDLE_TASK == true
 		IHM_Print(3, TaskList.GetIdleStr().c_str(), true);
+#endif
 
 		// Test extinction de l'écran
 		IHM_CheckTurnOff();
 		END_TASK_CODE();
 	}
 }
-#define DISPLAY_DATA_TASK	{true, "Display_Task", 4096, 4, 1000, CoreAny, Task_Display_code}
+#define DISPLAY_DATA_TASK	{true, "Display_Task", 4096, 4, 1000, CoreAny, Display_Task_code}
 
 // ********************************************************************************
 // Initialization
@@ -208,8 +212,13 @@ void setup()
 
 	IHM_Print0("Connexion .....");
 	print_debug(F("==> Wait for network <=="));
-	if (!myServer.WaitForConnexion((Conn_typedef)SSID_CONNEXION))
-	  print_debug(F("==> Connected to network <=="));
+	if (!myServer.WaitForConnexion((Conn_typedef) SSID_CONNEXION))
+	{
+		print_debug(F("==> Connected to network <=="));
+
+		// Affichage ip adresse
+		IHM_IPAddress(myServer.IPaddress().c_str());
+	}
 	else
 	{
 		IHM_Print0("Failed !   ");
@@ -218,11 +227,13 @@ void setup()
 
 	print_debug("*** Setup time : " + String(millis() - start_time) + " ms ***\r\n");
 
+	delay(1000);
+
 	// Task definition
 	TaskList.AddTask(RTC_DATA_TASK);
 	TaskList.AddTask(UART_DATA_TASK);
 	TaskList.AddTask(DISPLAY_DATA_TASK);
-	TaskList.Create(true);
+	TaskList.Create(USE_IDLE_TASK);
 }
 
 // The loop function is called in an endless loop
@@ -267,12 +278,6 @@ void OnAfterConnexion(void)
 
 	server.on("/operation", HTTP_PUT, handleOperation);
 	server.on("/operation", HTTP_GET, handleOperation);
-
-	// Begin the server
-	server.begin();
-
-	// Affichage ip adresse
-	IHM_IPAddress(myServer.IPaddress().c_str());
 }
 
 // ********************************************************************************

@@ -5,6 +5,10 @@
 #endif
 #include "display.h"
 
+#ifdef CIRRUS_USE_TASK
+#include "Tasks_utils.h"
+#endif
+
 extern uint8_t CIRRUS_Number;
 
 // Data 200 ms
@@ -212,6 +216,25 @@ void Simple_Update_IHM(const char *first_text, const char *last_text)
   // Actualise l'écran si nécessaire
   IHM_Display();
 }
+
+// ********************************************************************************
+// Basic Task function to get data from Cirrus
+// ********************************************************************************
+/**
+ * A basic Task to get data from Cirrus
+ */
+#ifdef CIRRUS_USE_TASK
+
+void CIRRUS_Task_code(void *parameter)
+{
+	BEGIN_TASK_CODE_UNTIL("CIRRUS_Task");
+	for (EVER)
+	{
+		Simple_Get_Data();
+		END_TASK_CODE_UNTIL();
+	}
+}
+#endif
 
 // ********************************************************************************
 // End of file

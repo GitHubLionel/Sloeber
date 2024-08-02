@@ -383,6 +383,13 @@ bool ServerConnexion::Connexion(bool toUART)
 	print_debug(String(_Wifi_Signal), false);
 	print_debug(F(" dBm"));
 
+#ifdef USE_MDNS
+  if (MDNS.begin(_mDNSHostName.c_str()))
+  {
+  	print_debug(F("mDNS responder started"));
+  }
+#endif
+
 	// Send IP address to UART if required
 	if (toUART)
 		printf_message_to_UART(_IPaddress);
@@ -490,8 +497,14 @@ bool ServerConnexion::WaitForConnexion(Conn_typedef connexion, bool toUART)
 			if (_onAfterConnexion != NULL)
 				_onAfterConnexion();
 
+			// Start the server
+			server.begin();
+#ifdef USE_MDNS
+			MDNS.addService("http", "tcp", SERVER_PORT);
+#endif
+
 			// Get Epoch time via NTP
-#if defined(USE_NTP_SERVER)
+#if defined(USE_NTP_SERVER) && defined(USE_RTCLocal)
 			if (!_IsSoftAP)
 			{
 				print_debug(F("Get EpochTime"));
@@ -569,7 +582,17 @@ bool ServerConnexion::ExtractSSID_Password(void)
  */
 String GetIPaddress(void)
 {
-	return "IP=" + WiFi.softAPIP().toString();
+#ifdef ESP8266
+	if (WiFi.getMode() == WIFI_AP)
+	  return "IP=" + WiFi.softAPIP().toString();
+	else
+		return "IP=" + WiFi.localIP().toString();
+#else
+	if (WiFi.getMode() == WIFI_MODE_AP)
+	  return "IP=" + WiFi.softAPIP().toString();
+	else
+		return "IP=" + WiFi.localIP().toString();
+#endif
 }
 
 // ********************************************************************************
@@ -1464,47 +1487,6 @@ const String getContentType(const String &filename)
 											if (filename.endsWith(".zip"))
 												return "application/x-zip";
 	return "text/plain";
-}
-
-// ********************************************************************************
-// Other utilitary function
-// ********************************************************************************
-
-/**
- * Recherche de données entre deux expressions dans une chaine de caractère
- * data : la chaine de caractère
- * B_Begin : la balise de début
- * B_End : la balise de fin
- * value : renvoie la chaine entre les balises (l'espace mémoire doit exister)
- * len : longueur de la chaine trouvée
- * Le fonction retourne un pointeur sur la balise de début si elle est trouvée, NULL sinon
- */
-char* Search_Balise(uint8_t *data, const char *B_Begin, const char *B_end, char *value,
-		uint16_t *len)
-{
-	char *pos_B_Begin;
-	char *pos_B_end;
-	char *result = NULL;
-
-	*len = 0;
-	if ((pos_B_Begin = strstr((char*) data, B_Begin)) != NULL)
-	{
-		pos_B_Begin += strlen(B_Begin);
-
-		if ((pos_B_end = strstr((char*) pos_B_Begin, B_end)) != NULL)
-		{
-			*len = (uint16_t) (pos_B_end - pos_B_Begin);
-			if (*len != 0)
-			{
-				strncpy((char*) value, (char*) pos_B_Begin, *len);
-				value[*len] = 0;
-			}
-			else
-				value[0] = 0;
-			result = pos_B_Begin;
-		}
-	}
-	return result;
 }
 
 // ********************************************************************************

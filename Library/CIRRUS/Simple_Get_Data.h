@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef USE_CONFIG_LIB_FILE
+#include "config_lib.h"
+#endif
+
 #include <stdint.h>
 #include <stdbool.h>
 #include "CIRRUS.h"
@@ -11,6 +15,12 @@
  * Lors d'un projet particulier, dupliquer cette unité en supprimant "Simple_"
  * Ne pas oublier d'exclure du build "Simple_Get_Data.c"
  */
+
+// To create a basic task to check Cirrus data every 200 ms
+#ifdef CIRRUS_USE_TASK
+#define CIRRUS_DATA_TASK(start)	{(start), "CIRRUS_Task", 4096, 5, 200, CoreAny, CIRRUS_Task_code}
+void CIRRUS_Task_code(void *parameter);
+#endif
 
 // Pour la gestion du SSR
 //#define USE_SSR

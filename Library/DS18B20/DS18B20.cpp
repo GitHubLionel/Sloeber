@@ -2,6 +2,10 @@
 
 //#define DALLAS_DEBUG
 
+#ifdef DS18B20_USE_TASK
+#include "Tasks_utils.h"
+#endif
+
 // External function for debug message
 extern void print_debug(String mess, bool ln = true);
 extern void print_debug(int val, bool ln = true);
@@ -130,6 +134,30 @@ String DS18B20::get_Temperature_Str(uint8_t id)
 {
 	return String(get_Temperature(id));
 }
+
+// ********************************************************************************
+// Basic Task function to check dallas DS18B20
+// ********************************************************************************
+/**
+ * A basic Task to check dallas DS18B20
+ */
+#ifdef DS18B20_USE_TASK
+
+/**
+ * We assume that DS18B20 instance is called DS
+ */
+extern DS18B20 DS;
+
+void DS18B20_Task_code(void *parameter)
+{
+	BEGIN_TASK_CODE("DS18B20_Task");
+	for (EVER)
+	{
+		DS.check_dallas();
+		END_TASK_CODE();
+	}
+}
+#endif
 
 // ********************************************************************************
 // End of file

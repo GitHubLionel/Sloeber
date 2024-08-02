@@ -191,8 +191,13 @@ void setup()
 
 	IHM_Print0("Connexion .....");
 	print_debug(F("==> Wait for network <=="));
-	if (!myServer.WaitForConnexion((Conn_typedef)SSID_CONNEXION))
-	  print_debug(F("==> Connected to network <=="));
+	if (!myServer.WaitForConnexion((Conn_typedef) SSID_CONNEXION))
+	{
+		print_debug(F("==> Connected to network <=="));
+
+		// Affichage ip adresse
+		IHM_IPAddress(myServer.IPaddress().c_str());
+	}
 	else
 	{
 		IHM_Print0("Failed !   ");
@@ -200,6 +205,8 @@ void setup()
 	}
 
 	print_debug("*** Setup time : " + String(millis() - start_time) + " ms ***\r\n");
+
+	delay(1000);
 
   // Subscribe to a topic pattern and attach a callback
   mqtt.subscribe("#", [](const char * topic, const char * payload) {
@@ -276,12 +283,6 @@ void OnAfterConnexion(void)
 
 	server.on("/operation", HTTP_PUT, handleOperation);
 	server.on("/operation", HTTP_GET, handleOperation);
-
-	// Begin the server
-	server.begin();
-
-	// Affichage ip adresse
-	IHM_IPAddress(myServer.IPaddress().c_str());
 }
 
 // ********************************************************************************

@@ -257,22 +257,22 @@ void IHM_IPAddress(const char *ip)
 	SSD1306_GotoXY(0, 0);
 	SSD1306_PutString(ip, Font_7x10, SSD1306_COLOR_WHITE);
 	SSD1306_UpdateScreen();
-	delay(2000);
-	SSD1306_Clear_Screen();
+//	delay(2000);
+//	SSD1306_Clear_Screen();
 #endif
 #ifdef OLED_SSD1327
 	SSD1327_String({0, 20}, ip, &Font12, FONT_BACKGROUND, SSD1327_WHITE);
 	SSD1327_DisplayUpdated();
-	delay(2000);
-	SSD1327_Clear(SSD1327_BACKGROUND);
-	SSD1327_Display();
+//	delay(2000);
+//	SSD1327_Clear(SSD1327_BACKGROUND);
+//	SSD1327_Display();
 #endif
 #ifdef OLED_SH1107
 	SH1107_Fill(0x0, 0);
 	SH1107_WriteString(0, 0, 2, (char*) ip, FONT_NORMAL, 0);
 	SH1107_DumpBuffer();
-	delay(2000);
-  SH1107_Fill(0x0, 1);
+//	delay(2000);
+//  SH1107_Fill(0x0, 1);
 #endif
 #ifdef DEFAULT_OUTPUT
   (void) ip;

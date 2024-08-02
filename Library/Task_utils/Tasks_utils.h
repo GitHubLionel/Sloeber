@@ -73,6 +73,7 @@
 
 // Some defines to simplify task code.
 // This define create a pointer to the struct TaskData_t of the task that can used in the code.
+// BEWARE : no verification is done on the pointer !
 #define BEGIN_TASK_CODE(name)	TaskData_t *td = TaskList.GetTaskByName(name); \
 		int sleep = pdMS_TO_TICKS(td->Sleep_ms);
 
