@@ -88,6 +88,7 @@ PART_TYPE *Data_Partition = FS_Partition;
 /**
  * Create and open a data partition
  * The partition "/data" must exist in the partitions.csv file
+ * ShowInfo : print information of data partition. Only in debug mode.
  */
 bool CreateOpenDataPartition(bool ForceFormat, bool ShowInfo)
 {
@@ -110,10 +111,12 @@ bool CreateOpenDataPartition(bool ForceFormat, bool ShowInfo)
 		print_debug(F("** Data partition open **"));
 		if (ShowInfo)
 		{
+#ifdef SERIAL_DEBUG
 			SelectPartitionForInfo(Data_Partition);
 			Partition_Info();
 			Partition_ListDir();
 			SelectPartitionForInfo(FS_Partition);
+#endif
 		}
 		return true;
 	}
