@@ -101,6 +101,15 @@ void IHM_Print0(const char *text)
  */
 void IHM_Print(uint8_t line, const char *text, bool update_screen)
 {
+#ifdef DEFAULT_OUTPUT
+  // Par défaut envoie dans la console
+  PrintTerminal(text);
+  (void) line;
+  (void) update_screen;
+#endif
+  // Si l'écran est éteint, on ne fait rien
+  if (TurnOff)
+  	return;
   line += Display_offset_line;
 #ifdef USE_LCD
   LCD_I2C_Str(line+1, 1 ,text, true);
@@ -120,12 +129,6 @@ void IHM_Print(uint8_t line, const char *text, bool update_screen)
 	SH1107_WriteString(0, 0, line, (char*) text, FONT_NORMAL, 0);
   if (update_screen)
   	SH1107_DumpBuffer();
-#endif
-#ifdef DEFAULT_OUTPUT
-  // Par défaut envoie dans la console
-  PrintTerminal(text);
-  (void) line;
-  (void) update_screen;
 #endif
 }
 

@@ -92,6 +92,12 @@
  **********************************************************/
 
 /**********************************************************
+ * Keyboard define
+ **********************************************************/
+#define DEBOUNCING_MS	200
+#define DEBOUNCING_US	200000
+
+/**********************************************************
  * Cirrus define
  **********************************************************/
 //#define CIRRUS_CS5480
@@ -116,5 +122,5 @@
 //#define DS18B20_USE_TASK     // A basic task to check DS18B20 temperature every 2 s
 //#define TELEINFO_USE_TASK    // A basic task to check TeleInfo every 1 s
 //#define CIRRUS_USE_TASK      // A basic task to check Cirrus data every 200 ms
-
+//#define KEYBOARD_USE_TASK    // A basic task to check keyboard every 10 ms
 
