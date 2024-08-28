@@ -75,10 +75,14 @@ SDA        |PB9          |Serial data line
 #define SSD1306_OFFSET_WIDTH     0
 #endif
 
-#ifdef ESP32
-#define SSD1306_CLOCK							800000	// Clock speed
+#ifdef I2C_FREQUENCY
+#define SSD1306_CLOCK	I2C_FREQUENCY
 #else
-#define SSD1306_CLOCK							400000	// Clock speed
+	#ifdef ESP32
+	#define SSD1306_CLOCK							800000	// Clock speed
+	#else
+	#define SSD1306_CLOCK							400000	// Clock speed
+	#endif
 #endif
 
 typedef enum {

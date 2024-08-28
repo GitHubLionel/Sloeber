@@ -49,6 +49,8 @@ void SERIAL_Initialization(int baud)
 	// On démarre le port série : NB_BIT = 8, PARITY NONE, NB_STOP_BIT = 1
 	Serial.begin(baud);
 	delay(100);  // Pour stabiliser UART
+#else
+	(void) baud;
 #endif
 #ifdef SERIAL_DEBUG
 	// On attend 5 secondes pour stabiliser l'alimentation et pour lancer la console UART (debug)

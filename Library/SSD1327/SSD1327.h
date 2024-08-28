@@ -31,10 +31,14 @@
 #define	OLED_TOP_DOWN
 #endif
 
-#ifdef ESP32
-#define SSD1327_CLOCK							800000	// Clock speed
+#ifdef I2C_FREQUENCY
+#define SSD1327_CLOCK	I2C_FREQUENCY
 #else
-#define SSD1327_CLOCK							400000	// Clock speed
+	#ifdef ESP32
+	#define SSD1327_CLOCK							800000	// Clock speed
+	#else
+	#define SSD1327_CLOCK							400000	// Clock speed
+	#endif
 #endif
 
 /********************************************************************************

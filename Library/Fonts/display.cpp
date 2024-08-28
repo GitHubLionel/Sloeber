@@ -9,8 +9,16 @@
 #ifdef ESP32
 // I2C0 : GPIO22(SCL) et GPIO21(SDA)
 // I2C1 : GPIO12(SCL) et GPIO14(SDA)
-#define PIN_WIRE_SDA	21 // 14
-#define PIN_WIRE_SCL  22 // 12
+#ifdef I2C_SDA_GPIO
+#define PIN_WIRE_SDA	I2C_SDA_GPIO
+#else
+#define PIN_WIRE_SDA	21 // I2C0
+#endif
+#ifdef I2C_SCL_GPIO
+#define PIN_WIRE_SCL  I2C_SCL_GPIO
+#else
+#define PIN_WIRE_SCL  22 // I2C0
+#endif
 #endif
 
 volatile uint8_t Display_offset_line = 0;

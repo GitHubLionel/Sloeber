@@ -118,6 +118,7 @@ bool CIRRUS_Base::begin()
 }
 #endif
 
+#ifdef CIRRUS_USE_UART
 /**
  * Set baud rate of Cirrus
  * Set baud rate of UART if change_UART == true
@@ -198,6 +199,7 @@ bool CIRRUS_Base::set_uart_baudrate(uint32_t baud)
 
 	return success;
 }
+#endif
 
 /**
  * Calibration du Cirrus sélectionné en cours (par défaut Cirrus_1)
@@ -356,15 +358,15 @@ void CIRRUS_Base::Get_Parameters(CIRRUS_Calib_typedef *calib, CIRRUS_Config_type
 	calib->V1_Calib = Scale_ch1.V_SCALE * 0.6;
 	calib->I1_MAX = Scale_ch1.I_SCALE * 0.6;
 
-	read_register(P16_V_GAIN, PAGE16, &reg);
+	read_register(P16_V1_GAIN, PAGE16, &reg);
 	calib->V1GAIN = reg.Bit32;
-	read_register(P16_I_GAIN, PAGE16, &reg);
+	read_register(P16_I1_GAIN, PAGE16, &reg);
 	calib->I1GAIN = reg.Bit32;
-	read_register(P16_I_ACOFF, PAGE16, &reg);
+	read_register(P16_I1_ACOFF, PAGE16, &reg);
 	calib->I1ACOFF = reg.Bit32;
-	read_register(P16_P_OFF, PAGE16, &reg);
+	read_register(P16_P1_OFF, PAGE16, &reg);
 	calib->P1OFF = reg.Bit32;
-	read_register(P16_Q_OFF, PAGE16, &reg);
+	read_register(P16_Q1_OFF, PAGE16, &reg);
 	calib->Q1OFF = reg.Bit32;
 
 	// Channel 2
@@ -1098,7 +1100,7 @@ bool CIRRUS_Base::wait_for_ready(bool clear_ready)
 	{
 		IsNotTimeOut = ((millis() - StartTime) < Ready_TimeOut);  // csReferenceTime
 		// Background Wifi process
-//		yield();
+		yield();
 	}
 
 	if ((!IsNotTimeOut) && (CIRRUS_Last_Error == CIRRUS_OK))
@@ -1346,11 +1348,11 @@ void CIRRUS_Base::SelectChannel(CIRRUS_Channel channel)
 
 	if (channel == Channel_1)
 	{
-		//Page 0 registers.
+		// Page 0 registers.
 		P0_V_PEAK = P0_V1_PEAK;
 		P0_I_PEAK = P0_I1_PEAK;
 
-		//Page 16 registers.
+		// Page 16 registers.
 		P16_I = P16_I1;
 		P16_V = P16_V1;
 		P16_P = P16_P1;
@@ -1361,21 +1363,22 @@ void CIRRUS_Base::SelectChannel(CIRRUS_Channel channel)
 		P16_Q = P16_Q1;
 		P16_S = P16_S1;
 		P16_PF = P16_PF1;
-		P16_I_DCOFF = P16_I1_DCOFF;
-		P16_I_GAIN = P16_I1_GAIN;
-		P16_V_DCOFF = P16_V1_DCOFF;
-		P16_V_GAIN = P16_V1_GAIN;
-		P16_P_OFF = P16_P1_OFF;
-		P16_I_ACOFF = P16_I1_ACOFF;
-		P16_Q_OFF = P16_Q1_OFF;
+		// Config parameters
+//		P16_I_DCOFF = P16_I1_DCOFF;
+//		P16_I_GAIN = P16_I1_GAIN;
+//		P16_V_DCOFF = P16_V1_DCOFF;
+//		P16_V_GAIN = P16_V1_GAIN;
+//		P16_P_OFF = P16_P1_OFF;
+//		P16_I_ACOFF = P16_I1_ACOFF;
+//		P16_Q_OFF = P16_Q1_OFF;
 
-		//Page 17 registers.
+		// Page 17 registers.
 		P17_VSag_DUR = P17_V1Sag_DUR;
 		P17_VSag_LEVEL = P17_V1Sag_LEVEL;
 		P17_IOver_DUR = P17_I1Over_DUR;
 		P17_IOver_LEVEL = P17_I1Over_LEVEL;
 
-		//Page 18 registers.
+		// Page 18 registers.
 		P18_VSweil_DUR = P18_V1Sweil_DUR;
 		P18_VSweil_LEVEL = P18_V1Sweil_LEVEL;
 
@@ -1384,11 +1387,11 @@ void CIRRUS_Base::SelectChannel(CIRRUS_Channel channel)
 	}
 	else
 	{
-		//Page 0 registers.
+		// Page 0 registers.
 		P0_V_PEAK = P0_V2_PEAK;
 		P0_I_PEAK = P0_I2_PEAK;
 
-		//Page 16 registers.
+		// Page 16 registers.
 		P16_I = P16_I2;
 		P16_V = P16_V2;
 		P16_P = P16_P2;
@@ -1399,21 +1402,22 @@ void CIRRUS_Base::SelectChannel(CIRRUS_Channel channel)
 		P16_Q = P16_Q2;
 		P16_S = P16_S2;
 		P16_PF = P16_PF2;
-		P16_I_DCOFF = P16_I2_DCOFF;
-		P16_I_GAIN = P16_I2_GAIN;
-		P16_V_DCOFF = P16_V2_DCOFF;
-		P16_V_GAIN = P16_V2_GAIN;
-		P16_P_OFF = P16_P2_OFF;
-		P16_I_ACOFF = P16_I2_ACOFF;
-		P16_Q_OFF = P16_Q2_OFF;
+		// Config parameters
+//		P16_I_DCOFF = P16_I2_DCOFF;
+//		P16_I_GAIN = P16_I2_GAIN;
+//		P16_V_DCOFF = P16_V2_DCOFF;
+//		P16_V_GAIN = P16_V2_GAIN;
+//		P16_P_OFF = P16_P2_OFF;
+//		P16_I_ACOFF = P16_I2_ACOFF;
+//		P16_Q_OFF = P16_Q2_OFF;
 
-		//Page 17 registers.
+		// Page 17 registers.
 		P17_VSag_DUR = P17_V2Sag_DUR;
 		P17_VSag_LEVEL = P17_V2Sag_LEVEL;
 		P17_IOver_DUR = P17_I2Over_DUR;
 		P17_IOver_LEVEL = P17_I2Over_LEVEL;
 
-		//Page 18 registers.
+		// Page 18 registers.
 		P18_VSweil_DUR = P18_V2Sweil_DUR;
 		P18_VSweil_LEVEL = P18_V2Sweil_LEVEL;
 
@@ -1431,7 +1435,7 @@ void CIRRUS_Base::SelectChannel(CIRRUS_Channel channel)
 float CIRRUS_Base::get_instantaneous_voltage(void)
 {
 	Bit_List v;
-	static float old_val = 0.0;
+	float old_val = 0.0;
 
 	if (read_register(P16_V, PAGE16, &v))
 		old_val = (twoscompl_to_real(&v) * Scale->V_SCALE);
@@ -1444,7 +1448,7 @@ float CIRRUS_Base::get_instantaneous_voltage(void)
 float CIRRUS_Base::get_instantaneous_current(void)
 {
 	Bit_List i;
-	static float old_val = 0.0;
+	float old_val = 0.0;
 
 	if (read_register(P16_I, PAGE16, &i))
 		old_val = (twoscompl_to_real(&i) * Scale->I_SCALE);
@@ -1457,7 +1461,7 @@ float CIRRUS_Base::get_instantaneous_current(void)
 float CIRRUS_Base::get_instantaneous_power(void)
 {
 	Bit_List p;
-	static float old_val = 0.0;
+	float old_val = 0.0;
 
 	if (read_register(P16_P, PAGE16, &p))
 		old_val = (twoscompl_to_real(&p) * Scale->P_SCALE);
@@ -1470,11 +1474,11 @@ float CIRRUS_Base::get_instantaneous_power(void)
 float CIRRUS_Base::get_instantaneous_quadrature_power(void)
 {
 	Bit_List q;
-	static float old_val = 0.0;
+	float old_pquad = 0.0;
 
 	if (read_register(P16_Q, PAGE16, &q))
-		old_val = (twoscompl_to_real(&q) * Scale->P_SCALE);
-	return old_val;
+		old_pquad = (twoscompl_to_real(&q) * Scale->P_SCALE);
+	return old_pquad;
 }
 
 //Average and RMS quantities
@@ -1485,7 +1489,7 @@ float CIRRUS_Base::get_instantaneous_quadrature_power(void)
 float CIRRUS_Base::get_rms_voltage(void)
 {
 	Bit_List reg;
-	static float old_val = 0.0;
+	float old_val = 0.0;
 
 	if (read_register(P16_V_RMS, PAGE16, &reg))
 		old_val = (float) (blist_to_int(&reg) * over_pow2_24 * Scale->V_SCALE);
@@ -1498,7 +1502,7 @@ float CIRRUS_Base::get_rms_voltage(void)
 float CIRRUS_Base::get_rms_current(void)
 {
 	Bit_List reg;
-	static float old_val = 0.0;
+	float old_val = 0.0;
 
 	if (read_register(P16_I_RMS, PAGE16, &reg))
 		old_val = (float) (blist_to_int(&reg) * over_pow2_24 * Scale->I_SCALE);
@@ -1511,11 +1515,11 @@ float CIRRUS_Base::get_rms_current(void)
 float CIRRUS_Base::get_average_power(void)
 {
 	Bit_List pavg;
-	static float old_val = 0.0;
+	float old_paverage = 0.0;
 
 	if (read_register(P16_P_AVG, PAGE16, &pavg))
-		old_val = (twoscompl_to_real(&pavg) * Scale->P_SCALE);
-	return old_val;
+		old_paverage = (twoscompl_to_real(&pavg) * Scale->P_SCALE);
+	return old_paverage;
 }
 
 /*
@@ -1524,11 +1528,11 @@ float CIRRUS_Base::get_average_power(void)
 float CIRRUS_Base::get_average_reactive_power(void)
 {
 	Bit_List qavg;
-	static float old_val = 0.0;
+	float old_preact = 0.0;
 
 	if (read_register(P16_Q_AVG, PAGE16, &qavg))
-		old_val = (twoscompl_to_real(&qavg) * Scale->P_SCALE);
-	return old_val;
+		old_preact = (twoscompl_to_real(&qavg) * Scale->P_SCALE);
+	return old_preact;
 }
 
 //Peak quantities
@@ -1539,7 +1543,7 @@ float CIRRUS_Base::get_average_reactive_power(void)
 float CIRRUS_Base::get_peak_voltage(void)
 {
 	Bit_List v;
-	static float old_val = 0.0;
+	float old_val = 0.0;
 
 	if (read_register(P0_V_PEAK, PAGE0, &v))
 		old_val = (twoscompl_to_real(&v) * Scale->V_SCALE);
@@ -1552,7 +1556,7 @@ float CIRRUS_Base::get_peak_voltage(void)
 float CIRRUS_Base::get_peak_current(void)
 {
 	Bit_List i;
-	static float old_val = 0.0;
+	float old_val = 0.0;
 
 	if (read_register(P0_I_PEAK, PAGE0, &i))
 		old_val = (twoscompl_to_real(&i) * Scale->I_SCALE);
@@ -1565,11 +1569,11 @@ float CIRRUS_Base::get_peak_current(void)
 float CIRRUS_Base::get_apparent_power(void)
 {
 	Bit_List s;
-	static float old_val = 0.0;
+	float old_papp = 0.0;
 
 	if (read_register(P16_S, PAGE16, &s))
-		old_val = (fabs(twoscompl_to_real(&s)) * Scale->P_SCALE);
-	return old_val;
+		old_papp = (fabs(twoscompl_to_real(&s)) * Scale->P_SCALE);
+	return old_papp;
 }
 
 /*
@@ -1578,11 +1582,11 @@ float CIRRUS_Base::get_apparent_power(void)
 float CIRRUS_Base::get_power_factor(void)
 {
 	Bit_List pf;
-	static float old_val = 0.0;
+	float old_pf = 0.0;
 
 	if (read_register(P16_PF, PAGE16, &pf))
-		old_val = (twoscompl_to_real(&pf));
-	return old_val;
+		old_pf = (twoscompl_to_real(&pf));
+	return old_pf;
 }
 
 //Total sum quantities
@@ -1593,11 +1597,10 @@ float CIRRUS_Base::get_power_factor(void)
 float CIRRUS_Base::get_sum_active_power(void)
 {
 	Bit_List p_sum;
-	static float old_val = 0.0;
 
 	if (read_register(P16_P_SUM, PAGE16, &p_sum))
-		old_val = (twoscompl_to_real(&p_sum) * Scale->P_SCALE);
-	return old_val;
+		old_psumact = (twoscompl_to_real(&p_sum) * Scale->P_SCALE);
+	return old_psumact;
 }
 
 /*
@@ -1606,11 +1609,10 @@ float CIRRUS_Base::get_sum_active_power(void)
 float CIRRUS_Base::get_sum_apparent_power(void)
 {
 	Bit_List s_sum;
-	static float old_val = 0.0;
 
 	if (read_register(P16_S_SUM, PAGE16, &s_sum))
-		old_val = (fabs(twoscompl_to_real(&s_sum)) * Scale->P_SCALE);
-	return old_val;
+		old_psumapp = (fabs(twoscompl_to_real(&s_sum)) * Scale->P_SCALE);
+	return old_psumapp;
 }
 
 /*
@@ -1619,11 +1621,10 @@ float CIRRUS_Base::get_sum_apparent_power(void)
 float CIRRUS_Base::get_sum_reactive_power(void)
 {
 	Bit_List q_sum;
-	static float old_val = 0.0;
 
 	if (read_register(P16_Q_SUM, PAGE16, &q_sum))
-		old_val = (twoscompl_to_real(&q_sum) * Scale->P_SCALE);
-	return old_val;
+		old_psumreact = (twoscompl_to_real(&q_sum) * Scale->P_SCALE);
+	return old_psumreact;
 }
 
 /*
@@ -1773,7 +1774,7 @@ float CIRRUS_Base::get_data(CIRRUS_Data _data, float *result)
 			break;
 		}
 
-			// common channel
+		// common channel
 		case CIRRUS_Total_Active_Power:
 		{
 			if (read_register(P16_P_SUM, PAGE16, &reg))
@@ -1830,30 +1831,28 @@ float CIRRUS_Base::get_temperature(void)
 	const float pow2_7 = 128.0;
 	Bit_List t;
 	Reg_Mask tup = REG_MASK_TUP;
-	static float old_val = 0.0;
 
 	if (get_bitmask(tup) == CIRRUS_RegBit_Set)
 	{
 		if (read_register(P16_T, PAGE16, &t))
-			old_val = (twoscompl_to_real(&t) * pow2_7);
+			old_temp = (twoscompl_to_real(&t) * pow2_7);
 		clear_bitmask(tup);
 	}
-	return old_val;
+	return old_temp;
 }
 
 float CIRRUS_Base::get_frequency(void)
 {
 	Bit_List reg;
 	Reg_Mask fup = REG_MASK_FUP;
-	static float old_val = 0.0;
 
 	if (get_bitmask(fup) == CIRRUS_RegBit_Set)
 	{
 		if (read_register(P16_Epsilon, PAGE16, &reg))
-			old_val = (fabs(twoscompl_to_real(&reg)) * 4000);
+			old_freq = (fabs(twoscompl_to_real(&reg)) * 4000);
 		clear_bitmask(fup);
 	}
-	return old_val;
+	return old_freq;
 }
 
 // ********************************************************************************

@@ -277,7 +277,6 @@ class ServerConnexion
 			return (!WaitForNetWork);
 		}
 		bool ExtractSSID_Password(void);
-		bool BasicAnalyseMessage(void);
 		String IPaddress() const
 		{
 			return _IPaddress;

@@ -980,6 +980,8 @@ bool handleReadFile(CB_SERVER_PARAM)
 	// Les pages web
 	if (_path.endsWith("/"))
 		_path += "index.html";         		// If a folder is requested, send the index file
+	if (_path.equals("/home"))
+		_path = "/index.html";
 	String contentType;
 	if (pserver->hasArg("download"))
 		contentType = "application/octet-stream";

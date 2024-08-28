@@ -24,7 +24,6 @@ adc_channel_t Keyboard_Channel;
 #endif
 static uint8_t Btn_Count = 0;
 static bool Keyboard_Initialized = false;
-volatile uint64_t Start_click = 0;
 volatile Btn_Action Btn_Clicked = Btn_NOP;
 volatile uint16_t last_ADC = 0;
 
@@ -308,8 +307,10 @@ void Keyboard_UpdateTime(void)
 				count = 0;
 			}
 			if (KBClick_cb)
+			{
 				KBClick_cb(Btn_Clicked);
-			Btn_Clicked = Btn_NOP;
+			  Btn_Clicked = Btn_NOP;
+			}
 		}
 	}
 }
@@ -324,7 +325,6 @@ bool Check_Keyboard(Btn_Action *Btn)
 {
 	*Btn = Btn_Clicked;
 	Btn_Clicked = Btn_NOP;  // On "mange" la valeur
-	Start_click = 0;
 	return (bool) (*Btn != Btn_NOP);
 }
 

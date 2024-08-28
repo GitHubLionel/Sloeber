@@ -19,10 +19,14 @@
 #define	OLED_TOP_DOWN
 #endif
 
-#ifdef ESP32
-#define SH1107_CLOCK							800000	// Clock speed
+#ifdef I2C_FREQUENCY
+#define SH1107_CLOCK	I2C_FREQUENCY
 #else
-#define SH1107_CLOCK							400000	// Clock speed
+	#ifdef ESP32
+	#define SH1107_CLOCK							800000	// Clock speed
+	#else
+	#define SH1107_CLOCK							400000	// Clock speed
+	#endif
 #endif
 
 typedef struct

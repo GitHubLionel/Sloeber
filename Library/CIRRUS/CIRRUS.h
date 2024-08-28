@@ -321,6 +321,7 @@ typedef enum
  * RMS data struct.
  * Contain Voltage, Current, Power and Energy by day
  */
+#ifdef CIRRUS_RMS_FULL
 typedef struct RMS_Data
 {
 		float Voltage;
@@ -332,7 +333,7 @@ typedef struct RMS_Data
 		RMS_Data(float u = 0.0, float i = 0.0, float e = 0.0) :
 				Voltage(u), Current(i), Power(e)
 		{
-			Energy = 0;
+			Energy = 0.0;
 		}
 
 		inline RMS_Data& operator +=(const RMS_Data &data)
@@ -368,13 +369,54 @@ typedef struct RMS_Data
 			Voltage = Current = Power = Energy = 0.0;
 			return *this;
 		}
-};
+} RMS_Data_type;
+#else
+typedef struct RMS_Data
+{
+		float Voltage;
+		float Power;
+		float Energy;
 
-// Forward class definition
-class CIRRUS_Base;
-class CIRRUS_RMSData;
+	public:
+		RMS_Data(float u = 0.0, float e = 0.0) :
+				Voltage(u), Power(e)
+		{
+			Energy = 0.0;
+		}
 
-typedef std::deque<CIRRUS_Base*> CirrusList;
+		inline RMS_Data& operator +=(const RMS_Data &data)
+		{
+			Voltage += data.Voltage;
+			Power += data.Power;
+			return *this;
+		}
+
+		inline RMS_Data& operator /=(const float val)
+		{
+			float inv = 1.0 / val;
+			Voltage *= inv;
+			Power *= inv;
+			return *this;
+		}
+
+		inline RMS_Data operator +(RMS_Data const &data) const
+		{
+			return RMS_Data(Voltage + data.Voltage, Power + data.Power);
+		}
+
+		inline RMS_Data operator /(float const val) const
+		{
+			float inv = 1.0 / val;
+			return RMS_Data(Voltage * inv, Power * inv);
+		}
+
+		inline RMS_Data& Zero(void)
+		{
+			Voltage = Power = Energy = 0.0;
+			return *this;
+		}
+} RMS_Data_type;
+#endif
 
 //// Un compteur des passages du zéro
 //extern volatile uint32_t Zero_Cirrus;
@@ -393,6 +435,19 @@ void CIRRUS_Save_To_FLASH(char id_cirrus, CIRRUS_Calib_typedef *calib,
 
 #define CSDelay(delay_ms)	delay(delay_ms);
 
+// Forward class definition
+class CIRRUS_Base;
+
+/**
+ * Define of a list of Cirrus.
+ * Usefull when we have several Cirrus
+ */
+typedef std::deque<CIRRUS_Base*> CirrusList;
+
+/**
+ * Cirrus Communication class
+ * The purpose of this class is to manage the communication with the Cirrus in UART or SPI (with the define)
+ */
 class CIRRUS_Communication
 {
 	public:
@@ -401,6 +456,7 @@ class CIRRUS_Communication
 		}
 		CIRRUS_Communication(void *com, uint8_t RESET_Pin);
 
+		// Initialization
 		void Initialize(void *com, uint8_t RESET_Pin);
 		void begin(void);
 		bool IsStarted(void) const
@@ -408,19 +464,21 @@ class CIRRUS_Communication
 			return Comm_started;
 		}
 
-		void Select_Init(uint8_t CS1_Pin, uint8_t CS2_Pin);
-
 #ifdef CIRRUS_USE_UART
+		// Specific to UART
 		void UART_Change_Baud(uint32_t baud);
 		void ClearBuffer(void);
 #endif
 
+		// Transmit and receive data
 		CIRRUS_State_typedef Transmit(uint8_t *pData, uint16_t Size);
 		CIRRUS_State_typedef Receive(Bit_List *pResult, uint8_t Size = 3);
 
+		// Reset
 		void Chip_Reset(GPIO_PinState PinState);
 		void Hard_Reset(void);
 
+		// Ensure the managment of several Cirrus
 		void AddCirrus(CIRRUS_Base *cirrus, uint8_t select_Pin = 0);
 		CIRRUS_Base* SelectCirrus(uint8_t position, CIRRUS_Channel channel = Channel_none);
 		CIRRUS_Base* GetCirrus(int position);
@@ -477,7 +535,7 @@ class CIRRUS_Base
 
 #ifdef CIRRUS_USE_UART
 		bool begin(uint32_t baud, bool change_UART);
-#else
+#else // SPI
 		bool begin();
 #endif
 
@@ -487,8 +545,10 @@ class CIRRUS_Base
 		void GetScale(float *scale);
 		void SetScale(float *scale);
 		bool TryConnexion();
+#ifdef CIRRUS_USE_UART
 		bool SetUARTBaud(uint32_t baud, bool change_UART);
 		bool set_uart_baudrate(uint32_t baud);
+#endif
 
 		void Load_From_FLASH(CIRRUS_Calib_typedef *calib, CIRRUS_Config_typedef *config);
 		void Save_To_FLASH(CIRRUS_Calib_typedef *calib, CIRRUS_Config_typedef *config);
@@ -637,13 +697,14 @@ class CIRRUS_Base
 		uint8_t P16_Q;
 		uint8_t P16_S;
 		uint8_t P16_PF;
-		uint8_t P16_I_DCOFF;
-		uint8_t P16_I_GAIN;
-		uint8_t P16_V_DCOFF;
-		uint8_t P16_V_GAIN;
-		uint8_t P16_P_OFF;
-		uint8_t P16_I_ACOFF;
-		uint8_t P16_Q_OFF;
+		// Config parameters
+//		uint8_t P16_I_DCOFF;
+//		uint8_t P16_I_GAIN;
+//		uint8_t P16_V_DCOFF;
+//		uint8_t P16_V_GAIN;
+//		uint8_t P16_P_OFF;
+//		uint8_t P16_I_ACOFF;
+//		uint8_t P16_Q_OFF;
 
 		//Page 17 registers.
 		uint8_t P17_VSag_DUR;
@@ -677,6 +738,13 @@ class CIRRUS_Base
 		uint32_t Sample_Count_ms = 25;
 		uint32_t Ready_TimeOut = 25 + 10;
 
+		// Old values
+		float old_temp = 0.0;
+		float old_freq = 0.0;
+		float old_psumreact = 0.0;
+		float old_psumapp = 0.0;
+		float old_psumact = 0.0;
+
 		void data_reset(void);
 
 		// Calibration
@@ -686,6 +754,160 @@ class CIRRUS_Base
 		void set_no_load_calibrations(Bit_List *p_off, Bit_List *q_off, CIRRUS_Channel channel);
 };
 
+
+// ********************************************************************************
+// RMSData class
+// ********************************************************************************
+/**
+ * RMSData class
+ * Get U, I and P RMS data
+ */
+class CIRRUS_RMSData
+{
+	public:
+		CIRRUS_RMSData(bool temperature = true)
+		{
+			_temperature = temperature;
+		}
+		CIRRUS_RMSData(CIRRUS_Base *parent, bool temperature = true) :
+				CIRRUS_RMSData(temperature)
+		{
+			Cirrus = parent;
+		}
+		~CIRRUS_RMSData()
+		{
+		}
+
+		void SetParent(CIRRUS_Base *parent)
+		{
+			Cirrus = parent;
+		}
+
+		void SetTemperature(bool temp)
+		{
+			_temperature = temp;
+		}
+
+		void SetWantData(bool power_factor, bool frequency)
+		{
+			_WantPower_Factor = power_factor;
+			_WantFrequency = frequency;
+		}
+
+		void RestartEnergy(void)
+		{
+			energy_day_conso = 0.0;
+			energy_day_surplus = 0.0;
+		}
+
+		/**
+		 * Main function that get RMS data and others parameters.
+		 * Compute the energy and the mean for the log.
+		 * Return true and set flag log available if mean is complete.
+		 */
+		bool GetData(unsigned long reftime, bool reset_ready = true);
+
+		float GetURMS() const
+		{
+			return _inst_data.Voltage;
+		}
+
+		float GetIRMS() const
+		{
+#ifdef CIRRUS_RMS_FULL
+			return _inst_data.Current;
+#else
+			return 0;
+#endif
+		}
+
+		float GetPRMSSigned() const
+		{
+			return _inst_data.Power;
+		}
+
+		float GetTemperature() const
+		{
+			return _inst_temp;
+		}
+
+		float GetPowerFactor() const
+		{
+			return Power_Factor;
+		}
+
+		float GetFrequency() const
+		{
+			return Frequency;
+		}
+
+		float GetEnergyConso() const
+		{
+			return energy_day_conso;
+		}
+
+		float GetEnergySurplus() const
+		{
+			return energy_day_surplus;
+		}
+
+		/**
+		 * Get log data. Flag log available is reseted.
+		 */
+		RMS_Data GetLog(double *temp)
+		{
+			_logAvailable = false;
+			if (temp != NULL)
+				*temp = _log_temp;
+			return _log_data;
+		}
+
+		uint32_t GetErrorCount(void) const
+		{
+			return _error_count;
+		}
+
+	private:
+		CIRRUS_Base *Cirrus = NULL;
+
+		// instantaneous values
+		RMS_Data _inst_data;
+		double _inst_temp = 0;
+
+		// log values (mean over 2 minutes)
+		RMS_Data _log_data;
+		double _log_temp = 0;
+		bool _logAvailable = false;
+
+		bool _temperature = true;
+
+  	// Extra data
+		bool _WantPower_Factor = true;
+		bool _WantFrequency = true;
+		float Power_Factor = 0;
+		float Frequency = 0;
+
+		float energy_day_conso = 0.0;
+		float energy_day_surplus = 0.0;
+
+		uint32_t _error_count = 0;
+
+		// Variable for GetData (Do not make them static in GetData() function !!)
+		RMS_Data _inst_data_cumul;
+		double _inst_temp_Cumul = 0;
+		RMS_Data _log_cumul_data;
+		double _log_cumul_temp = 0;
+
+		uint32_t _inst_count = 0;
+		uint32_t _log_count = 0;
+
+		unsigned long _start = 0;
+		unsigned long _startLog = 0;
+};
+
+// ********************************************************************************
+// Definition of CS5490, CS548x class
+// ********************************************************************************
 /**
  * Cirrus CIRRUS_CS5490 class for CS5490 with RMS data
  */
@@ -705,14 +927,102 @@ class CIRRUS_CS5490: public CIRRUS_Base
 		}
 		~CIRRUS_CS5490();
 
-		void GetData(void);
-		float GetURMS(void);
-		float GetPRMSSigned(void);
-		float GetTemperature(void);
-		float GetPowerFactor(void);
-		float GetFrequency(void);
-		void GetEnergy(float *conso, float *surplus);
-		uint32_t GetErrorCount(void);
+		/**
+		 * Get direct access to RMS data class
+		 */
+		CIRRUS_RMSData* GetRMSData(void)
+		{
+			return RMSData;
+		}
+
+		void RestartEnergy(void)
+		{
+			RMSData->RestartEnergy();
+		}
+
+		/**
+		 * Main function that get the RMS data and others from Cirrus
+		 * Get RMS Data and temperature
+		 */
+		bool GetData(void);
+
+		/**
+		 * Return U RMS
+		 */
+		float GetURMS(void) const
+		{
+			return RMSData->GetURMS();
+		}
+
+		/**
+		 * Return I RMS
+		 */
+
+		float GetIRMS(void) const
+		{
+#ifdef CIRRUS_RMS_FULL
+			return RMSData->GetIRMS();
+#else
+			return 0;
+#endif
+		}
+
+		/**
+		 * Return P RMS
+		 */
+		float GetPRMSSigned(void) const
+		{
+			return RMSData->GetPRMSSigned();
+		}
+
+		/**
+		 * Return temperature
+		 */
+		float GetTemperature(void) const
+		{
+			return RMSData->GetTemperature();
+		}
+
+		/**
+		 * Return power factor (cosphi)
+		 */
+		float GetPowerFactor(void) const
+		{
+			return RMSData->GetPowerFactor();
+		}
+
+		/**
+		 * Return frequency
+		 */
+		float GetFrequency(void) const
+		{
+			return RMSData->GetFrequency();
+		}
+
+		/**
+		 * Return energies of the day
+		 */
+		void GetEnergy(float *conso, float *surplus)
+		{
+			*conso = RMSData->GetEnergyConso();
+			*surplus = RMSData->GetEnergySurplus();
+		}
+
+		/**
+		 * Return log (mean data over 2 minutes). Flag log availble is reseted.
+		 */
+		RMS_Data GetLog(double *temp) const
+		{
+			return RMSData->GetLog(temp);
+		}
+
+		/**
+		 * Return error count
+		 */
+		uint32_t GetErrorCount(void) const
+		{
+			return RMSData->GetErrorCount();
+		}
 
 	protected:
 		void Initialize();
@@ -745,15 +1055,28 @@ class CIRRUS_CS548x: public CIRRUS_Base
 		}
 		~CIRRUS_CS548x();
 
+		void RestartEnergy(void);
 		bool GetData(CIRRUS_Channel channel);
-		float GetURMS(CIRRUS_Channel channel);
-		float GetPRMSSigned(CIRRUS_Channel channel);
-		float GetTemperature(void);
-		float GetPowerFactor(CIRRUS_Channel channel);
-		float GetFrequency(void);
+		float GetURMS(CIRRUS_Channel channel) const;
+		float GetIRMS(CIRRUS_Channel channel) const;
+		float GetPRMSSigned(CIRRUS_Channel channel) const;
+		float GetTemperature(void) const;
+		float GetPowerFactor(CIRRUS_Channel channel) const;
+		float GetFrequency(void) const;
 		void GetEnergy(float *conso, float *surplus, CIRRUS_Channel channel);
-		RMS_Data GetLog(CIRRUS_Channel channel);
-		uint32_t GetErrorCount(void);
+		RMS_Data GetLog(CIRRUS_Channel channel, double *temp);
+		uint32_t GetErrorCount(void) const;
+
+		CIRRUS_RMSData* GetRMSData(CIRRUS_Channel channel)
+		{
+			if (channel == Channel_1)
+				return RMSData_ch1;
+			else
+				if (channel == Channel_2)
+					return RMSData_ch2;
+				else
+					return NULL;
+		}
 
 	protected:
 		bool isCS5484;
@@ -762,116 +1085,6 @@ class CIRRUS_CS548x: public CIRRUS_Base
 	private:
 		CIRRUS_RMSData *RMSData_ch1 = NULL;
 		CIRRUS_RMSData *RMSData_ch2 = NULL;
-};
-
-/**
- * RMSData class
- * Get U, I and P RMS data
- */
-class CIRRUS_RMSData
-{
-	public:
-		CIRRUS_RMSData(bool temperature = true)
-		{
-			_temperature = temperature;
-		}
-		CIRRUS_RMSData(CIRRUS_Base *parent, bool temperature = true) :
-				CIRRUS_RMSData(temperature)
-		{
-			Cirrus = parent;
-		}
-		~CIRRUS_RMSData()
-		{
-
-		}
-
-		void SetParent(CIRRUS_Base *parent)
-		{
-			Cirrus = parent;
-		}
-
-		void SetTemperature(bool temp)
-		{
-			_temperature = temp;
-		}
-
-		bool GetData(void);
-
-		float GetURMS()
-		{
-			return _data.Voltage;
-		}
-
-		float GetPRMSSigned()
-		{
-			return _data.Power;
-		}
-
-		float GetTemperature()
-		{
-			return _tempData;
-		}
-
-		float GetPowerFactor()
-		{
-			return Power_Factor;
-		}
-
-		float GetFrequency()
-		{
-			return Frequency;
-		}
-
-		float GetEnergyConso()
-		{
-			return energy_day_conso;
-		}
-
-		float GetEnergySurplus()
-		{
-			return energy_day_surplus;
-		}
-
-		RMS_Data GetLog(void)
-		{
-			_logAvailable = false;
-			return _logcumul;
-		}
-
-		uint32_t GetErrorCount(void)
-		{
-			return _error_count;
-		}
-
-	private:
-		CIRRUS_Base *Cirrus = NULL;
-
-		RMS_Data _data;
-		RMS_Data _cumul;
-		RMS_Data _log;
-		RMS_Data _logcumul;
-		bool _temperature = true;
-		double _tempData = 0;
-		double _tempCumul = 0;
-		double _tempLog = 0;
-
-		// Extra data
-		float Power_Factor = 0;
-		float Frequency = 0;
-
-		unsigned long _start = 0;
-
-		uint32_t _cumul_count = 0;
-		uint8_t _cumul_MAX = 5;
-
-		uint32_t _log_count = 0;
-		unsigned long _startLog = 0;
-		bool _logAvailable = false;
-
-		float energy_day_conso = 0.0;
-		float energy_day_surplus = 0.0;
-
-		uint32_t _error_count = 0;
 };
 
 // Communication UART/Wifi
@@ -883,4 +1096,11 @@ char* CIRRUS_COM_Register_Multi(uint8_t *Request, char *response);
 bool CIRRUS_COM_ChangeBaud(uint8_t *Baud, char *response);
 char* CIRRUS_COM_Flash(char *response);
 #endif
+
+// To create a basic task to check Cirrus data every 100 ms
+#ifdef CIRRUS_USE_TASK
+#define CIRRUS_DATA_TASK(start)	{(start), "CIRRUS_Task", 6144, 8, CIRRUS_TASK_DELAY, CoreAny, CIRRUS_Task_code}
+void CIRRUS_Task_code(void *parameter);
+#endif
+
 
