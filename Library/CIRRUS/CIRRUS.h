@@ -478,10 +478,38 @@ class CIRRUS_Communication
 		void Chip_Reset(GPIO_PinState PinState);
 		void Hard_Reset(void);
 
+		// Current Cirrus used
+		void SetCurrentCirrus(CIRRUS_Base* cirrus)
+		{
+			CurrentCirrus = cirrus;
+		}
+		CIRRUS_Base* GetCurrentCirrus()
+		{
+			return CurrentCirrus;
+		}
+
+		uint8_t GetNumberCirrus(void);
+
 		// Ensure the managment of several Cirrus
 		void AddCirrus(CIRRUS_Base *cirrus, uint8_t select_Pin = 0);
 		CIRRUS_Base* SelectCirrus(uint8_t position, CIRRUS_Channel channel = Channel_none);
 		CIRRUS_Base* GetCirrus(int position);
+
+#ifdef CIRRUS_FLASH
+		void Register_To_FLASH(char id_cirrus);
+#endif
+
+		// Communication UART with Cirrus_Connect or Wifi with CIRRUS_Config
+#ifdef LOG_CIRRUS_CONNECT
+		uint8_t UART_Message_Cirrus(uint8_t *RxBuffer);
+		char* COM_Scale(uint8_t *Request, float *scale, char *response);
+		char* COM_Register(uint8_t *Request, char *response);
+		char* COM_Register_Multi(uint8_t *Request, char *response);
+		bool COM_ChangeBaud(uint8_t *Baud, char *response);
+#ifdef CIRRUS_FLASH
+		char* COM_Flash(char *response);
+#endif
+#endif
 
 	private:
 #ifdef CIRRUS_USE_UART
@@ -496,6 +524,8 @@ class CIRRUS_Communication
 		// 2 MHz, MSB first, clock polarity high, clock phase 2 edge
 		SPISettings spisettings = SPISettings(2000000, MSBFIRST, SPI_MODE3);  // A priori mode 1 ou 3 SPI_MODE3
 #endif
+
+		CIRRUS_Base* CurrentCirrus = NULL;
 
 		// Cirrus Reset pin
 		uint8_t Cirrus_RESET_Pin = 0;
@@ -521,17 +551,14 @@ class CIRRUS_Base
 		CIRRUS_Base(CIRRUS_Communication &com, bool _twochannel) :
 				CIRRUS_Base(_twochannel)
 		{
-			Com = &com;
+//			Com = &com;
+			SetCommunication(com);
 		}
 		virtual ~CIRRUS_Base()
 		{
 		}
 
-		void SetCommunication(CIRRUS_Communication &com)
-		{
-			if (Com == NULL)
-				Com = &com;
-		}
+		void SetCommunication(CIRRUS_Communication &com);
 
 #ifdef CIRRUS_USE_UART
 		bool begin(uint32_t baud, bool change_UART);
@@ -862,9 +889,14 @@ class CIRRUS_RMSData
 			return _log_data;
 		}
 
-		uint32_t GetErrorCount(void) const
+		/**
+		 * Return error count and reset it
+		 */
+		uint32_t GetErrorCount(void)
 		{
-			return _error_count;
+			uint32_t error = _error_count;
+			_error_count = 0;
+			return error;
 		}
 
 	private:
@@ -1086,16 +1118,6 @@ class CIRRUS_CS548x: public CIRRUS_Base
 		CIRRUS_RMSData *RMSData_ch1 = NULL;
 		CIRRUS_RMSData *RMSData_ch2 = NULL;
 };
-
-// Communication UART/Wifi
-#ifdef LOG_CIRRUS_CONNECT
-uint8_t UART_Message_Cirrus(uint8_t *RxBuffer);
-char* CIRRUS_COM_Scale(uint8_t *Request, float *scale, char *response);
-char* CIRRUS_COM_Register(uint8_t *Request, char *response);
-char* CIRRUS_COM_Register_Multi(uint8_t *Request, char *response);
-bool CIRRUS_COM_ChangeBaud(uint8_t *Baud, char *response);
-char* CIRRUS_COM_Flash(char *response);
-#endif
 
 // To create a basic task to check Cirrus data every 100 ms
 #ifdef CIRRUS_USE_TASK

@@ -66,6 +66,13 @@ const uint32_t pow2_24 = 16777216;
 // Initialization
 // ********************************************************************************
 
+void CIRRUS_Base::SetCommunication(CIRRUS_Communication &com)
+{
+	if (Com == NULL)
+		Com = &com;
+	Com->SetCurrentCirrus(this);
+}
+
 #ifdef CIRRUS_USE_UART
 /**
  * Start the Cirrus
@@ -85,7 +92,10 @@ bool CIRRUS_Base::begin(uint32_t baud, bool change_UART)
 		CorrectBug();
 
 		// Initialize cirrus communication at baud speed and UART if change_UART == true
-		return SetUARTBaud(baud, change_UART);
+		if (baud != 600)
+			return SetUARTBaud(baud, change_UART);
+		else
+			return true;
 	}
 	else
 	{
@@ -126,15 +136,13 @@ bool CIRRUS_Base::begin()
  */
 bool CIRRUS_Base::SetUARTBaud(uint32_t baud, bool change_UART)
 {
-	if (baud != 600)
+	// Set baud rate of Cirrus
+	if (set_uart_baudrate(baud))
 	{
-		// Set baud rate of Cirrus
-		if (set_uart_baudrate(baud))
+		// Set baud rate of UART
+		if (change_UART)
 		{
-			// Set baud rate of UART
-			if (change_UART)
-			{
-				Com->UART_Change_Baud(baud);
+			Com->UART_Change_Baud(baud);
 
 #ifdef DEBUG_CIRRUS_BAUD
 			Bit_List reg;
@@ -147,14 +155,12 @@ bool CIRRUS_Base::SetUARTBaud(uint32_t baud, bool change_UART)
 			else
 				print_str(CS_RES_BAUD_VERIF_FAIL);
 	#endif
-			}
-			return true;
 		}
-		else
-			print_str("CIRRUS Start Error");
-		return false;
+		return true;
 	}
-	return true;
+	else
+		print_str("CIRRUS Start Error");
+	return false;
 }
 
 /**
@@ -281,7 +287,7 @@ void CIRRUS_Base::GetScale(float *scale)
 	if (twochannel)
 	{
 		scale[2] = Scale_ch2.V_SCALE * 0.6;
-		scale[3] = Scale_ch2.V_SCALE * 0.6;
+		scale[3] = Scale_ch2.I_SCALE * 0.6;
 	}
 }
 
@@ -292,7 +298,7 @@ void CIRRUS_Base::SetScale(float *scale)
 	if (twochannel)
 	{
 		Scale_ch2.V_SCALE = scale[2] / 0.6;
-		Scale_ch2.V_SCALE = scale[3] / 0.6;
+		Scale_ch2.I_SCALE = scale[3] / 0.6;
 	}
 }
 
@@ -1774,7 +1780,7 @@ float CIRRUS_Base::get_data(CIRRUS_Data _data, float *result)
 			break;
 		}
 
-		// common channel
+			// common channel
 		case CIRRUS_Total_Active_Power:
 		{
 			if (read_register(P16_P_SUM, PAGE16, &reg))

@@ -212,6 +212,8 @@ float CIRRUS_CS548x::GetIRMS(CIRRUS_Channel channel) const
 		if (channel == Channel_2)
 			return RMSData_ch2->GetIRMS();
 		else
+#else
+	(void) channel;
 #endif
 			return 0;
 }
