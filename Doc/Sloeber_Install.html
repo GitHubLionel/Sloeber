@@ -543,7 +543,7 @@ Menu : Sloeber/preferences/Third party index url's</p>
 <p>Sinon : <br>
 Menu : Sloeber/preferences/Platforms and boards</p>
 <ul>
-<li>Sélectionner esp32/esp32/3.0.2 (s'y a deux sections esp32, prendre la section qui va bien)</li>
+<li>Sélectionner esp32/esp32/3.0.3 (s'y a deux sections esp32, prendre la section qui va bien)</li>
 <li>Apply and close et attendre, c'est très long !! (surveiller en bas à droite la progression)</li>
 <li>En cas d'erreur comme celle-ci : <br>
 <img src="file:./ESP32_Problem.png" alt="ESP32_Problem" title="Error"><br>
@@ -594,7 +594,7 @@ Menu : Sloeber/preferences/Library Manager</p>
 <li>Apply et attendre (surveiller en bas à droite la progression)</li>
 </ul>
 </li>
-<li>sélectionner Other/ESPAsyncHTTPUpdateServer (Default) v1.1.0 (pour le upload avec le serveur asynchrone)
+<li>sélectionner Other/ESPAsyncHTTPUpdateServer (Default) v2.0.0 (pour le upload avec le serveur asynchrone)
 <ul>
 <li>Apply et attendre (surveiller en bas à droite la progression)</li>
 </ul>
@@ -803,7 +803,7 @@ Puis le dézipper dans le dossier tools de Arduino ("Emplacement du dossier de c
 <h3 id="liste-des-directives">Liste des directives</h3>
 <p>Note : les directives <b>ESP8266</b> ou <b>ESP32</b> sont automatiquement définies suivant le type de carte qu'on a choisi pour le projet.
 Les directives sont à rajouter dans le menu Sloeber/"Compile Options" dans le champ "append to C and C++" sous la forme -Ddirective. Ne pas oublier d'attacher la librairie qui va bien dans Sloeber/"Add a library to the selected project".<br>
-Une alternative est de juste définir la directive USE_CONFIG_LIB_FILE et de copier le le fichier config_lib.h en l'adaptant à ses besoins. <br></p>
+Une alternative est de juste définir la directive USE_CONFIG_LIB_FILE et de copier le fichier config_lib.h dans le dossier du projet en l'adaptant à ses besoins. <br></p>
 <ul>
 <li>Général et gestion messages UART (librairie Debug_utils)
 <ul>
@@ -839,7 +839,7 @@ Une alternative est de juste définir la directive USE_CONFIG_LIB_FILE et de cop
 <li>Task (librairie Task_utils) : gestion d'une liste de taches
 <ul>
 <li>RUN_TASK_MEMORY=true pour utiliser la tache "Memory" permettant de surveiller la stack des taches</li>
-<li>Il y a plusieurs define permettant d'effectuer des taches de base dans ceraine librairie :</li>
+<li>Il y a plusieurs define permettant d'effectuer des taches de base dans certaine librairie :</li>
 <li>UART_USE_TASK pour l'analyse d'un message UART dans une tache (ajouter librairie Task_utils)</li>
 <li>RTC_USE_TASK pour mettre la RTC dans une tache (ajouter librairie Task_utils)</li>
 <li>DS18B20_USE_TASK pour mesurer la température DS18B20 toutes les 2 secondes</li>
@@ -858,8 +858,6 @@ Une alternative est de juste définir la directive USE_CONFIG_LIB_FILE et de cop
 </li>
 <li>Cirrus (librairie CIRRUS)
 <ul>
-<li>Si rien n'est défini, on utilise le CS5490 et en UART (CIRRUS_USE_UART est alors défini automatiquement)</li>
-<li>CIRRUS_CS5480 pour le CS5480 ou CS5484, sinon c'est le CS5490</li>
 <li>CIRRUS_USE_UART pour utiliser UART (par défaut pour le CS5490) sinon SPI (pour CS5480 ou CS5484 uniquement)</li>
 <li>CIRRUS_FLASH pour stocker/lire les paramètres de configuration dans la FLASH (EEPROM)</li>
 <li>LOG_CIRRUS_CONNECT pour le log</li>

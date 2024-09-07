@@ -18,7 +18,6 @@
 //#define DEBUG_CIRRUS
 //#define DEBUG_CIRRUS_BAUD
 //#define DEBUG_CIRRUS_WAIT_MESSAGE
-
 /**
  * If we use Cirrus_Connect software to communicate with the Cirrus in UART.
  * In this case, only on SPI or if we have two UART (one for Cirrus, one for Cirrus_Connect)
@@ -26,12 +25,10 @@
  * if we communicate by Wifi
  */
 //#define LOG_CIRRUS_CONNECT
-
 /**
  * For FLASH
  */
 //#define CIRRUS_FLASH
-
 // Spécifique UART
 #ifdef CIRRUS_USE_UART
 // define SoftwareSerial = 0 or HardwareSerial = 1 mode
@@ -259,14 +256,14 @@ typedef union
 typedef struct CIRRUS_Calib_typedef
 {
 		// Scale factor
-		float V1_Calib;
-		float I1_MAX;
+		float V1_Calib = 0;
+		float I1_MAX = 0;
 		// Gain AC
-		uint32_t V1GAIN, I1GAIN;
+		uint32_t V1GAIN = 0, I1GAIN = 0;
 		// AC Offset
-		uint32_t I1ACOFF;
+		uint32_t I1ACOFF = 0;
 		// No Load Offset
-		uint32_t P1OFF, Q1OFF;
+		uint32_t P1OFF = 0, Q1OFF = 0;
 
 		// Deuxième channel
 		// Scale factor
@@ -290,9 +287,9 @@ typedef struct CIRRUS_Calib_typedef
 typedef struct CIRRUS_Config_typedef
 {
 		// Config register
-		uint32_t config0, config1, config2;
+		uint32_t config0 = 0, config1 = 0, config2 = 0;
 		// Pulse register
-		uint32_t P_width, P_rate, P_control;
+		uint32_t P_width = 0, P_rate = 0, P_control = 0;
 } CIRRUS_Config_typedef;
 
 #define CS_CONFIG0	{0, 0, 0, 0, 0, 0}
@@ -479,7 +476,7 @@ class CIRRUS_Communication
 		void Hard_Reset(void);
 
 		// Current Cirrus used
-		void SetCurrentCirrus(CIRRUS_Base* cirrus)
+		void SetCurrentCirrus(CIRRUS_Base *cirrus)
 		{
 			CurrentCirrus = cirrus;
 		}
@@ -511,6 +508,8 @@ class CIRRUS_Communication
 #endif
 #endif
 
+		bool Get_rms_data(float *uRMS, float *pRMS);
+
 	private:
 #ifdef CIRRUS_USE_UART
 		// UART handle initialization
@@ -525,7 +524,7 @@ class CIRRUS_Communication
 		SPISettings spisettings = SPISettings(2000000, MSBFIRST, SPI_MODE3);  // A priori mode 1 ou 3 SPI_MODE3
 #endif
 
-		CIRRUS_Base* CurrentCirrus = NULL;
+		CIRRUS_Base *CurrentCirrus = NULL;
 
 		// Cirrus Reset pin
 		uint8_t Cirrus_RESET_Pin = 0;
@@ -546,12 +545,12 @@ class CIRRUS_Base
 		CIRRUS_Base(bool _twochannel)
 		{
 			twochannel = _twochannel;
+			// We select the first channel who always exist
 			SelectChannel(Channel_1);
 		}
 		CIRRUS_Base(CIRRUS_Communication &com, bool _twochannel) :
 				CIRRUS_Base(_twochannel)
 		{
-//			Com = &com;
 			SetCommunication(com);
 		}
 		virtual ~CIRRUS_Base()
@@ -644,6 +643,14 @@ class CIRRUS_Base
 		void write_register(uint8_t register_no, uint8_t page_no, Bit_List *thedata);
 		void send_instruction(uint8_t instruction);
 
+		// Calibration do
+		void do_dc_offset_calibration(bool only_I);
+		void do_ac_offset_calibration(void);
+		void do_gain_calibration(float calib_vac, float calib_r);
+		void set_phase_compensations(void);
+		void do_noload_power_calibration();
+		void set_temp_calibrations(void);
+
 		// The pin to select the Cirrus in case we have several Cirrus
 		uint8_t Cirrus_Pin = 0;
 
@@ -695,14 +702,6 @@ class CIRRUS_Base
 		void clear_bitmask(Reg_Mask b_mask);
 		void interrupt_bitmask(uint8_t bit);
 
-// Calibration do
-		void do_dc_offset_calibration(bool only_I);
-		void do_ac_offset_calibration(void);
-		void do_gain_calibration(float calib_vac, float calib_r);
-		void set_phase_compensations(void);
-		void do_noload_power_calibration();
-		void set_temp_calibrations(void);
-
 		Bit_List config0_default = 0xC02000; // For CS5490 and CS5480
 
 	private:
@@ -749,7 +748,7 @@ class CIRRUS_Base
 		CIRRUS_Scale_typedef Scale_ch2;
 
 		// Channel
-		bool twochannel = true; // Pour forcer l'initialisation
+		bool twochannel = false;
 		CIRRUS_Channel currentchannel = Channel_none;
 
 		bool comm_checksum = false;    // Booléen Vrai/Faux. Define USE_CHECKSUN must be defined
@@ -780,7 +779,6 @@ class CIRRUS_Base
 		void set_ac_offset_calibrations(Bit_List *i_acoff, CIRRUS_Channel channel);
 		void set_no_load_calibrations(Bit_List *p_off, Bit_List *q_off, CIRRUS_Channel channel);
 };
-
 
 // ********************************************************************************
 // RMSData class
@@ -913,7 +911,7 @@ class CIRRUS_RMSData
 
 		bool _temperature = true;
 
-  	// Extra data
+		// Extra data
 		bool _WantPower_Factor = true;
 		bool _WantFrequency = true;
 		float Power_Factor = 0;
@@ -1124,5 +1122,4 @@ class CIRRUS_CS548x: public CIRRUS_Base
 #define CIRRUS_DATA_TASK(start)	{(start), "CIRRUS_Task", 6144, 8, CIRRUS_TASK_DELAY, CoreAny, CIRRUS_Task_code}
 void CIRRUS_Task_code(void *parameter);
 #endif
-
 

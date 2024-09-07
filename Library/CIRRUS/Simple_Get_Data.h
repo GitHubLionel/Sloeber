@@ -15,7 +15,6 @@
 
 // Pour la gestion du SSR
 //#define USE_SSR
-
 /**
  * La structure pour le log dans le fichier
  * Données moyennées toutes les x minutes
@@ -45,6 +44,6 @@ typedef struct
 
 } Simple_Data_Struct;
 
-void Get_Data(void);
-uint8_t Update_IHM(const char *first_text, const char *last_text, bool display = true);
+void Simple_Get_Data(void);
+uint8_t Simple_Update_IHM(const char *first_text, const char *last_text, bool display = true);
 

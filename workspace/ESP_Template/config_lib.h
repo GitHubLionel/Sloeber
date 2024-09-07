@@ -68,6 +68,9 @@
  * LCD, Oled, TFT define
  **********************************************************/
 #define I2C_ADDRESS	0x3C // or 0x78
+#define I2C_FREQUENCY	400000 // 100000 or 400000. May try 800000 for speed display.
+//#define I2C_SDA_GPIO	GPIO_NUM_21 // ESP32 I2C0
+//#define I2C_SCL_GPIO	GPIO_NUM_22 // ESP32 I2C0
 #define OLED_TIMEOUT	600	// 10 minutes
 
 //#define USE_LCD
@@ -86,31 +89,46 @@
 /**********************************************************
  * Dallas DS18B20 define
  **********************************************************/
+//#define DS18B20_GPIO	GPIO_NUM_27
+//#define DS18B20_PRECISION	11     // 9 (lower) to 12 (higher) resolution
 
 /**********************************************************
  * TeleInfo define
  **********************************************************/
+//#define TI_RX_GPIO	GPIO_NUM_14
 
 /**********************************************************
  * Keyboard define
  **********************************************************/
-#define DEBOUNCING_MS	200
-#define DEBOUNCING_US	200000
+//#define KEYBOARD_ADC_GPIO	GPIO_NUM_36
+//#define DEBOUNCING_MS	200
+//#define DEBOUNCING_US	200000
 
 /**********************************************************
  * Cirrus define
  **********************************************************/
-//#define CIRRUS_CS5480
+//#define CIRRUS_RESET_GPIO	GPIO_NUM_4
+//#define CIRRUS_RX_GPIO	GPIO_NUM_16  // UART2
+//#define CIRRUS_TX_GPIO	GPIO_NUM_17  // UART2
+//#define CIRRUS_CS1_GPIO	GPIO_NUM_18
+//#define CIRRUS_CS2_GPIO	GPIO_NUM_19
+
 //#define CIRRUS_USE_UART
 //#define CIRRUS_FLASH
 //#define LOG_CIRRUS_CONNECT
 //#define DEBUG_CIRRUS
 //#define DEBUG_CIRRUS_BAUD
 
+//#define CIRRUS_RMS_FULL  // To have U, I and P RMS. Otherwise only U and P RMS
+
 /**********************************************************
  * SSR define
  **********************************************************/
 //#define USE_SSR
+//#define ZERO_CROSS_GPIO	GPIO_NUM_34
+//#define SSR_COMMAND_GPIO	GPIO_NUM_12
+//#define SSR_LED_GPIO	GPIO_NUM_13
+
 //#define SIMPLE_ZC_TEST
 
 /**********************************************************
@@ -121,6 +139,7 @@
 //#define RTC_USE_TASK         // To run RTCLocal in a task
 //#define DS18B20_USE_TASK     // A basic task to check DS18B20 temperature every 2 s
 //#define TELEINFO_USE_TASK    // A basic task to check TeleInfo every 1 s
-//#define CIRRUS_USE_TASK      // A basic task to check Cirrus data every 200 ms
+//#define CIRRUS_TASK_DELAY	100    // The delay for the Cirrus task. Must be adapted according the time required of the GetData()
+//#define CIRRUS_USE_TASK      // A basic task to check Cirrus data every CIRRUS_TASK_DELAY ms
 //#define KEYBOARD_USE_TASK    // A basic task to check keyboard every 10 ms
 

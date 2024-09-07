@@ -218,7 +218,6 @@ float CIRRUS_CS548x::GetIRMS(CIRRUS_Channel channel) const
 			return 0;
 }
 
-
 /**
  * Return P RMS of the selected channel
  */

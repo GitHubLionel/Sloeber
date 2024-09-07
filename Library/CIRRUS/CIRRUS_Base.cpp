@@ -358,9 +358,6 @@ void CIRRUS_Base::Get_Parameters(CIRRUS_Calib_typedef *calib, CIRRUS_Config_type
 {
 	Bit_List reg;
 
-//	if ((V1_SCALE == NULL) || (I1_SCALE == NULL))
-//		return;
-
 	calib->V1_Calib = Scale_ch1.V_SCALE * 0.6;
 	calib->I1_MAX = Scale_ch1.I_SCALE * 0.6;
 
@@ -378,9 +375,6 @@ void CIRRUS_Base::Get_Parameters(CIRRUS_Calib_typedef *calib, CIRRUS_Config_type
 	// Channel 2
 	if (twochannel)
 	{
-//	if ((V2_SCALE == NULL) || (I2_SCALE == NULL))
-//		return;
-
 		calib->V2_Calib = Scale_ch2.V_SCALE * 0.6;
 		calib->I2_MAX = Scale_ch2.I_SCALE * 0.6;
 
@@ -1349,7 +1343,7 @@ void CIRRUS_Base::set_filter(CIRRUS_Filter V1, CIRRUS_Filter I1, CIRRUS_Filter V
 
 void CIRRUS_Base::SelectChannel(CIRRUS_Channel channel)
 {
-	if ((!twochannel) || (currentchannel == channel))
+	if (currentchannel == channel)
 		return;
 
 	if (channel == Channel_1)

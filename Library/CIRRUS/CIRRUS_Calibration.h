@@ -7,14 +7,18 @@
 
 #include "CIRRUS.h"
 
-
-class CIRRUS_Calibration : public CIRRUS_Base
+class CIRRUS_Calibration
 {
 	public:
-		CIRRUS_Calibration(bool _twochannel) : CIRRUS_Base(_twochannel) { ;}
-		void Calibration_Complete(CIRRUS_Calib_typedef *Calib_base, float V1_Ref, float R);
-		void Calibration_NoCharge(bool with_DC = true);
-		void Calibration_WithCharge(CIRRUS_Calib_typedef *Calib_base, float V1_Ref, float R);
+		CIRRUS_Calibration(CIRRUS_Base &cirrus)
+		{
+			Current_Cirrus = &cirrus;
+		}
+		void Complete(CIRRUS_Calib_typedef *Calib_base, float V1_Ref, float R);
+		void NoCharge(bool with_DC = true);
+		void WithCharge(CIRRUS_Calib_typedef *Calib_base, float V1_Ref, float R);
+	protected:
+		CIRRUS_Base *Current_Cirrus = NULL;
 };
 
 #endif /* _CIRRUS_CALIBRATION_H_ */

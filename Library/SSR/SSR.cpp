@@ -87,7 +87,7 @@ float Dimme_Power = 0.0;
 // La tension et la puissance en cours fournies par le Cirrus ou autre
 extern float Cirrus_voltage;
 extern float Cirrus_power_signed;
-extern bool CIRRUS_get_rms_data(volatile float *uRMS, volatile float *pRMS);
+extern bool CIRRUS_get_rms_data(float *uRMS, float *pRMS);
 // Fonction de gestion du SSR en mode dimme ou surplus
 volatile Gestion_SSR_TypeDef Gestion_SSR_CallBack = NULL;
 

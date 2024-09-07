@@ -338,6 +338,7 @@ void TaskList_c::Task_Memory_code(void *parameter)
 			TaskData_t *td = &Tasks[i];
 			if (td->Handle != NULL)
 				Memory_str += String(td->Name) + ": " + String(td->Memory) + " / " + String(td->StackSize) + "\r\n";
+			taskYIELD();
 		}
 
 		print_debug(Memory_str, false);
@@ -371,6 +372,7 @@ void Task_Idle0_code(void *parameter)
 	int sleep = pdMS_TO_TICKS(TaskIdle0.Sleep_ms);
 	for (EVER)
 	{
+		taskYIELD();
 		count_Idle0++;
 		vTaskDelay(sleep);
 	}
@@ -384,6 +386,7 @@ void Task_Idle1_code(void *parameter)
 	int sleep = pdMS_TO_TICKS(TaskIdle1.Sleep_ms);
 	for (EVER)
 	{
+		taskYIELD();
 		count_Idle1++;
 		vTaskDelay(sleep);
 	}

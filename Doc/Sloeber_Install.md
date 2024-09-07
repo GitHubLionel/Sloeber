@@ -72,7 +72,7 @@ Menu : Sloeber/preferences/Third party index url's
   
 Sinon : <br>
 Menu : Sloeber/preferences/Platforms and boards
-  - Sélectionner esp32/esp32/3.0.2 (s'y a deux sections esp32, prendre la section qui va bien)
+  - Sélectionner esp32/esp32/3.0.3 (s'y a deux sections esp32, prendre la section qui va bien)
   - Apply and close et attendre, c'est très long !! (surveiller en bas à droite la progression)
   - En cas d'erreur comme celle-ci : <br>
 ![ESP32_Problem](./ESP32_Problem.png "Error")<br>
@@ -101,7 +101,7 @@ Menu : Sloeber/preferences/Library Manager
     - Apply et attendre (surveiller en bas à droite la progression)
   - sélectionner Communication/ESPAsyncWebServer (Default) v3.1.0 (pour le serveur asynchrone)
     - Apply et attendre (surveiller en bas à droite la progression)
-  - sélectionner Other/ESPAsyncHTTPUpdateServer (Default) v1.1.0 (pour le upload avec le serveur asynchrone)
+  - sélectionner Other/ESPAsyncHTTPUpdateServer (Default) v2.0.0 (pour le upload avec le serveur asynchrone)
     - Apply et attendre (surveiller en bas à droite la progression)
   - sélectionner Other/EspSaveCrash (Default) v1.3.0 (uniquement <b>ESP8266</b>)
     - Apply et attendre (surveiller en bas à droite la progression)
@@ -268,7 +268,7 @@ Puis le dézipper dans le dossier tools de Arduino ("Emplacement du dossier de c
 ### Liste des directives
 Note : les directives <b>ESP8266</b> ou <b>ESP32</b> sont automatiquement définies suivant le type de carte qu'on a choisi pour le projet.
 Les directives sont à rajouter dans le menu Sloeber/"Compile Options" dans le champ "append to C and C++" sous la forme -Ddirective. Ne pas oublier d'attacher la librairie qui va bien dans Sloeber/"Add a library to the selected project".<br>
-Une alternative est de juste définir la directive USE_CONFIG_LIB_FILE et de copier le le fichier config_lib.h en l'adaptant à ses besoins. <br>
+Une alternative est de juste définir la directive USE_CONFIG_LIB_FILE et de copier le fichier config_lib.h dans le dossier du projet en l'adaptant à ses besoins. <br>
 - Général et gestion messages UART (librairie Debug_utils)
   - USE_UART pour initialiser UART (Serial) pour un périphérique. Attention, si on utilise en même temps SERIAL_DEBUG, on peut avoir un comportement inattendu.
   - USE_SAVE_CRASH pour sauvegarder le log du crash (Sloeber : EEPROM et EspSaveCrash pour <b>ESP8266</b>). Utiliser l'utilitaire <a href="https://github.com/me-no-dev/EspExceptionDecoder" target="_blank">EspExceptionDecoder</a>.
@@ -290,7 +290,7 @@ Une alternative est de juste définir la directive USE_CONFIG_LIB_FILE et de cop
   - USE_HTTPUPDATER pour l'upload du firwmare et du filesystem. <b>ESP8266</b> (Sloeber : ESP8266HTTPUpdateServer); <b>ESP32</b> (Sloeber : HTTPUpdateServer ou <a href="https://github.com/IPdotSetAF/ESPAsyncHTTPUpdateServer" target="_blank">ESPAsyncHTTPUpdateServer</a> pour la version asynchrone)
 - Task (librairie Task_utils) : gestion d'une liste de taches
   - RUN_TASK_MEMORY=true pour utiliser la tache "Memory" permettant de surveiller la stack des taches
-  - Il y a plusieurs define permettant d'effectuer des taches de base dans ceraine librairie :
+  - Il y a plusieurs define permettant d'effectuer des taches de base dans certaine librairie :
   - UART_USE_TASK pour l'analyse d'un message UART dans une tache (ajouter librairie Task_utils)
   - RTC_USE_TASK pour mettre la RTC dans une tache (ajouter librairie Task_utils)
   - DS18B20_USE_TASK pour mesurer la température DS18B20 toutes les 2 secondes
@@ -303,8 +303,6 @@ Une alternative est de juste définir la directive USE_CONFIG_LIB_FILE et de cop
   - OLED_SSD1327 pour le SSD1327. Ajouter en plus OLED_TOP_DOWN (par défaut) ou OLED_LEFT_RIGHT ou OLED_DOWN_TOP ou OLED_RIGHT_LEFT suivant l'orientation
   - OLED_SH1107 pour le SH1107. Ajouter en plus OLED_TOP_DOWN (par défaut) ou OLED_LEFT_RIGHT ou OLED_DOWN_TOP ou OLED_RIGHT_LEFT suivant l'orientation
 - Cirrus (librairie CIRRUS)
-  - Si rien n'est défini, on utilise le CS5490 et en UART (CIRRUS_USE_UART est alors défini automatiquement)
-  - CIRRUS_CS5480 pour le CS5480 ou CS5484, sinon c'est le CS5490
   - CIRRUS_USE_UART pour utiliser UART (par défaut pour le CS5490) sinon SPI (pour CS5480 ou CS5484 uniquement)
   - CIRRUS_FLASH pour stocker/lire les paramètres de configuration dans la FLASH (EEPROM) 
   - LOG_CIRRUS_CONNECT pour le log

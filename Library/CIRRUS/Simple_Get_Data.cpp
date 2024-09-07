@@ -66,7 +66,7 @@ void __attribute__((weak)) print_debug(String mess, bool ln = true)
  * Exemple de fonction d'acquisition des données du Cirrus
  * En pratique, il convient d'appeler régulièrement cette fonction dans un timer (200 ms ou 1 s)
  */
-void Get_Data(void)
+void Simple_Get_Data(void)
 {
 	static bool Data_acquisition = false;
 	static int countmessage = 0;
@@ -87,7 +87,9 @@ void Get_Data(void)
 //	uint32_t start_time = millis();
 
 	log = CS5490.GetData(); // durée : 256 ms
+#ifdef ESP32
 	vTaskDelay(1);
+#endif
 
 	if (CS5490.GetErrorCount() > 0)
 		print_debug("*** Cirrus error : " + String(CS5490.GetErrorCount()));
@@ -146,13 +148,13 @@ void Get_Data(void)
 /**
  * Fonction d'affichage simple des données de Simple_Get_Data
  */
-uint8_t Update_IHM(const char *first_text, const char *last_text, bool display)
+uint8_t Simple_Update_IHM(const char *first_text, const char *last_text, bool display)
 {
-  char buffer[30];  // Normalement 20 caractères + eol mais on sait jamais
-  uint8_t line = 0;
+	char buffer[30];  // Normalement 20 caractères + eol mais on sait jamais
+	uint8_t line = 0;
 
-  // Efface la mémoire de l'écran si nécessaire
-  IHM_Clear();
+	// Efface la mémoire de l'écran si nécessaire
+	IHM_Clear();
 
 #ifdef LOG_CIRRUS_CONNECT
 	if (CIRRUS_Lock_IHM)
@@ -216,7 +218,7 @@ void append_data(void)
 	{
 		// Time, Pconso_rms, Pprod_rms, U_rms, Tcs, TDS1, TDS2
 		String data = String(RTC_Local.getUNIXDateTime()) + '\t' + (String) log_cumul.Power_ch1 + '\t'
-				 + (String) log_cumul.Voltage + '\t' + (String) log_cumul.Temp;
+				+ (String) log_cumul.Voltage + '\t' + (String) log_cumul.Temp;
 		temp.print(data);
 		temp.close();
 	}

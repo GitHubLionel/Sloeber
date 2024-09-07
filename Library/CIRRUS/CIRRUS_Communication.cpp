@@ -302,15 +302,15 @@ void CIRRUS_Communication::AddCirrus(CIRRUS_Base *cirrus, uint8_t select_Pin)
  */
 CIRRUS_Base* CIRRUS_Communication::SelectCirrus(uint8_t position, CIRRUS_Channel channel)
 {
-//#ifdef DEBUG_CIRRUS
-//	  CIRRUS_print_str("Enter CIRRUS Select\r\n");
-//	  CIRRUS_print_int("Number of Cirrus : ", CIRRUS_Number);
-//	  CIRRUS_print_int("Selected : ", CIRRUS_Selected);
-//	  CIRRUS_print_int("New Selected : ", cirrus);
-//	#endif
-
 	if (m_Cirrus.size() == 0)
 		return NULL;
+
+#ifdef DEBUG_CIRRUS
+	CurrentCirrus->print_str("Enter CIRRUS Select\r\n");
+	CurrentCirrus->print_int("Number of Cirrus : ", m_Cirrus.size());
+	CurrentCirrus->print_int("Selected : ", Selected);
+	CurrentCirrus->print_int("New Selected : ", position);
+#endif
 
 	if (Selected == position)
 	{
@@ -369,6 +369,14 @@ uint8_t CIRRUS_Communication::GetNumberCirrus(void)
 		else
 			return 0;
 	}
+}
+
+/**
+ * Use the current cirrus
+ */
+bool CIRRUS_Communication::Get_rms_data(float *uRMS, float *pRMS)
+{
+	return CurrentCirrus->get_rms_data(uRMS, pRMS);
 }
 
 // ********************************************************************************
@@ -600,7 +608,7 @@ uint8_t CIRRUS_Communication::UART_Message_Cirrus(uint8_t *RxBuffer)
 		if (nb == 0)
 			return 1;
 
-		uint32_t CirrusNewBaud = strtol((char*) message, NULL, 10);
+		int CirrusNewBaud = strtol((char*) message, NULL, 10);
 
 		if (Cirrus_UART->baudRate() == CirrusNewBaud)
 			return 1;
@@ -716,7 +724,7 @@ bool CIRRUS_Communication::COM_ChangeBaud(uint8_t *Baud, char *response)
 		return false;
 	}
 
-	uint32_t CirrusNewBaud = strtol((char*) Baud, NULL, 10);
+	int CirrusNewBaud = strtol((char*) Baud, NULL, 10);
 
 	if (Cirrus_UART->baudRate() == CirrusNewBaud)
 	{

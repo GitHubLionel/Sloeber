@@ -79,9 +79,10 @@
 
 #if RUN_TASK_MEMORY == true
 #define END_TASK_CODE()	{ td->Memory = uxTaskGetStackHighWaterMark(NULL); \
+		taskYIELD(); \
 		if (sleep != 0) vTaskDelay(sleep); }
 #else
-#define END_TASK_CODE()	if (sleep != 0) vTaskDelay(sleep);
+#define END_TASK_CODE()	taskYIELD(); if (sleep != 0) vTaskDelay(sleep);
 #endif
 
 // The same couple of define to use with DelayUntil
