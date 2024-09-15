@@ -217,7 +217,7 @@ bool MQTTClient::MQTTConnected(void)
 void MQTTClient::Keepalive_Task(void *parameter)
 {
 	// setting keep alive to 90 seconds makes for a very reliable connection, must be set before the 1st connection is made.
-	MQTT_client->setKeepAlive(90);
+//	MQTT_client->setKeepAlive(90);
 	TickType_t xLastWakeTime = xTaskGetTickCount();
 	const TickType_t xFrequency = 250; //delay for ms
 	for (;;)

@@ -21,7 +21,7 @@ void __attribute__((weak)) print_debug(const char *mess, bool ln = true)
  * Initialisation du relais.
  * gpio : values of gpio
  */
-void Relay_Init(uint8_t nbRelay, const uint8_t gpio[])
+void Relay_Initialize(uint8_t nbRelay, const uint8_t gpio[])
 {
 	Nb_Relay = nbRelay;
 	for (int i=0; i<nbRelay; i++)

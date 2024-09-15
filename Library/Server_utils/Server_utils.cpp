@@ -890,6 +890,7 @@ String GetURI(CB_SERVER_PARAM)
 #ifdef USE_ASYNC_WEBSERVER
 void send_html(AsyncWebServerRequest *request, String filefs, String format, bool zipped, PART_TYPE &partition)
 {
+	taskYIELD();
 	AsyncWebServerResponse *response = request->beginResponse(partition, filefs, format);
 	if (zipped)
 	{

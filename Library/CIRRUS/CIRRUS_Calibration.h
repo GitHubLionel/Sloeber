@@ -1,7 +1,6 @@
 /*
  * CIRRUS_Calibration.h
  */
-
 #ifndef _CIRRUS_CALIBRATION_H_
 #define _CIRRUS_CALIBRATION_H_
 
@@ -15,7 +14,7 @@ class CIRRUS_Calibration
 			Current_Cirrus = &cirrus;
 		}
 		void Complete(CIRRUS_Calib_typedef *Calib_base, float V1_Ref, float R);
-		void NoCharge(bool with_DC = true);
+		void NoCharge(CIRRUS_Calib_typedef *Calib_base, bool with_DC = true);
 		void WithCharge(CIRRUS_Calib_typedef *Calib_base, float V1_Ref, float R);
 	protected:
 		CIRRUS_Base *Current_Cirrus = NULL;

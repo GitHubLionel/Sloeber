@@ -65,6 +65,14 @@ bool IHM_Initialization(uint8_t address, bool test)
 // Gestion IHM
 // *****************************************************************************
 
+/**
+ * Return true if display is off
+ */
+bool IHM_IsDisplayOff(void)
+{
+	return TurnOff;
+}
+
 #ifdef OLED_SSD1327
 extern void PrintTerminal(const char *text);
 void SSD1327_Print(const String &str)
@@ -88,7 +96,7 @@ void IHM_Print0(const char *text)
 	SSD1306_UpdateScreen();
 #endif
 #ifdef OLED_SSD1327
-	SSD1327_String({0, 20}, text, &Font12, FONT_BACKGROUND, SSD1327_WHITE);
+	SSD1327_String({0, 12}, text, &Font12, FONT_BACKGROUND, SSD1327_WHITE);
 	SSD1327_DisplayUpdated();
 #endif
 #ifdef OLED_SH1107
@@ -131,7 +139,7 @@ void IHM_Print(uint8_t line, const char *text, bool update_screen)
 #ifdef OLED_SSD1327
   SSD1327_String(TPoint(0, 12*line), text, &Font12, FONT_BACKGROUND, SSD1327_WHITE);
   if (update_screen)
-  	SSD1327_DisplayUpdated();
+  	SSD1327_Display();
 #endif
 #ifdef OLED_SH1107
 	SH1107_WriteString(0, 0, line, (char*) text, FONT_NORMAL, 0);
@@ -272,7 +280,7 @@ void IHM_IPAddress(const char *ip)
 //	SSD1306_Clear_Screen();
 #endif
 #ifdef OLED_SSD1327
-	SSD1327_String({0, 20}, ip, &Font12, FONT_BACKGROUND, SSD1327_WHITE);
+	SSD1327_String({0, 12}, ip, &Font12, FONT_BACKGROUND, SSD1327_WHITE);
 	SSD1327_DisplayUpdated();
 //	delay(2000);
 //	SSD1327_Clear(SSD1327_BACKGROUND);

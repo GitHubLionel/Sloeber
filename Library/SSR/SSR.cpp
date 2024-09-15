@@ -290,14 +290,14 @@ void SetLedPinLow(void)
 // ********************************************************************************
 
 /**
- * SSR_Init : initialisation du SSR avec les callback zéro-cross et timer
+ * SSR_Initialize : initialisation du SSR avec les callback zéro-cross et timer
  * ZC_Pin : le pin zéro-cross
  * SSR_Pin : le pin actionnant le SSR
  * LED_Pin : le pin de la led indiquant le status du SSR (default -1)
  * Le SSR est désactivé.
  * D'abord définir le type d'action avec SSR_Action() puis appeler SSR_Enable() pour l'activer.
  */
-void SSR_Init(uint8_t ZC_Pin, uint8_t SSR_Pin, int8_t LED_Pin)
+void SSR_Initialize(uint8_t ZC_Pin, uint8_t SSR_Pin, int8_t LED_Pin)
 {
 	// Interruption zero-cross Cirrus, callback onCirrusZC
 	// Zero cross pin INPUT_PULLUP

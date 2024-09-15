@@ -1293,10 +1293,16 @@ void SH1107_DumpBuffer(uint8_t *pBuffer)
 		return;
 
 #ifdef ROTATED_90
+	static uint8_t saveBuffer[BUFFER_SIZE];  // rotated buffer
+	bool needRestaure = false;
 	if (pBuffer != NULL)
 	  SH1107_Rotate90(pBuffer);
 	else
+	{
+		mempcpy(saveBuffer, oled_1107.ucScreen, BUFFER_SIZE);
+		needRestaure = true;
 		SH1107_Rotate90(oled_1107.ucScreen);
+	}
 	pBuffer = rotBuffer;
 #endif
 
@@ -1317,6 +1323,11 @@ void SH1107_DumpBuffer(uint8_t *pBuffer)
 			pBuffer += 16;
 		} // for x
 	} // for y
+
+#ifdef ROTATED_90
+	if (needRestaure)
+		mempcpy(oled_1107.ucScreen, saveBuffer, BUFFER_SIZE);
+#endif
 } /* SH1107_DumpBuffer() */
 
 //

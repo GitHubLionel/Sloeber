@@ -2,6 +2,13 @@
 #include "CIRRUS_RES_EN.h"
 #include "Debug_utils.h"
 
+// Calibration
+#ifdef CIRRUS_CALIBRATION
+#include "CIRRUS_Calibration.h"
+extern CIRRUS_Calibration CS_Calibration;
+bool Calibration = false;
+#endif
+
 #ifdef CIRRUS_FLASH
 #include <Preferences.h>
 
@@ -113,26 +120,25 @@ void CIRRUS_Communication::Register_To_FLASH(char id_cirrus)
 #include <stdlib.h>
 #endif
 
+// Un compteur des passages du zéro
+//volatile uint32_t Zero_Cirrus = 0;
+// Un top à chaque période (2 zéro)
+//volatile uint8_t CIRRUS_Top_Period;
+
+// Mode SPI
 #ifndef CIRRUS_USE_UART
 #ifdef ESP32
 #define SPI_SCLK	GPIO_NUM_18
 #define SPI_MISO	GPIO_NUM_19
 #define SPI_MOSI	GPIO_NUM_23
 #endif
-#endif
 
-// Un compteur des passages du zéro
-//volatile uint32_t Zero_Cirrus = 0;
-// Un top à chaque période (2 zéro)
-//volatile uint8_t CIRRUS_Top_Period;
-
-#ifndef CIRRUS_USE_UART
 #define DELAY_SPI	1	// Datasheet say 1 us between each send
-#define SPI_BEGIN_TRANSACTION()	digitalWrite(CirrusSelected_Pin, GPIO_PIN_RESET); \
+#define SPI_BEGIN_TRANSACTION()	digitalWrite(Selected_Pin, GPIO_PIN_RESET); \
 		delayMicroseconds(DELAY_SPI); \
 		Cirrus_SPI->beginTransaction(spisettings)
 #define SPI_END_TRANSACTION()	Cirrus_SPI->endTransaction(); \
-		digitalWrite(CirrusSelected_Pin, GPIO_PIN_SET)
+		digitalWrite(Selected_Pin, GPIO_PIN_SET)
 #endif
 
 // ********************************************************************************
@@ -295,7 +301,7 @@ void CIRRUS_Communication::AddCirrus(CIRRUS_Base *cirrus, uint8_t select_Pin)
 }
 
 /**
- * Sélection d'un Cirrus (uniquement CS5480) :
+ * Sélection d'un Cirrus (uniquement CS548x) :
  * Le CS utilisé est passé à LOW, l'autre à HIGH
  * En UART, on met le pin à LOW
  * En SPI, il est controlé au moment de la transaction
@@ -318,6 +324,7 @@ CIRRUS_Base* CIRRUS_Communication::SelectCirrus(uint8_t position, CIRRUS_Channel
 		if (channel != Channel_none)
 			cs->SelectChannel(channel);
 		CurrentCirrus = cs;
+		Selected_Pin = cs->Cirrus_Pin;
 		return cs;
 	}
 
@@ -439,7 +446,11 @@ CIRRUS_State_typedef CIRRUS_Communication::Receive(Bit_List *pResult, uint8_t Si
 	uint32_t timeout = millis();
 
 	while ((Cirrus_UART->available() < Size) && ((millis() - timeout) < Cirrus_TimeOut))
+#ifdef ESP8266
 		yield();
+#else
+		taskYIELD();
+#endif
 	if (Cirrus_UART->available() < Size)
 	{
 //		CIRRUS_print_str("TIMEOUT");
@@ -490,12 +501,28 @@ void CIRRUS_Interrupt_DO_Action_SSR()
 // ********************************************************************************
 
 #ifdef LOG_CIRRUS_CONNECT
+//#define DEBUG_CONNECT
 
-// Commande Cirrus
-// L'IHM est prioritaire sur les opérations de log
-volatile bool CIRRUS_Lock_IHM = false;
-// Une commande pour le Cirrus est en attente de traitement
-volatile bool CIRRUS_Command = false;
+// This boolean must be defined with the Get_Data() function
+extern bool Data_acquisition;
+void CIRRUS_Communication::Do_Lock_IHM(bool op)
+{
+	if (op)
+	{
+		// Wait until current data acquisition is ended
+		while (Data_acquisition)
+		{
+#ifdef ESP8266
+		  yield();
+#else
+			taskYIELD();
+#endif
+		}
+		CIRRUS_Lock_IHM++;
+	}
+	else
+		CIRRUS_Lock_IHM--;
+}
 
 /**
  * Analyse du message reçu de la part de Cirrus_Connect par ordre d'importance.
@@ -506,89 +533,22 @@ volatile bool CIRRUS_Command = false;
  */
 uint8_t CIRRUS_Communication::UART_Message_Cirrus(uint8_t *RxBuffer)
 {
-	static uint8_t Cirrus_message[12];
+	static uint8_t Cirrus_message[100];
 	uint8_t message[100] = {0};
-	uint64_t command;
 	uint16_t len = 0;
-	bool op; // READ = true
-	uint8_t registre, page;
-	Bit_List result;
-	float scale[4] = {0};
-	char *pbuffer;
 
 //  ************** Lecture/écriture registre du Cirrus ************************
 	if (Search_Balise(RxBuffer, "REG=", LOG_ETX_STR, (char*) message, &len) != NULL)
 	{
-		// Cirrus est occupé
-		if (CIRRUS_Command)
-		{
-			CurrentCirrus->print_str(":#Cirrus busy\03\r\n");
-			return 1;
-		}
-
-		CIRRUS_Command = true;
-		// Le format de la commande est hhmmllpprrcc\03
-		// hhmmll : La valeur du registre à écrire
-		// pp est la page, rr est le registre et cc la commande (1 = READ, 0 = WRITE)
-		// Si commande = WRITE et Page = 1 on a une commande simple
-		command = strtoll((char*) message, NULL, 10);
-#ifdef DEBUG_CONNECT
-    sprintf((char *)message,":#%s\r\n", (char *)aRxBuffer); // Pas le \03
-    CurrentCirrus->print_str((char *)message);
-    HAL_Delay(1);
-#endif
-		op = ((command & 0x01) == 1);
-		command >>= 8;
-		registre = (uint8_t) (command & 0xFF);
-		command >>= 8;
-		page = (uint8_t) (command & 0xFF);
-
-		// On vérifie au moins que la page est bonne
-		if ((page != 0) && (page != 1) && (page != 16) && (page != 17) && (page != 18))
-		{
-			CurrentCirrus->print_str(":#Cirrus page error\03\r\n");
-			CIRRUS_Command = false;
-			return 1;
-		}
-
-#ifdef DEBUG_CONNECT
-    sprintf((char *)message,":#Page=%d; Registre=%d \03\r\n", page, registre);
-    CurrentCirrus->print_str((char *)message);
-    HAL_Delay(1);
-#endif
-		if (op) // READ
-		{
-			if (CurrentCirrus->read_register(registre, page, &result))
-			{
-				// Expédition du résultat au format ":résultat en hexa\03"
-				// : et \03 sont les caractères de début et de fin du message
-				sprintf((char*) Cirrus_message, ":%X\03\r\n", (unsigned int) result.Bit32);
-				CurrentCirrus->print_str((char*) Cirrus_message);
-			}
-			else
-				CurrentCirrus->print_str(":#ERROR\03\r\n");
-		}
-		else // WRITE
-		{
-			// PAGE = 1 n'existe pas. Est utilisé pour envoyer une instruction.
-			if (page == 1)
-			{
-				CurrentCirrus->send_instruction(registre);
-			}
-			else
-			{
-				result.Bit32 = (command >> 8);
-#ifdef DEBUG_CONNECT
-	sprintf((char *)message,":#Command : (LSB: 0x%.2X, MSB: 0x%.2X, HSB: 0x%.2X), Checksum: %d\03\r\n",
-		result.LSB, result.MSB, result.HSB, result.CHECK);
-	CurrentCirrus->print_str((char *)message);
-	HAL_Delay(1);
-#endif
-				CurrentCirrus->write_register(registre, page, &result);
-			}
-			CurrentCirrus->print_str(":#REG_OK\03\r\n");
-		}
-		CIRRUS_Command = false;
+		char response[50];
+		COM_Register(message, response);
+		// Expédition du résultat au format ":résultat en hexa (sans 0x)\03"
+		// : et \03 sont les caractères de début et de fin du message
+		char *presponse = &response[0];
+		if (response[0] != '#') // Ce n'est pas un message d'information
+			presponse += 2;
+		sprintf((char*) Cirrus_message, ":%s\03\r\n", presponse);
+		CurrentCirrus->print_str((char*) Cirrus_message);
 		return 1;
 	}
 
@@ -603,64 +563,18 @@ uint8_t CIRRUS_Communication::UART_Message_Cirrus(uint8_t *RxBuffer)
 //  ************** Changement de vitesse du Cirrus (mode UART) ****************
 	if (Search_Balise(RxBuffer, "BAUD=", LOG_ETX_STR, (char*) message, &len) != NULL)
 	{
-#ifdef CIRRUS_USE_UART
-		uint8_t nb = GetNumberCirrus();
-		if (nb == 0)
-			return 1;
-
-		int CirrusNewBaud = strtol((char*) message, NULL, 10);
-
-		if (Cirrus_UART->baudRate() == CirrusNewBaud)
-			return 1;
-
-		if (nb == 1)
-		{
-			CurrentCirrus->SetUARTBaud(CirrusNewBaud, true);
-		}
-		else
-		{
-			SelectCirrus(0);
-			CurrentCirrus->SetUARTBaud(CirrusNewBaud, false);
-			SelectCirrus(1);
-			CurrentCirrus->SetUARTBaud(CirrusNewBaud, true);
-			// Go back to first Cirrus
-			SelectCirrus(0);
-		}
-
-#ifdef DEBUG_CONNECT
-    sprintf((char *)message,":#CirrusNewBaud=%ld\03\r\n", CirrusNewBaud);
-    CurrentCirrus->print_str((char *)message);
-    delay(1);
-#endif
-
-#else
-		// On est en SPI, donc on ignore cette commande
-		CurrentCirrus->print_str("Baud ignore, use SPI.\r\n");
-#endif
+		char response[50];
+		COM_ChangeBaud(message, response);
 		return 1;
 	}
 
 //  ************** Lecture des coefficient de SCALE du Cirrus *****************
 	if (Search_Balise(RxBuffer, "SCALE=", LOG_ETX_STR, (char*) message, &len) != NULL)
 	{
-		// Récupération des SCALE
-		if (len == 0)
-		{
-			CurrentCirrus->GetScale((float*) &scale);
-			sprintf((char*) message, "%.2f;%.2f;%.2f;%.2f;\03\r\n", scale[0], scale[1], scale[2],
-					scale[3]);
-			CurrentCirrus->print_str((char*) message);
-		}
-		else
-		{
-			pbuffer = strtok((char*) message, ";");
-			scale[0] = strtod(pbuffer, NULL);
-			for (len = 1; len < 4; len++)
-			{
-				scale[len] = strtod(strtok(NULL, ";"), NULL);
-			}
-			CurrentCirrus->SetScale((float*) &scale);
-		}
+		float scale[4] = {0};
+		char response[50];
+		COM_Scale(message, &scale[0], response);
+		CurrentCirrus->print_str((char*) response);
 		return 1;
 	}
 
@@ -678,25 +592,34 @@ uint8_t CIRRUS_Communication::UART_Message_Cirrus(uint8_t *RxBuffer)
 //  ************** Changement de Cirrus ***************************************
 	if (Search_Balise(RxBuffer, "CS=", LOG_ETX_STR, (char*) message, &len) != NULL)
 	{
+		// we must have 2 cirrus
+		if (GetNumberCirrus() != 2)
+		{
+			return 1;
+		}
+
 		if (strcmp((char*) message, "0") == 0)
 		{
-//			CurrentCirrus->Select(Cirrus_1);
+			SelectCirrus(0, Channel_1);
 			CurrentCirrus->print_str("Cirrus 1 selected\r\n");
 		}
 		else
 		{
-//			CurrentCirrus->Select(Cirrus_2);
+			SelectCirrus(1, Channel_1);
 			CurrentCirrus->print_str("Cirrus 2 selected\r\n");
 		}
 		return 1;
 	}
 
-//  ************** Message lock IHM pour calibration du Cirrus ****************
+//  ************** Message lock/unlock IHM pour calibration du Cirrus ****************
 	if (strstr((char*) RxBuffer, "LOCK=") != NULL)
 	{
 		// Toggle flag Calibration
-		CIRRUS_Lock_IHM = !CIRRUS_Lock_IHM;
-		if (CIRRUS_Lock_IHM)
+		if (Is_IHM_Locked())
+			Do_Lock_IHM(false);
+		else
+			Do_Lock_IHM(true);
+		if (Is_IHM_Locked())
 			CurrentCirrus->print_str("IHM Locked\r\n");
 		else
 			CurrentCirrus->print_str("IHM unLocked\r\n");
@@ -709,6 +632,92 @@ uint8_t CIRRUS_Communication::UART_Message_Cirrus(uint8_t *RxBuffer)
 // ********************************************************************************
 // Fonction pour la communication Wifi
 // ********************************************************************************
+
+/**
+ * Handle common requests to tue Cirrus
+ */
+String CIRRUS_Communication::Handle_Common_Request(CS_Common_Request Common_Request, char *Request,
+		CIRRUS_Calib_typedef *CS_Calib, CIRRUS_Config_typedef *CS_Config)
+{
+	char response[255] = {0};
+
+	// Lock IHM
+	Do_Lock_IHM(true);
+
+	switch (Common_Request)
+	{
+		// Demande d'un registre
+		case csw_REG:
+		{
+			COM_Register((uint8_t*) Request, response);
+			break;
+		}
+			// Demande des scales (U_Calib, I_Max)
+		case csw_SCALE:
+		{
+			float scale[4] = {0};
+			COM_Scale((uint8_t*) Request, &scale[0], response);
+			// Update local scale
+			CS_Calib->V1_Calib = scale[0];
+			CS_Calib->I1_MAX = scale[1];
+			CS_Calib->V2_Calib = scale[2];
+			CS_Calib->I2_MAX = scale[3];
+			break;
+		}
+			// Demande de plusieurs registres (graphe, dump)
+		case csw_REG_MULTI:
+		{
+			COM_Register_Multi((uint8_t*) Request, response);
+			break;
+		}
+			// Changement de la vitesse
+		case csw_BAUD:
+		{
+			COM_ChangeBaud((uint8_t*) Request, response);
+			break;
+		}
+#ifdef CIRRUS_CALIBRATION
+			// Demande calibration sans charge
+		case csw_NOLOAD:
+		{
+			Calibration = true;
+			CS_Calibration.NoCharge(CS_Calib, false);
+			Calibration = false;
+			strcpy(response, "NOLOAD_OK");
+
+			// Redémarrage du Cirrus
+			CIRRUS_Restart(*GetCurrentCirrus(), CS_Calib, CS_Config);
+			break;
+		}
+			// Demande calibration gain (avec charge)
+		case csw_GAIN:
+		{
+			float V1_Ref, R;
+			uint8_t *Request2 = (uint8_t*) Request;
+			char *pbuffer = strtok((char*) Request2, ";#");
+
+			R = strtof(pbuffer, NULL);
+			V1_Ref = strtof(strtok(NULL, ";#"), NULL);
+
+			Calibration = true;
+			CS_Calibration.WithCharge(CS_Calib, V1_Ref, R);
+			Calibration = false;
+			strcpy(response, "GAIN_OK");
+
+			// Redémarrage du Cirrus
+			CIRRUS_Restart(*GetCurrentCirrus(), CS_Calib, CS_Config);
+			break;
+		}
+#endif // CALIBRATION
+		default:
+			;
+	}
+
+	// UnLock IHM
+	Do_Lock_IHM(false);
+
+	return String(response);
+}
 
 /**
  * Change Cirrus baud when use UART
@@ -733,6 +742,8 @@ bool CIRRUS_Communication::COM_ChangeBaud(uint8_t *Baud, char *response)
 	}
 
 	bool result = false;
+	Do_Lock_IHM(true);
+	CSDelay(1);
 	if (nb == 1)
 	{
 		result = CurrentCirrus->SetUARTBaud(CirrusNewBaud, true);
@@ -746,6 +757,7 @@ bool CIRRUS_Communication::COM_ChangeBaud(uint8_t *Baud, char *response)
 		// Go back to first Cirrus
 		SelectCirrus(0);
 	}
+	Do_Lock_IHM(false);
 
 	if (!result)
 	{
@@ -754,9 +766,10 @@ bool CIRRUS_Communication::COM_ChangeBaud(uint8_t *Baud, char *response)
 	}
 
 #ifdef DEBUG_CONNECT
-  sprintf((char *)message,":#CirrusNewBaud=%ld\03\r\n", CirrusNewBaud);
-  CurrentCirrus->print_str((char *)message);
-  delay(1);
+	char message[100] = {0};
+	sprintf((char*) message, ":#CirrusNewBaud=%d\03\r\n", CirrusNewBaud);
+	CurrentCirrus->print_str((char*) message);
+	delay(1);
 #endif
 	strcpy(response, "BAUD_OK");
 
@@ -823,11 +836,16 @@ char* CIRRUS_Communication::COM_Register(uint8_t *Request, char *response)
 	// Cirrus est occupé
 	if (CIRRUS_Command)
 	{
-		strcpy(response, "Cirrus busy");
+		strcpy(response, "#Cirrus busy");
 		return response;
 	}
 
 	CIRRUS_Command = true;
+
+	// Le format de la commande est hhmmllpprrcc\03
+	// hhmmll : La valeur du registre à écrire
+	// pp est la page, rr est le registre et cc la commande (1 = READ, 0 = WRITE)
+	// Si commande = WRITE et Page = 1 on a une commande simple
 
 	// command is a uint64_t
 	command = strtoull((char*) Request, NULL, 10);
@@ -841,10 +859,16 @@ char* CIRRUS_Communication::COM_Register(uint8_t *Request, char *response)
 	if ((page != 0) && (page != 1) && (page != 16) && (page != 17) && (page != 18))
 	{
 		CIRRUS_Command = false;
-		strcpy(response, "Cirrus page error");
+		strcpy(response, "#Cirrus page error");
 		return response;
 	}
 
+#ifdef DEBUG_CONNECT
+	char message[100] = {0};
+	sprintf((char*) message, "#Page=%d; Registre=%d", page, registre);
+	CurrentCirrus->print_str((char*) message);
+#endif
+	Do_Lock_IHM(true);
 	if (op) // READ
 	{
 		if (CurrentCirrus->read_register(registre, page, &result))
@@ -853,7 +877,7 @@ char* CIRRUS_Communication::COM_Register(uint8_t *Request, char *response)
 			sprintf(response, "0x%.6X", (unsigned int) result.Bit32);
 		}
 		else
-			strcpy(response, "REG_ERROR");
+			strcpy(response, "#REG_ERROR");
 	}
 	else // WRITE
 	{
@@ -865,10 +889,16 @@ char* CIRRUS_Communication::COM_Register(uint8_t *Request, char *response)
 		else
 		{
 			result.Bit32 = (command >> 8);
+#ifdef DEBUG_CONNECT
+			sprintf((char*) message, "#Command : (LSB: 0x%.2X, MSB: 0x%.2X, HSB: 0x%.2X), Checksum: %d",
+					result.LSB, result.MSB, result.HSB, result.CHECK);
+			CurrentCirrus->print_str((char*) message);
+#endif
 			CurrentCirrus->write_register(registre, page, &result);
 		}
-		strcpy(response, "REG_OK");
+		strcpy(response, "#REG_OK");
 	}
+	Do_Lock_IHM(false);
 	CIRRUS_Command = false;
 	return response;
 }
@@ -891,15 +921,14 @@ char* CIRRUS_Communication::COM_Register_Multi(uint8_t *Request, char *response)
 		if ((pbuffer = strtok(NULL, ";#")) != NULL)
 			strcat(response, "#");
 	}
-
 	return response;
 }
 
 #ifdef CIRRUS_FLASH
-char* CIRRUS_Communication::COM_Flash(char *response)
+char* CIRRUS_Communication::COM_Flash(char id_cirrus, char *response)
 {
 	// Sauvegarde dans la FLASH
-	Register_To_FLASH('1');
+	Register_To_FLASH(id_cirrus);
 //	CIRRUS_print_str("FLASH Data OK\r\n");
 	strcpy(response, "FLASH_OK");
 	return response;

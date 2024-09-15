@@ -50,9 +50,9 @@ void UserKeyboardAction(Btn_Action Btn_Clicked);
 typedef void (*KeyBoard_Click_cb)(Btn_Action Btn);
 
 // Initialisation du clavier
-void Keyboard_Init(uint8_t pin, uint8_t nbButton, ADC_Sampling sampling = ADC_10bits,
+void Keyboard_Initialize(uint8_t pin, uint8_t nbButton, ADC_Sampling sampling = ADC_10bits,
 		const KeyBoard_Click_cb &kbClick = NULL);
-void Keyboard_Init(uint8_t pin, uint8_t nbButton, const uint16_t interval[],
+void Keyboard_Initialize(uint8_t pin, uint8_t nbButton, const uint16_t interval[],
 		const KeyBoard_Click_cb &kbClick = NULL);
 // La mise à jour en fond de tache à mettre dans la boucle loop
 void Keyboard_UpdateTime(void);

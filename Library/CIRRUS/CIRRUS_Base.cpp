@@ -15,8 +15,8 @@
 // SCT013 : turn ration 100A:50mA  50mV
 #define SHUNT_R  0.05 // Ohm
 #define TORE_RATIO  2000  // 100/0.05
-#define VDIV_R1  1.5e6 // Ohm
-#define VDIV_R2  1.8e3 // Ohm
+//#define VDIV_R1  1.5e6 // Ohm
+//#define VDIV_R2  1.8e3 // Ohm
 #define MCLK  4096000  // Hz clock rate: 4.096 MHz
 #define MCLK100  40960 // Hz clock rate: 4.096 MHz div 100
 #define sqrt2  1.414213562
@@ -66,6 +66,11 @@ const uint32_t pow2_24 = 16777216;
 // Initialization
 // ********************************************************************************
 
+String CIRRUS_Base::GetName(void)
+{
+	return "Cirrus Base";
+}
+
 void CIRRUS_Base::SetCommunication(CIRRUS_Communication &com)
 {
 	if (Com == NULL)
@@ -109,7 +114,7 @@ bool CIRRUS_Base::begin(uint32_t baud, bool change_UART)
  */
 bool CIRRUS_Base::begin()
 {
-	if (Communication_connected && Com->IsStarted())
+	if ((Com != NULL) && Com->IsStarted())
 	{
 		print_str("CIRRUS SPI Started");
 
@@ -933,7 +938,9 @@ void CIRRUS_Base::write_register(uint8_t register_no, uint8_t page_no, Bit_List 
 #endif
 	send(thedata, 3);
 	// Need time to process
+#ifdef CIRRUS_USE_UART
 	CSDelay(WRITE_REGISTER_DELAY_MS); // WRITE_REGISTER_DELAY_MS
+#endif
 }
 
 /*
@@ -977,6 +984,9 @@ void CIRRUS_Base::data_reset(void)
 	csResponse = false;
 }
 
+/**
+ * Unofficial soft reset
+ */
 void CIRRUS_Base::softsoft_reset(void)
 {
 	Bit_List msg = Bit_List_Zero;
@@ -1100,7 +1110,11 @@ bool CIRRUS_Base::wait_for_ready(bool clear_ready)
 	{
 		IsNotTimeOut = ((millis() - StartTime) < Ready_TimeOut);  // csReferenceTime
 		// Background Wifi process
+#ifdef ESP8266
 		yield();
+#else
+		taskYIELD();
+#endif
 	}
 
 	if ((!IsNotTimeOut) && (CIRRUS_Last_Error == CIRRUS_OK))
@@ -1125,7 +1139,10 @@ bool CIRRUS_Base::Check_Positive_Power(CIRRUS_Channel channel)
 	if (channel == Channel_1)
 		return (bool) (get_bitmask(REG_MASK_P1SIGN) == CIRRUS_RegBit_UnSet);
 	else
-		return (bool) (get_bitmask(REG_MASK_P2SIGN) == CIRRUS_RegBit_UnSet);
+		if (channel == Channel_2)
+			return (bool) (get_bitmask(REG_MASK_P2SIGN) == CIRRUS_RegBit_UnSet);
+		else
+			return false;
 }
 
 /**
@@ -1430,7 +1447,7 @@ void CIRRUS_Base::SelectChannel(CIRRUS_Channel channel)
 //Instantaneous quantities
 
 /*
- @return the instantaneous voltage
+ @return the instantaneous voltage for current channel
  */
 float CIRRUS_Base::get_instantaneous_voltage(void)
 {
@@ -1443,7 +1460,7 @@ float CIRRUS_Base::get_instantaneous_voltage(void)
 }
 
 /*
- @return the instantaneous current
+ @return the instantaneous current for current channel
  */
 float CIRRUS_Base::get_instantaneous_current(void)
 {
@@ -1456,7 +1473,7 @@ float CIRRUS_Base::get_instantaneous_current(void)
 }
 
 /*
- @return the current power calculated from the voltage and current channels
+ @return the current power calculated from the voltage and current channels for current channel
  */
 float CIRRUS_Base::get_instantaneous_power(void)
 {
@@ -1469,7 +1486,7 @@ float CIRRUS_Base::get_instantaneous_power(void)
 }
 
 /*
- @return the current quadrature power (Q)
+ @return the current quadrature power (Q) for current channel
  */
 float CIRRUS_Base::get_instantaneous_quadrature_power(void)
 {
@@ -1484,7 +1501,7 @@ float CIRRUS_Base::get_instantaneous_quadrature_power(void)
 //Average and RMS quantities
 
 /*
- @return rms value of V calculated during each low-rate interval
+ @return rms value of V calculated during each low-rate interval for current channel
  */
 float CIRRUS_Base::get_rms_voltage(void)
 {
@@ -1497,7 +1514,7 @@ float CIRRUS_Base::get_rms_voltage(void)
 }
 
 /*
- @return rms value of I calculated during each low-rate interval
+ @return rms value of I calculated during each low-rate interval for current channel
  */
 float CIRRUS_Base::get_rms_current(void)
 {
@@ -1510,7 +1527,7 @@ float CIRRUS_Base::get_rms_current(void)
 }
 
 /*
- @return power averaged over each low-rate interval (samplecount samples)
+ @return power averaged over each low-rate interval (samplecount samples) for current channel
  */
 float CIRRUS_Base::get_average_power(void)
 {
@@ -1523,7 +1540,7 @@ float CIRRUS_Base::get_average_power(void)
 }
 
 /*
- @return reactive power (Q) averaged over each low-rate interval (samplecount samples)
+ @return reactive power (Q) averaged over each low-rate interval (samplecount samples) for current channel
  */
 float CIRRUS_Base::get_average_reactive_power(void)
 {
@@ -1538,7 +1555,7 @@ float CIRRUS_Base::get_average_reactive_power(void)
 //Peak quantities
 
 /*
- @return The peak voltage
+ @return The peak voltage for current channel
  */
 float CIRRUS_Base::get_peak_voltage(void)
 {
@@ -1551,7 +1568,7 @@ float CIRRUS_Base::get_peak_voltage(void)
 }
 
 /*
- @return The peak current
+ @return The peak current for current channel
  */
 float CIRRUS_Base::get_peak_current(void)
 {
@@ -1564,7 +1581,7 @@ float CIRRUS_Base::get_peak_current(void)
 }
 
 /*
- @return The apparent power (S)
+ @return The apparent power (S) for current channel
  */
 float CIRRUS_Base::get_apparent_power(void)
 {
@@ -1577,7 +1594,7 @@ float CIRRUS_Base::get_apparent_power(void)
 }
 
 /*
- @return The power factor (ratio of P_avg and S) * sign(P_avg)
+ @return The power factor (ratio of P_avg and S) * sign(P_avg) for current channel
  */
 float CIRRUS_Base::get_power_factor(void)
 {
@@ -1592,7 +1609,7 @@ float CIRRUS_Base::get_power_factor(void)
 //Total sum quantities
 
 /*
- @return Total active power, P_sum
+ @return Total active power, P_sum for current channel
  */
 float CIRRUS_Base::get_sum_active_power(void)
 {
@@ -1604,7 +1621,7 @@ float CIRRUS_Base::get_sum_active_power(void)
 }
 
 /*
- @return Total apparent power, S_sum
+ @return Total apparent power, S_sum for current channel
  */
 float CIRRUS_Base::get_sum_apparent_power(void)
 {
@@ -1616,7 +1633,7 @@ float CIRRUS_Base::get_sum_apparent_power(void)
 }
 
 /*
- @return Total reactive power, Q_sum
+ @return Total reactive power, Q_sum for current channel
  */
 float CIRRUS_Base::get_sum_reactive_power(void)
 {
@@ -1628,7 +1645,7 @@ float CIRRUS_Base::get_sum_reactive_power(void)
 }
 
 /*
- @return uRMS and pRMS data for channel 1
+ @return uRMS and pRMS data for current channel
  */
 bool CIRRUS_Base::get_rms_data(volatile float *uRMS, volatile float *pRMS)
 {
@@ -1653,7 +1670,7 @@ bool CIRRUS_Base::get_rms_data(volatile float *uRMS, volatile float *pRMS)
 }
 
 /*
- @return all RMS data for channel 1
+ @return all RMS data for current channel
  */
 bool CIRRUS_Base::get_rms_data(float *uRMS, float *iRMS, float *pRMS, float *CosPhi)
 {
@@ -2455,7 +2472,7 @@ void CIRRUS_Base::Print_Calib(CIRRUS_Calib_typedef *calib)
 	sprintf(uart_Text, "Q1OFF : 0x%.6X", (unsigned int) calib->Q1OFF);
 	print_str(uart_Text);
 
-	sprintf(uart_Text, "CS_Calib1 = {%.2f, %.2f, 0x%.6X, 0x%.6X, 0x%.6X, 0x%.6X, 0x%.6X}",
+	sprintf(uart_Text, "CS_Calib_ch1 = {%.2f, %.2f, 0x%.6X, 0x%.6X, 0x%.6X, 0x%.6X, 0x%.6X}",
 			calib->V1_Calib, calib->I1_MAX, (unsigned int) calib->V1GAIN, (unsigned int) calib->I1GAIN,
 			(unsigned int) calib->I1ACOFF, (unsigned int) calib->P1OFF, (unsigned int) calib->Q1OFF);
 	print_str(uart_Text);
@@ -2478,7 +2495,7 @@ void CIRRUS_Base::Print_Calib(CIRRUS_Calib_typedef *calib)
 		sprintf(uart_Text, "Q2OFF : 0x%.6X", (unsigned int) calib->Q2OFF);
 		print_str(uart_Text);
 
-		sprintf(uart_Text, "CS_Calib2 = {%.2f, %.2f, 0x%.6X, 0x%.6X, 0x%.6X, 0x%.6X, 0x%.6X}",
+		sprintf(uart_Text, "CS_Calib_ch2 = {%.2f, %.2f, 0x%.6X, 0x%.6X, 0x%.6X, 0x%.6X, 0x%.6X}",
 				calib->V2_Calib, calib->I2_MAX, (unsigned int) calib->V2GAIN, (unsigned int) calib->I2GAIN,
 				(unsigned int) calib->I2ACOFF, (unsigned int) calib->P2OFF, (unsigned int) calib->Q2OFF);
 		print_str(uart_Text);
@@ -2489,7 +2506,7 @@ void CIRRUS_Base::Print_Calib(CIRRUS_Calib_typedef *calib)
 
 void CIRRUS_Base::Print_Config(CIRRUS_Config_typedef *config)
 {
-	char uart_Text[50] = {0};
+	char uart_Text[100] = {0};
 
 	print_str("***** Cirrus Configuration data *****");
 
@@ -2504,6 +2521,11 @@ void CIRRUS_Base::Print_Config(CIRRUS_Config_typedef *config)
 	sprintf(uart_Text, "Pulse rate : 0x%.6X", (unsigned int) config->P_rate);
 	print_str(uart_Text);
 	sprintf(uart_Text, "Pulse control : 0x%.6X", (unsigned int) config->P_control);
+	print_str(uart_Text);
+
+	sprintf(uart_Text, "CS_Config = {0x%.6X, 0x%.6X, 0x%.6X, 0x%.6X, 0x%.6X, 0x%.6X}",
+			(unsigned int) config->config0, (unsigned int) config->config1, (unsigned int) config->config2,
+			(unsigned int) config->P_width, (unsigned int) config->P_rate, (unsigned int) config->P_control);
 	print_str(uart_Text);
 
 	print_str("****************************\r\n");

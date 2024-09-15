@@ -4,13 +4,12 @@
 #include "config_lib.h"
 #endif
 
-#include "CIRRUS_define.h"
-
 #include "Arduino.h"
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <deque>
+#include "CIRRUS_define.h"
 
 /**
  * For debug purpose
@@ -18,6 +17,7 @@
 //#define DEBUG_CIRRUS
 //#define DEBUG_CIRRUS_BAUD
 //#define DEBUG_CIRRUS_WAIT_MESSAGE
+
 /**
  * If we use Cirrus_Connect software to communicate with the Cirrus in UART.
  * In this case, only on SPI or if we have two UART (one for Cirrus, one for Cirrus_Connect)
@@ -25,10 +25,12 @@
  * if we communicate by Wifi
  */
 //#define LOG_CIRRUS_CONNECT
+
 /**
  * For FLASH
  */
 //#define CIRRUS_FLASH
+
 // Spécifique UART
 #ifdef CIRRUS_USE_UART
 // define SoftwareSerial = 0 or HardwareSerial = 1 mode
@@ -38,11 +40,11 @@
  * TimeOut definition for uart and spi communication
  */
 #define TIMEOUT600	100	// Timeout for 600 baud, should always be enough
-#define TIMEOUT512K	8	// Timeout for >= 128 kbaud, 5 is good for CS5490 but depend of the insulator
+#define TIMEOUT512K	8	  // Timeout for >= 128 kbaud, 5 is good for CS5490 but depend of the insulator
 
 // Delay for the read/write register in ms. May be increased if necessary
-#define READ_REGISTER_DELAY_MS 100
-#define WRITE_REGISTER_DELAY_MS 128
+#define READ_REGISTER_DELAY_MS 100 // Not used
+#define WRITE_REGISTER_DELAY_MS 64 // 128 ms is the max time out serial reset
 
 // ******************************************************************
 // Ne pas modifier ci-dessous
@@ -315,6 +317,19 @@ typedef enum
 } HAL_StatusTypeDef;
 
 /**
+ * Common request enumeration
+ */
+typedef enum {
+	csw_REG,
+	csw_SCALE,
+	csw_REG_MULTI,
+	csw_BAUD,
+	csw_NOLOAD,
+	csw_GAIN,
+	csw_NONE
+} CS_Common_Request;
+
+/**
  * RMS data struct.
  * Contain Voltage, Current, Power and Energy by day
  */
@@ -492,19 +507,28 @@ class CIRRUS_Communication
 		CIRRUS_Base* SelectCirrus(uint8_t position, CIRRUS_Channel channel = Channel_none);
 		CIRRUS_Base* GetCirrus(int position);
 
+		String Handle_Common_Request(CS_Common_Request Common_Request, char *Request,
+				CIRRUS_Calib_typedef *CS_Calib, CIRRUS_Config_typedef *CS_Config);
+
 #ifdef CIRRUS_FLASH
 		void Register_To_FLASH(char id_cirrus);
 #endif
 
 		// Communication UART with Cirrus_Connect or Wifi with CIRRUS_Config
 #ifdef LOG_CIRRUS_CONNECT
+		void Do_Lock_IHM(bool op);
+		bool Is_IHM_Locked(void)
+		{
+			return (CIRRUS_Lock_IHM > 0);
+		}
+
 		uint8_t UART_Message_Cirrus(uint8_t *RxBuffer);
 		char* COM_Scale(uint8_t *Request, float *scale, char *response);
 		char* COM_Register(uint8_t *Request, char *response);
 		char* COM_Register_Multi(uint8_t *Request, char *response);
 		bool COM_ChangeBaud(uint8_t *Baud, char *response);
 #ifdef CIRRUS_FLASH
-		char* COM_Flash(char *response);
+		char* COM_Flash(char id_cirrus, char *response);
 #endif
 #endif
 
@@ -534,6 +558,14 @@ class CIRRUS_Communication
 		uint8_t Selected_Pin = 0;
 
 		bool Comm_started = false;
+
+#ifdef LOG_CIRRUS_CONNECT
+		// Une commande pour le Cirrus est en attente de traitement
+		bool CIRRUS_Command = false;
+
+		// To stop data acquisition for log and IHM
+		int CIRRUS_Lock_IHM = 0;
+#endif
 };
 
 /**
@@ -575,6 +607,11 @@ class CIRRUS_Base
 		bool SetUARTBaud(uint32_t baud, bool change_UART);
 		bool set_uart_baudrate(uint32_t baud);
 #endif
+		virtual String GetName(void);
+		virtual bool IsTwoChannel(void)
+		{
+			return false;
+		}
 
 		void Load_From_FLASH(CIRRUS_Calib_typedef *calib, CIRRUS_Config_typedef *config);
 		void Save_To_FLASH(CIRRUS_Calib_typedef *calib, CIRRUS_Config_typedef *config);
@@ -922,7 +959,7 @@ class CIRRUS_RMSData
 
 		uint32_t _error_count = 0;
 
-		// Variable for GetData (Do not make them static in GetData() function !!)
+		// Variables for GetData (Do not make them static in GetData() function !!)
 		RMS_Data _inst_data_cumul;
 		double _inst_temp_Cumul = 0;
 		RMS_Data _log_cumul_data;
@@ -941,7 +978,7 @@ class CIRRUS_RMSData
 /**
  * Cirrus CIRRUS_CS5490 class for CS5490 with RMS data
  */
-#ifdef CIRRUS_USE_UART
+
 class CIRRUS_CS5490: public CIRRUS_Base
 {
 	public:
@@ -956,6 +993,7 @@ class CIRRUS_CS5490: public CIRRUS_Base
 			Initialize();
 		}
 		~CIRRUS_CS5490();
+		String GetName(void);
 
 		/**
 		 * Get direct access to RMS data class
@@ -1061,7 +1099,7 @@ class CIRRUS_CS5490: public CIRRUS_Base
 		// RMS Data
 		CIRRUS_RMSData *RMSData = NULL;
 };
-#else
+#ifndef CIRRUS_USE_UART
 #warning "CIRRUS_CS5490 not available with SPI"
 #endif
 
@@ -1084,6 +1122,11 @@ class CIRRUS_CS548x: public CIRRUS_Base
 			Initialize();
 		}
 		~CIRRUS_CS548x();
+		String GetName(void);
+		virtual bool IsTwoChannel(void)
+		{
+			return true;
+		}
 
 		void RestartEnergy(void);
 		bool GetData(CIRRUS_Channel channel);
@@ -1116,6 +1159,27 @@ class CIRRUS_CS548x: public CIRRUS_Base
 		CIRRUS_RMSData *RMSData_ch1 = NULL;
 		CIRRUS_RMSData *RMSData_ch2 = NULL;
 };
+
+// ********************************************************************************
+// Some basic functions used with IHM
+// ********************************************************************************
+
+/**
+ * Generic initialization of a cirrus after begin
+ */
+#ifdef CIRRUS_FLASH
+bool CIRRUS_Generic_Initialization(CIRRUS_Base &Cirrus, CIRRUS_Calib_typedef *CS_Calib,
+		CIRRUS_Config_typedef *CS_Config, bool print_data, bool Flash_op_load, char Flash_id);
+#else
+bool CIRRUS_Generic_Initialization(CIRRUS_Base &Cirrus, CIRRUS_Calib_typedef *CS_Calib,
+		CIRRUS_Config_typedef *CS_Config, bool print_data, bool Flash_op_load = false, char Flash_id = '1');
+#endif
+void CIRRUS_Restart(CIRRUS_Base &Cirrus, CIRRUS_Calib_typedef *CS_Calib, CIRRUS_Config_typedef *CS_Config);
+
+/**
+ * For the general response for a Wifi "/getCirrus" request
+ */
+String Handle_Wifi_Request(CS_Common_Request Wifi_Request, char *Request);
 
 // To create a basic task to check Cirrus data every 100 ms
 #ifdef CIRRUS_USE_TASK

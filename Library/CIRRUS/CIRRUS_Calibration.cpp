@@ -9,7 +9,7 @@
  */
 void CIRRUS_Calibration::Complete(CIRRUS_Calib_typedef *Calib_base, float V1_Ref, float R)
 {
-	NoCharge();
+	NoCharge(Calib_base);
 
 	// Update Calib_base
 	Bit_List i_acoff;
@@ -24,7 +24,7 @@ void CIRRUS_Calibration::Complete(CIRRUS_Calib_typedef *Calib_base, float V1_Ref
  * Séquence de calibration n°1 :
  * Aucune charge doit être présente : I et V Cirrus déconnectés
  */
-void CIRRUS_Calibration::NoCharge(bool with_DC)
+void CIRRUS_Calibration::NoCharge(CIRRUS_Calib_typedef *Calib_base, bool with_DC)
 {
 	IHM_Clear(true);
 	IHM_Print(1, "Calibration ...", true);
@@ -34,6 +34,12 @@ void CIRRUS_Calibration::NoCharge(bool with_DC)
 	if (with_DC)
 		Current_Cirrus->do_dc_offset_calibration(true);
 	Current_Cirrus->do_ac_offset_calibration();
+
+	// Update Calib_base
+	Bit_List i_acoff;
+	// get I AC offset registers
+	Current_Cirrus->read_register(P16_I1_ACOFF, PAGE16, &i_acoff);
+	Calib_base->I1ACOFF = i_acoff.Bit32;
 
 	IHM_Print(2, "Ended.    ");
 	IHM_Print(3, "Reconnect ...", true);

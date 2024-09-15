@@ -192,7 +192,7 @@ void Keyboard_Init_Base(uint8_t pin, uint8_t nbButton)
  * sampling : 10, 12 or 16 bits
  * Ne pas oublier de mettre la fonction Keyboard_UpdateTime() dans le loop principal
  */
-void Keyboard_Init(uint8_t pin, uint8_t nbButton, ADC_Sampling sampling,
+void Keyboard_Initialize(uint8_t pin, uint8_t nbButton, ADC_Sampling sampling,
 		const KeyBoard_Click_cb &kbClick)
 {
 	Keyboard_Init_Base(pin, nbButton);
@@ -238,7 +238,7 @@ void Keyboard_Init(uint8_t pin, uint8_t nbButton, ADC_Sampling sampling,
  * interval : intervals to be considered, max to min : nbButton + 1 values
  * Ne pas oublier de mettre la fonction Keyboard_UpdateTime() dans le loop principal
  */
-void Keyboard_Init(uint8_t pin, uint8_t nbButton, const uint16_t interval[],
+void Keyboard_Initialize(uint8_t pin, uint8_t nbButton, const uint16_t interval[],
 		const KeyBoard_Click_cb &kbClick)
 {
 	Keyboard_Init_Base(pin, nbButton);

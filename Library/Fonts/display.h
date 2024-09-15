@@ -62,6 +62,7 @@ extern volatile uint8_t Display_offset_line;
 extern void PrintTerminal(const char *text);
 
 bool IHM_Initialization(uint8_t address, bool test);
+bool IHM_IsDisplayOff(void);
 void IHM_Print0(const char *text);
 void IHM_Print(uint8_t line, const char *text, bool update_screen = false);
 void IHM_Display(void);

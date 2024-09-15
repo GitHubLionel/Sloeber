@@ -6,10 +6,6 @@
 #include "RTCLocal.h"					// A pseudo RTC software library
 #include "Partition_utils.h"	// Some utils functions for LittleFS/SPIFFS/FatFS
 
-#ifdef CIRRUS_USE_TASK
-#include "Tasks_utils.h"
-#endif
-
 // data au format CSV
 const String CSV_Filename = "/data.csv";
 
@@ -26,15 +22,11 @@ extern Gestion_SSR_TypeDef Gestion_SSR_CallBack;
 #endif
 
 // Le Cirrus CS5490, défini ailleurs
+extern CIRRUS_Communication CS_Com;
 extern CIRRUS_CS5490 CS5490;
 
-volatile bool Simple_Data_acquisition = false;
-
-// UART message
-#ifdef LOG_CIRRUS_CONNECT
-extern volatile bool CIRRUS_Command;
-extern volatile bool CIRRUS_Lock_IHM;
-#endif
+// Booléen indiquant une acquisition de donnée en cours
+bool Data_acquisition = false;
 
 // Gestion énergie
 float energy_day_conso = 0.0;
@@ -68,14 +60,13 @@ void __attribute__((weak)) print_debug(String mess, bool ln = true)
  */
 void Simple_Get_Data(void)
 {
-	static bool Data_acquisition = false;
 	static int countmessage = 0;
 	bool log = false;
 
 #ifdef LOG_CIRRUS_CONNECT
-	if (Data_acquisition || CIRRUS_Command || CIRRUS_Lock_IHM)
+	if (Data_acquisition || CS_Com.Is_IHM_Locked())
 #else
-  if (Simple_Data_acquisition)
+  if (Data_acquisition)
 #endif
 	{
 		return; // On est déjà dans la procédure ou il y a un message pour le Cirrus
@@ -91,8 +82,13 @@ void Simple_Get_Data(void)
 	vTaskDelay(1);
 #endif
 
-	if (CS5490.GetErrorCount() > 0)
-		print_debug("*** Cirrus error : " + String(CS5490.GetErrorCount()));
+	uint32_t err;
+	if ((err = CS5490.GetErrorCount()) > 0)
+	{
+		print_debug("*** Cirrus error : " + String(err));
+		Data_acquisition = false;
+		return;
+	}
 
 	// Fill current data channel 1
 	Simple_Current_Data.Cirrus_ch1.Voltage = CS5490.GetURMS();
@@ -153,25 +149,29 @@ uint8_t Simple_Update_IHM(const char *first_text, const char *last_text, bool di
 	char buffer[30];  // Normalement 20 caractères + eol mais on sait jamais
 	uint8_t line = 0;
 
+	if (IHM_IsDisplayOff())
+		return line;
+
 	// Efface la mémoire de l'écran si nécessaire
 	IHM_Clear();
-
-#ifdef LOG_CIRRUS_CONNECT
-	if (CIRRUS_Lock_IHM)
-	{
-		IHM_Print(0, "Cirrus Lock");
-
-		// Actualise l'écran si nécessaire
-		IHM_Display();
-
-		return 1;
-	}
-#endif
 
 	if (strlen(first_text) > 0)
 	{
 		IHM_Print(line++, first_text);
 	}
+
+#ifdef LOG_CIRRUS_CONNECT
+	if (CS_Com.Is_IHM_Locked())
+	{
+		IHM_Print(line++, "Cirrus Lock");
+
+		// Actualise l'écran si nécessaire
+		if (display)
+			IHM_Display();
+
+		return 1;
+	}
+#endif
 
 	sprintf(buffer, "Urms: %.2f", Simple_Current_Data.Cirrus_ch1.Voltage);
 	IHM_Print(line++, (char*) buffer);

@@ -26,7 +26,7 @@ typedef enum
 // Fonction d'action
 typedef void (*Gestion_SSR_TypeDef)(void);
 
-void SSR_Init(uint8_t ZC_Pin, uint8_t SSR_Pin, int8_t LED_Pin = -1);
+void SSR_Initialize(uint8_t ZC_Pin, uint8_t SSR_Pin, int8_t LED_Pin = -1);
 float SSR_Compute_Dump_power(float default_Power);
 
 void SSR_Action(SSR_Action_typedef do_action, bool restart = false);

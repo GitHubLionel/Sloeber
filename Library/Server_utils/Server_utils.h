@@ -84,6 +84,7 @@
 // The web server
 #ifdef ESP8266
 extern ESP8266WebServer server;
+extern ESP8266WebServer *pserver;
 #ifdef USE_HTTPUPDATER
 // Set to true to send debug to Serial
 #define UPDATER_DEBUG	false

@@ -109,6 +109,11 @@ CIRRUS_CS5490::~CIRRUS_CS5490()
 	DeleteAndNull(RMSData);
 }
 
+String CIRRUS_CS5490::GetName(void)
+{
+	return "CS5490";
+}
+
 void CIRRUS_CS5490::Initialize()
 {
 	RMSData = new CIRRUS_RMSData(this);
@@ -131,6 +136,14 @@ CIRRUS_CS548x::~CIRRUS_CS548x()
 {
 	DeleteAndNull(RMSData_ch1);
 	DeleteAndNull(RMSData_ch2);
+}
+
+String CIRRUS_CS548x::GetName(void)
+{
+	if (isCS5484)
+	  return "CS5484";
+	else
+		return "CS5480";
 }
 
 void CIRRUS_CS548x::Initialize()
@@ -304,10 +317,12 @@ RMS_Data CIRRUS_CS548x::GetLog(CIRRUS_Channel channel, double *temp)
 
 /**
  * Return error count
+ * Error counter is reinitialized
  */
 uint32_t CIRRUS_CS548x::GetErrorCount(void) const
 {
-	return RMSData_ch1->GetErrorCount() + RMSData_ch2->GetErrorCount();
+	uint32_t err = RMSData_ch1->GetErrorCount() + RMSData_ch2->GetErrorCount();
+	return err;
 }
 
 // ********************************************************************************

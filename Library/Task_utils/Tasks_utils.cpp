@@ -32,8 +32,8 @@ void Task_Memory_code_local(void *parameter)
 }
 
 const TaskData_t TaskZero = {false, "zero", 1024, 0, 1000, CoreAny, NULL};
-const TaskData_t TaskIdle0 = {true, "Idle0", 1024, tskIDLE_PRIORITY, 10, Core0, Task_Idle0_code};
-const TaskData_t TaskIdle1 = {true, "Idle1", 1024, tskIDLE_PRIORITY, 10, Core1, Task_Idle1_code};
+const TaskData_t TaskIdle0 = {true, "TK_Idle0", 1024, tskIDLE_PRIORITY, 10, Core0, Task_Idle0_code};
+const TaskData_t TaskIdle1 = {true, "TK_Idle1", 1024, tskIDLE_PRIORITY, 10, Core1, Task_Idle1_code};
 const TaskData_t TaskIdleSecond = {true, "IdleSecond", 4096, 10, 1000, CoreAny, Task_IdleSecond_code};
 
 static portMUX_TYPE Idlelock = portMUX_INITIALIZER_UNLOCKED;
