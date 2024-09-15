@@ -29,7 +29,6 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP32_PicoMQTT/libraries/FS/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP32_PicoMQTT/libraries/SPIFFS/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP32_PicoMQTT/libraries/LittleFS/src}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP32_PicoMQTT/libraries/FFat/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP32_PicoMQTT/libraries/WiFi/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP32_PicoMQTT/user_lib/Partition_utils}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP32_PicoMQTT/user_lib/Debug_utils}&quot;"/>
@@ -60,7 +59,6 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP32_PicoMQTT/libraries/FS/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP32_PicoMQTT/libraries/SPIFFS/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP32_PicoMQTT/libraries/LittleFS/src}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP32_PicoMQTT/libraries/FFat/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP32_PicoMQTT/libraries/WiFi/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP32_PicoMQTT/user_lib/Partition_utils}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP32_PicoMQTT/user_lib/Debug_utils}&quot;"/>
@@ -91,7 +89,6 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP32_PicoMQTT/libraries/FS/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP32_PicoMQTT/libraries/SPIFFS/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP32_PicoMQTT/libraries/LittleFS/src}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP32_PicoMQTT/libraries/FFat/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP32_PicoMQTT/libraries/WiFi/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP32_PicoMQTT/user_lib/Debug_utils}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP32_PicoMQTT/user_lib/RTCLocal}&quot;"/>
