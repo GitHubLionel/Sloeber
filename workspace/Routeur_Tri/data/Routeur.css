@@ -1,0 +1,331 @@
+/* Change the percent in the tablink css  */
+/* General */
+* {box-sizing: border-box}
+
+html {
+  font-family: "Times New Roman", Times, serif;
+  font-size: 1.2em;
+}
+
+hr {
+  padding: 15px;
+  border-width: 0px;
+}
+
+/* For waiting during upload */
+.loader_gif {
+  position: fixed;
+  z-index: 9999;
+  background: url('loader.gif') 50% 50% no-repeat;
+  top: 0px;
+  left: 0px;
+  height: 100%;
+  width : 100%;
+  cursor: wait;
+  visibility: hidden;
+}
+
+.loader_txt {
+  border: solid 1px black;
+  position: fixed;
+  z-index: 100;
+  left: 50%;
+  top: 50%;
+  background-color: #cccccc;
+  width: 400px;
+  margin-left: -200px;
+  text-align: center;
+  cursor: wait;
+  visibility: hidden;
+}
+h1 {
+  margin: 0px 10px 0px 10px;
+}
+h3 {
+  padding: 8px 1px 0px 1px;
+  margin: 0px 0px;
+}
+
+/* Header div */
+.header {
+  background-color: #1325ed;
+  color: #ffffff;
+  font-size: 1.6em;
+  font-weight: bold;
+  padding: 1px 5px 1px 5px;
+/*  margin-bottom: 10px;*/
+}
+
+.right {
+  float: right;
+}
+
+.left {
+  float: left;
+}
+
+.div_space {
+  margin-bottom: 10px;
+}
+
+.odd {
+  background-color: #e2dff7;
+}
+
+.row::after {
+  content: "";
+  clear: both;
+  display: table;
+}
+.tore {
+  margin-top: 20px;
+  margin-bottom: 0px;
+  background-color: #e612ec;
+  color: #ffffff;
+  padding: 20px 5px 20px 5px;
+}
+.menu ul {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+}
+.menu li {
+  padding: 4px;
+  margin-bottom: 7px;
+  background-color: #14e75a;
+  color: #ffffff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+}
+.menu li:hover {
+  background-color: #0099cc;
+}
+.tension {
+  padding: 4px;
+  margin-bottom: 7px;
+  background-color: #14e75a;
+  color: #ffffff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+  margin: 0px 10px 0px 10px;
+}
+
+.menu p {
+  padding: 4px;
+  background-color: #f3db29;
+  text-align: center;
+  font-size: 1.3em;
+  margin: 3px 0px 5px 0px;
+}
+.footer {
+  background-color: #0099cc;
+  color: #ffffff;
+  text-align: center;
+  font-size: 12px;
+  padding: 5px;
+}
+[class*="col-"] {
+  float: left;
+  padding: 5px;
+}
+[class*="col-"] {
+  width: 100%;
+}
+@media only screen and (min-width: 600px) {
+  .col-s-1 {width: 100%;}
+  .col-s-2 {width: 50%;}
+  .col-s-3 {width: 33.33%;}
+}
+@media only screen and (min-width: 768px) {
+  .col-1 {width: 100%;}
+  .col-2 {width: 50%;}
+  .col-3 {width: 33.33%;}
+}
+
+/**
+ Menu
+ Change the percent width to add menu
+*/
+.tablink {
+  background-color: black;
+  color: white;
+  float: left;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  padding: 10px 3px 10px 3px;
+  width: 16.66%;  /* percent is function of the number of page */
+}
+
+.tablink:hover {
+  background-color: #777;
+}
+
+.tabcontent {
+  display: none;
+  text-align: center;
+  height: 100%;
+}
+
+/* special button */
+button {
+  font-family: "Times New Roman", Times, serif;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  letter-spacing: .02em;
+  outline: none;
+}
+
+.myButton {
+  box-shadow:inset 0px 1px 0px 0px #e184f3;
+  background:linear-gradient(to bottom, #c123de 5%, #a20dbd 100%);
+  border-radius:6px;
+  border:1px solid #a511c0;
+  display:inline-block;
+  cursor:pointer;
+  color:#ffffff;
+  font-size:16px;
+  font-weight:bold;
+  padding:6px 24px;
+}
+
+.myButton:hover {
+  background:linear-gradient(to bottom, #a20dbd 5%, #c123de 100%);
+  background-color:#a20dbd;
+}
+
+.myButton:active {
+  position:relative;
+  top:1px;
+}
+
+.flash {
+  background-color: gold;
+  width: 300px;
+  margin: 0 auto;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  text-align: center;
+}
+
+/* Dimme slider */
+.range {
+  --ticksThickness: 2px;
+  --ticksHeight: 30%;
+  --ticksColor: silver;
+
+  display: inline-block;
+  background: silver;
+  background: linear-gradient(to right, var(--ticksColor) var(--ticksThickness), transparent 1px) repeat-x;
+  background-size: calc(100%/((var(--max) - var(--min)) / var(--step)) - .1%) var(--ticksHeight);
+  background-position: 0 bottom;
+  position: relative;
+}
+
+/* min / max labels at the edges */
+.range::before, .range::after {
+  font: 12px monospace;
+  content: counter(x);
+  position: absolute;
+  bottom: -2ch;
+}
+
+.range::before {
+  counter-reset: x var(--min);
+  transform: translateX(-50%);
+}
+
+.range::after {
+  counter-reset: x var(--max);
+  right: 0;
+  transform: translateX(50%);
+}
+
+.range > input {
+  width: 300px;
+  margin: 0 -6px; /* Critical adjustment */
+}
+
+.range-wrap {
+  position: relative;
+  margin: 0 auto 3rem;
+}
+
+/* Graphe */
+.uplot {
+  display: inline-block;
+  font-family: "Times New Roman", Times, serif
+}
+
+.u-title {
+  margin: 10px 0px 10px 0px;
+}
+
+.u-label {
+  margin-right: 5px;
+}
+
+.u-legend th {
+ font-weight: revert;
+}
+
+.uplot canvas {
+  width: auto;
+  height: auto;
+  border: 1px dotted blue;
+}
+
+#overlay {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.8);
+  padding: 0.5rem;
+  margin: 0.75rem;
+  color: #fff;
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* tooltip begin */
+
+.u-tooltip {
+    font-size: 14px;
+    text-align: left;
+    pointer-events: none;
+    position: absolute;
+    display: none;
+    left: 5px;
+    top: 5px;
+    box-shadow:  2px 2px 10px rgba(0,0,0,0.5);
+    border: 1px solid rgb(54, 136, 255);
+    border-radius: 10px 0px;
+    background:rgba(255, 249, 196, 0.92);
+    color: black;
+    z-index: 500;
+}
+
+.u-tooltip th > * {
+	vertical-align: middle;
+	display: inline-block;
+}
+
+.u-tooltip .u-marker {
+	width: 1em;
+	height: 1em;
+	margin-right: 4px;
+	border: 2px solid transparent;
+}
+
+.u-tooltip .u-series > * {
+  padding: 0px;
+}
+
+.u-tooltip .u-off > * {
+	opacity: 0.3;
+}
+
+/* tooltip end */
+
+
+#m_Data {background-color: white; color: white; text-align: left;}
+#m_Graphe {background-color: white;}
+#m_Energy {background-color: white;}
+#m_SSR {background-color: white;}
+#m_Config {background-color: white;}
