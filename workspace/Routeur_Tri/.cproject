@@ -49,9 +49,8 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Keyboard}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Relay}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Task_utils}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/ESPAsyncWebServer/src}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/AsyncTCP/src}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/ESPAsyncHTTPUpdateServer/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/HTTPUpdateServer/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/WebServer/src}&quot;"/>
 								</option>
 								<inputType id="io.sloeber.compiler.cpp.sketch.input.314382407" name="CPP source files" superClass="io.sloeber.compiler.cpp.sketch.input"/>
 							</tool>
@@ -87,9 +86,8 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Keyboard}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Relay}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Task_utils}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/ESPAsyncWebServer/src}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/AsyncTCP/src}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/ESPAsyncHTTPUpdateServer/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/HTTPUpdateServer/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/WebServer/src}&quot;"/>
 								</option>
 								<inputType id="io.sloeber.compiler.c.sketch.input.406145932" name="C Source Files" superClass="io.sloeber.compiler.c.sketch.input"/>
 							</tool>
@@ -125,9 +123,8 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Keyboard}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Relay}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Task_utils}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/ESPAsyncWebServer/src}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/AsyncTCP/src}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/ESPAsyncHTTPUpdateServer/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/HTTPUpdateServer/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/WebServer/src}&quot;"/>
 								</option>
 								<inputType id="io.sloeber.compiler.S.sketch.input.1177578633" name="Assembly source files" superClass="io.sloeber.compiler.S.sketch.input"/>
 							</tool>

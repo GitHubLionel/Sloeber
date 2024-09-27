@@ -2,7 +2,7 @@
 //This is a automatic generated file
 //Please do not modify this file
 //If you touch this file your change will be overwritten during the next build
-//This file has been generated on 2024-09-03 16:09:21
+//This file has been generated on 2024-09-22 15:41:32
 
 #include "Arduino.h"
 #include "Arduino.h"
@@ -24,6 +24,7 @@
 #define USE_KEYBOARD
 #include "Tasks_utils.h"
 
+bool CIRRUS_get_rms_data(float *uRMS, float *pRMS) ;
 void Display_Task_code(void *parameter) ;
 void UserKeyboardAction(Btn_Action Btn_Clicked) ;
 void setup() ;
@@ -34,7 +35,7 @@ bool UserAnalyseMessage(void) ;
 void handleInitialization(CB_SERVER_PARAM) ;
 void handleLastData(CB_SERVER_PARAM) ;
 void handleOperation(CB_SERVER_PARAM) ;
-void handleCirrus(CB_SERVER_PARAM) ;
+String Handle_Wifi_Request(CS_Common_Request Wifi_Request, char *Request) ;
 
 #include "Routeur_Tri.ino"
 

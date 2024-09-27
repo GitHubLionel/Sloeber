@@ -160,10 +160,6 @@ bool TI_OK = false;
 // Définition Cirrus
 // ********************************************************************************
 
-#ifdef CIRRUS_USE_UART
-#define CS_BAUD		512000	// 115200	512000
-#endif
-
 //CIRRUS_Calib_typedef CS_Calib = {260.00, 16.50, 0x3BF15A, 0x43E86F, 0x000000, 0x000000, 0x000000};
 //CIRRUS_Calib_typedef CS_Calib = {260.00, 16.50, 0x380B99, 0x3FE3E9, 0x084BDE, 0x000000, 0x000000};
 CIRRUS_Calib_typedef CS_Calib = {260.00, 16.50, 0x380B99, 0xC8B5CA, 0x1A04A6, 0x000000, 0x000000};
@@ -307,7 +303,7 @@ void setup()
 	CS_Com.begin();
 
 	// Start Cirrus
-	Cirrus_OK = CS5490.begin(CS_BAUD, true);
+	Cirrus_OK = CS5490.begin(CIRRUS_UART_BAUD, true);
 
 	// Initialisation
 	if (Cirrus_OK)

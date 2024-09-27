@@ -117,10 +117,6 @@ String UART_Message = "";
 // Définition Cirrus
 // ********************************************************************************
 
-#ifdef CIRRUS_USE_UART
-#define CS_BAUD		512000	// 115200	512000
-#endif
-
 #ifndef CIRRUS_CS5480
 //CIRRUS_Calib_typedef CS_Calib = {0};
 //CIRRUS_Config_typedef CS_Config = {0};
@@ -242,11 +238,14 @@ void setup()
 	CS_Com.begin();
 
 	// Start Cirrus
-	Cirrus_OK = CS5490.begin(CS_BAUD, true);
+	Cirrus_OK = CS5490.begin(CIRRUS_UART_BAUD, true);
 
 	// Initialisation
 	if (Cirrus_OK)
 		Cirrus_OK = CIRRUS_Generic_Initialization(CS5490, &CS_Calib, &CS_Config, true, true, '1');
+
+	// Simple Get data
+	Simple_Set_Cirrus(CS5490);
 
 	// **** FIN- Attente connexion réseau
 	IHM_Print0("Connexion .....");

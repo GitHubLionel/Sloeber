@@ -109,10 +109,10 @@ void Get_Data(void)
 	Current_Data.Cirrus_ch1.Power = CS5480.GetPRMSSigned(Channel_1);
 	Current_Data.Cirrus_PF = CS5480.GetPowerFactor(Channel_1);
 	Current_Data.Cirrus_Temp = CS5480.GetTemperature();
-	CS5480.GetEnergy(&energy_day_conso, &energy_day_surplus, Channel_1);
+	CS5480.GetEnergy(Channel_1, &energy_day_conso, &energy_day_surplus);
 
 	// A voir le signe
-	CS5480.GetEnergy(&energy_day_prod, NULL, Channel_2);
+	CS5480.GetEnergy(Channel_2, &energy_day_prod, NULL);
 	Current_Data.Cirrus_power_ch2 = CS5480.GetPRMSSigned(Channel_2);
 
 #ifdef USE_SSR

@@ -108,12 +108,12 @@ void Get_Data(void)
 	Current_Data.Phase1.Current = CurrentCirrus->GetIRMS(Channel_1);
 #endif
 	Current_Data.Phase1.Power = CurrentCirrus->GetPRMSSigned(Channel_1);
-	CurrentCirrus->GetEnergy(&Current_Data.Phase1.Energy, &Esurplus, Channel_1);
+	CurrentCirrus->GetEnergy(Channel_1, &Current_Data.Phase1.Energy, &Esurplus);
 	energy_day_surplus = Esurplus;
 
 	Current_Data.Phase2.Voltage = CurrentCirrus->GetURMS(Channel_2);
 	Current_Data.Phase2.Power = CurrentCirrus->GetPRMSSigned(Channel_2);
-	CurrentCirrus->GetEnergy(&Current_Data.Phase2.Energy, &Esurplus, Channel_2);
+	CurrentCirrus->GetEnergy(Channel_2, &Current_Data.Phase2.Energy, &Esurplus);
 	energy_day_surplus += Esurplus;
 
 	Current_Data.Cirrus1_PF = CurrentCirrus->GetPowerFactor(Channel_1);
@@ -130,12 +130,12 @@ void Get_Data(void)
 	// Fill current data
 	Current_Data.Phase3.Voltage = CurrentCirrus->GetURMS(Channel_1);
 	Current_Data.Phase3.Power = CurrentCirrus->GetPRMSSigned(Channel_1);
-	CurrentCirrus->GetEnergy(&Current_Data.Phase3.Energy, &Esurplus, Channel_1);
+	CurrentCirrus->GetEnergy(Channel_1, &Current_Data.Phase3.Energy, &Esurplus);
 	energy_day_surplus += Esurplus;
 
 	Current_Data.Production.Voltage = CurrentCirrus->GetURMS(Channel_2);
 	Current_Data.Production.Power = CurrentCirrus->GetPRMSSigned(Channel_2);
-	CurrentCirrus->GetEnergy(&Current_Data.Production.Energy, &Esurplus, Channel_2);
+	CurrentCirrus->GetEnergy(Channel_2, &Current_Data.Production.Energy, &Esurplus);
 	energy_day_surplus += Esurplus;
 
 	Current_Data.Cirrus1_Temp = CurrentCirrus->GetTemperature();
@@ -233,7 +233,7 @@ uint8_t Update_IHM(const char *first_text, const char *last_text, bool display)
 	IHM_Print(line++, (char*) buffer);
 
 	float conso, surplus;
-	CS5484.GetEnergy(&conso, &surplus, Channel_1);
+	CS5484.GetEnergy(Channel_1, &conso, &surplus);
 	sprintf(buffer, "Energie:%.2f   ", conso); // energy_day_conso
 	IHM_Print(line++, (char*) buffer);
 

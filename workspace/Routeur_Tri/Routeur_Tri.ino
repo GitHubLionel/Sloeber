@@ -166,10 +166,6 @@ TeleInfo TI(TI_RX_GPIO, 5000);
 // Définition Cirrus
 // ********************************************************************************
 
-#ifdef CIRRUS_USE_UART
-#define CS_BAUD		512000	// 115200	512000
-#endif
-
 // CS1 = CS5484
 CIRRUS_Calib_typedef CS1_Calib = {242.00, 53.55, 0x3CC756, 0x40D6B0, 0x7025B9, 0x0, 0x0, 242.00,
 		17.00, 0x3CC756, 0x4303EE, 0x8A6100, 0x0, 0x0};
@@ -455,9 +451,9 @@ void setup()
 	CS_Com.AddCirrus(&CS5480, CIRRUS_CS2_GPIO);
 
 	// Start the Cirrus CS5480 and CS5484
-	if ((CS_Com.SelectCirrus(0))->begin(CS_BAUD, false))
+	if ((CS_Com.SelectCirrus(0))->begin(CIRRUS_UART_BAUD, false))
 	{
-		Cirrus_OK = (CS_Com.SelectCirrus(1))->begin(CS_BAUD, true);
+		Cirrus_OK = (CS_Com.SelectCirrus(1))->begin(CIRRUS_UART_BAUD, true);
 	}
 
 	if (Cirrus_OK)

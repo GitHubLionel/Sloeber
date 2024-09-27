@@ -166,10 +166,6 @@ TeleInfo TI(TI_RX_GPIO, 5000);
 // Définition Cirrus
 // ********************************************************************************
 
-#ifdef CIRRUS_USE_UART
-#define CS_BAUD		256000	// 115200	512000
-#endif
-
 //CIRRUS_Calib_typedef CS_Calib = CS_CALIB0;
 //CIRRUS_Config_typedef CS_Config = CS_CONFIG0;
 
@@ -437,7 +433,7 @@ void setup()
 	CS_Com.begin();
 
 	// Start the Cirrus
-	Cirrus_OK = CS5480.begin(CS_BAUD, true);
+	Cirrus_OK = CS5480.begin(CIRRUS_UART_BAUD, true);
 
 	// Initialisation
 	if (Cirrus_OK)
@@ -468,7 +464,7 @@ void setup()
 
 	// **** 8- Initialisation Clavier, relais
 #ifdef USE_KEYBOARD
-//	Keyboard_Init(KEYBOARD_ADC_GPIO, 3, ADC_12bits);
+//	Keyboard_Initialize(KEYBOARD_ADC_GPIO, 3, ADC_12bits);
 	Keyboard_Initialize(KEYBOARD_ADC_GPIO, 3, interval);
 //	IHM_Print0("Test Btn 10s");
 //	Btn_Check_Config();

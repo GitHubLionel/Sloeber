@@ -54,13 +54,6 @@
 #define PAYLOAD_MAXSIZE	250
 
 /**********************************************************
- * Task define : Task_utils library
- * By default, global instance TaskList is created
- * See end of file for task define used in several libraries
- **********************************************************/
-#define RUN_TASK_MEMORY	false // true or false
-
-/**********************************************************
  * RTC define : RTCLocal library
  * By default, global instance RTC_Local is created
  **********************************************************/
@@ -115,7 +108,10 @@
 //#define CIRRUS_CS1_GPIO	GPIO_NUM_18
 //#define CIRRUS_CS2_GPIO	GPIO_NUM_19
 
-#define CIRRUS_USE_UART
+#define CIRRUS_USE_UART // If not defined then SPI is used
+#ifdef CIRRUS_USE_UART
+#define CIRRUS_UART_BAUD	512000
+#endif
 //#define CIRRUS_FLASH
 #define LOG_CIRRUS_CONNECT
 //#define CIRRUS_CALIBRATION
@@ -123,6 +119,7 @@
 //#define DEBUG_CIRRUS_BAUD
 
 #define CIRRUS_RMS_FULL  // To have U, I and P RMS. Otherwise only U and P RMS
+//#define CIRRUS_SIMPLE_IS_CS5490	true  // Only used in Simple_Get_Data. true for CS5490, false for CS548x
 
 /**********************************************************
  * SSR define
@@ -135,14 +132,17 @@
 //#define SIMPLE_ZC_TEST
 
 /**********************************************************
+ * Task define : Task_utils library
+ * By default, global instance TaskList is created
  * Task define used in several libraries
- * Need Task_utils library
  **********************************************************/
+//#define RUN_TASK_MEMORY	false // true or false. To check the memory used by tasks
+
 //#define UART_USE_TASK        // A basic task to analyse UART message
 //#define RTC_USE_TASK         // To run RTCLocal in a task
 //#define DS18B20_USE_TASK     // A basic task to check DS18B20 temperature every 2 s
 //#define TELEINFO_USE_TASK    // A basic task to check TeleInfo every 1 s
+//#define KEYBOARD_USE_TASK    // A basic task to check keyboard every 10 ms
 //#define CIRRUS_TASK_DELAY	100    // The delay for the Cirrus task. Must be adapted according the time required of the GetData()
 //#define CIRRUS_USE_TASK      // A basic task to check Cirrus data every CIRRUS_TASK_DELAY ms
-//#define KEYBOARD_USE_TASK    // A basic task to check keyboard every 10 ms
 
