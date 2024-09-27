@@ -82,7 +82,7 @@ bool CIRRUS_RMSData::GetData(unsigned long reftime, bool reset_ready)
 		}
 
 		// Gestion log graphe
-		if (reftime - _startLog >= 120000) // 2 minutes
+		if (reftime - _startLog >= _log_time_ms) // 2 minutes
 		{
 			_log_data = _log_cumul_data / _log_count;
 			_log_cumul_data.Zero();
@@ -160,6 +160,14 @@ void CIRRUS_CS548x::Initialize()
 		RMSData_ch1 = new CIRRUS_RMSData(this);
 		RMSData_ch2 = new CIRRUS_RMSData(this, false);
 	}
+	// By default, we don't want the frequency on second channel
+	RMSData_ch2->SetWantData(true, false);
+}
+
+void CIRRUS_CS548x::SetLogTime(uint32_t second)
+{
+	RMSData_ch1->SetLogTime(second);
+	RMSData_ch2->SetLogTime(second);
 }
 
 void CIRRUS_CS548x::RestartEnergy(void)
@@ -278,7 +286,7 @@ float CIRRUS_CS548x::GetFrequency(void) const
 /**
  * Return energies of the day. Select one channel.
  */
-void CIRRUS_CS548x::GetEnergy(float *conso, float *surplus, CIRRUS_Channel channel)
+void CIRRUS_CS548x::GetEnergy(CIRRUS_Channel channel, float *conso, float *surplus)
 {
 	if (channel == Channel_1)
 	{

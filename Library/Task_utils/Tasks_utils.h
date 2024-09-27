@@ -48,6 +48,12 @@
  * 	xSemaphoreTake(sema_lock, portMAX_DELAY);
  * 	... code
  * 	xSemaphoreGive(sema_lock);
+ *********************************************************************
+ * For the WatchDog:
+ * To increase the timeout period :
+ * - in sdkconfig.h, increase CONFIG_ESP_TASK_WDT_TIMEOUT_S
+ * or
+ * - use esp_task_wdt_init() function
  */
 #pragma once
 #ifndef TASKS_UTILS

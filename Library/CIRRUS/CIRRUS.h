@@ -504,8 +504,13 @@ class CIRRUS_Communication
 
 		// Ensure the managment of several Cirrus
 		void AddCirrus(CIRRUS_Base *cirrus, uint8_t select_Pin = 0);
+		void DisableCirrus(uint8_t select_Pin);
 		CIRRUS_Base* SelectCirrus(uint8_t position, CIRRUS_Channel channel = Channel_none);
 		CIRRUS_Base* GetCirrus(int position);
+		int8_t GetSelectedID(void)
+		{
+			return Selected;
+		}
 
 		String Handle_Common_Request(CS_Common_Request Common_Request, char *Request,
 				CIRRUS_Calib_typedef *CS_Calib, CIRRUS_Config_typedef *CS_Config);
@@ -850,6 +855,11 @@ class CIRRUS_RMSData
 			_temperature = temp;
 		}
 
+		void SetLogTime(uint32_t second)
+		{
+			_log_time_ms = second * 1000;
+		}
+
 		void SetWantData(bool power_factor, bool frequency)
 		{
 			_WantPower_Factor = power_factor;
@@ -941,8 +951,9 @@ class CIRRUS_RMSData
 		RMS_Data _inst_data;
 		double _inst_temp = 0;
 
-		// log values (mean over 2 minutes)
+		// log values (mean over _log_time_ms milliseconds)
 		RMS_Data _log_data;
+		uint32_t _log_time_ms = 120000; // 2 minutes
 		double _log_temp = 0;
 		bool _logAvailable = false;
 
@@ -1001,6 +1012,11 @@ class CIRRUS_CS5490: public CIRRUS_Base
 		CIRRUS_RMSData* GetRMSData(void)
 		{
 			return RMSData;
+		}
+
+		void SetLogTime(uint32_t second)
+		{
+			RMSData->SetLogTime(second);
 		}
 
 		void RestartEnergy(void)
@@ -1128,6 +1144,7 @@ class CIRRUS_CS548x: public CIRRUS_Base
 			return true;
 		}
 
+		void SetLogTime(uint32_t second);
 		void RestartEnergy(void);
 		bool GetData(CIRRUS_Channel channel);
 		float GetURMS(CIRRUS_Channel channel) const;
@@ -1136,7 +1153,7 @@ class CIRRUS_CS548x: public CIRRUS_Base
 		float GetTemperature(void) const;
 		float GetPowerFactor(CIRRUS_Channel channel) const;
 		float GetFrequency(void) const;
-		void GetEnergy(float *conso, float *surplus, CIRRUS_Channel channel);
+		void GetEnergy(CIRRUS_Channel channel, float *conso, float *surplus);
 		RMS_Data GetLog(CIRRUS_Channel channel, double *temp);
 		uint32_t GetErrorCount(void) const;
 

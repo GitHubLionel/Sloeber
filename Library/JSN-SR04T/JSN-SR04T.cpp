@@ -11,7 +11,7 @@
 // Le résultat est 1953 mm
 
 // UART Mode
-#define UART_BAUD	9600	// Vitesse pour JSN
+#define JSN_UART_BAUD	9600	// Vitesse pour JSN
 #define JSN_STX  	0xFF	// Start of frame
 #define JSN_QUERY  	0x55	// Request a measure (mode 3)
 
@@ -59,7 +59,7 @@ void JSN_SR04T::Initialize(uint8_t trig_Pin, uint8_t echo_Pin)
 	if (JSN_USE_UART)
 	{
 		// Start uart for JSN
-		Serial.begin(UART_BAUD);
+		Serial.begin(JSN_UART_BAUD);
 		delay(100);  // Pour stabiliser UART
 	}
 	else

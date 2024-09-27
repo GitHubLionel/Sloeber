@@ -273,12 +273,12 @@ void CIRRUS_Communication::Hard_Reset(void)
 
 /**
  * Initialisation des pins de sélection des Cirrus
- * A n'utiliser que si on a plusieurs CS5480.
+ * A n'utiliser que si on a plusieurs CS548x ou si on est en SPI.
  * Plusieurs cas possibles :
- * - Si on a qu'un seul CS5480, c'est nécessaire si on est en SPI. En UART, seulement si on contrôle
+ * - Si on a qu'un seul CS548x, c'est nécessaire si on est en SPI. En UART, seulement si on contrôle
  * en software mais le plus simple est de mettre CS à LOW en hardware (dans ce cas mettre -1 pour CS1_Pin)
  * ou de ne pas appeler cette fonction.
- * - Si on a plusieurs CS5480, c'est nécessaire en SPI et UART.
+ * - Si on a plusieurs CS548x, c'est nécessaire en SPI et UART.
  * Au début, les CS sont HIGH (Cirrus non sélectionné)
  */
 /**
@@ -297,6 +297,18 @@ void CIRRUS_Communication::AddCirrus(CIRRUS_Base *cirrus, uint8_t select_Pin)
 			digitalWrite(select_Pin, GPIO_PIN_SET);
 		}
 		m_Cirrus.push_back(cirrus);
+	}
+}
+
+/**
+ * Pour inactiver un Cirrus via son pin
+ */
+void CIRRUS_Communication::DisableCirrus(uint8_t select_Pin)
+{
+	if (select_Pin != 0)
+	{
+		pinMode(select_Pin, OUTPUT);
+		digitalWrite(select_Pin, GPIO_PIN_SET);
 	}
 }
 

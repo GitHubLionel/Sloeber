@@ -1,3 +1,9 @@
+/**
+ * A simple example of a get data process
+ * You must define CIRRUS_SIMPLE_IS_CS5490 to true or false following your Cirrus
+ * Only channel 1 is read
+ * Don't forget to exclude from build "Simple_Get_Data.cpp" if you don't use this file
+ */
 #pragma once
 
 #ifdef USE_CONFIG_LIB_FILE
@@ -8,13 +14,6 @@
 #include <stdbool.h>
 #include "CIRRUS.h"
 
-/**
- * Uniquement pour le Cirrus CS5490 : 1 seul channel
- * Ne pas oublier d'exclure du build "Simple_Get_Data.c"
- */
-
-// Pour la gestion du SSR
-//#define USE_SSR
 /**
  * La structure pour le log dans le fichier
  * Données moyennées toutes les x minutes
@@ -44,6 +43,7 @@ typedef struct
 
 } Simple_Data_Struct;
 
+void Simple_Set_Cirrus(const CIRRUS_Base &cirrus);
 void Simple_Get_Data(void);
 uint8_t Simple_Update_IHM(const char *first_text, const char *last_text, bool display = true);
 

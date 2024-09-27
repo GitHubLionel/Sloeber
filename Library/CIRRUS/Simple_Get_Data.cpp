@@ -21,9 +21,27 @@ volatile float Cirrus_power_signed = 0.0;
 extern Gestion_SSR_TypeDef Gestion_SSR_CallBack;
 #endif
 
-// Le Cirrus CS5490, défini ailleurs
+// Extern definitions
 extern CIRRUS_Communication CS_Com;
-extern CIRRUS_CS5490 CS5490;
+
+// Current cirrus initialized in Simple_Set_Cirrus() function
+#if defined(CIRRUS_SIMPLE_IS_CS5490)
+#if (CIRRUS_SIMPLE_IS_CS5490 == true)
+CIRRUS_CS5490 Current_Cirrus;
+#define CHANNEL
+#define CHANNEL2
+#elif (CIRRUS_SIMPLE_IS_CS5490 == false)
+CIRRUS_CS548x Current_Cirrus;
+#define CHANNEL	Channel_1
+#define CHANNEL2	Channel_1,
+#else
+#error "You must define CIRRUS_SIMPLE_IS_CS5490 to true or false"
+#endif
+#else
+#error "You must define CIRRUS_SIMPLE_IS_CS5490 to true or false, or exclude this file to build"
+#endif
+
+bool Cirrus_defined = false;
 
 // Booléen indiquant une acquisition de donnée en cours
 bool Data_acquisition = false;
@@ -55,13 +73,29 @@ void __attribute__((weak)) print_debug(String mess, bool ln = true)
 // ********************************************************************************
 
 /**
+ * Set the Cirrus
+ */
+void Simple_Set_Cirrus(const CIRRUS_Base &cirrus)
+{
+#if (CIRRUS_SIMPLE_IS_CS5490 == true)
+	Current_Cirrus = (CIRRUS_CS5490 &) cirrus;
+#else
+	Current_Cirrus = (CIRRUS_CS548x &) cirrus;
+#define CHANNEL	Channel_1
+#endif
+	Cirrus_defined = true;
+}
+
+/**
  * Exemple de fonction d'acquisition des données du Cirrus
  * En pratique, il convient d'appeler régulièrement cette fonction dans un timer (200 ms ou 1 s)
  */
 void Simple_Get_Data(void)
 {
 	static int countmessage = 0;
-	bool log = false;
+
+	if (!Cirrus_defined)
+		return;
 
 #ifdef LOG_CIRRUS_CONNECT
 	if (Data_acquisition || CS_Com.Is_IHM_Locked())
@@ -77,13 +111,13 @@ void Simple_Get_Data(void)
 	// To know the time required for data acquisition
 //	uint32_t start_time = millis();
 
-	log = CS5490.GetData(); // durée : 256 ms
+	bool log = Current_Cirrus.GetData(CHANNEL); // durée : 256 ms
 #ifdef ESP32
 	vTaskDelay(1);
 #endif
 
 	uint32_t err;
-	if ((err = CS5490.GetErrorCount()) > 0)
+	if ((err = Current_Cirrus.GetErrorCount()) > 0)
 	{
 		print_debug("*** Cirrus error : " + String(err));
 		Data_acquisition = false;
@@ -91,14 +125,14 @@ void Simple_Get_Data(void)
 	}
 
 	// Fill current data channel 1
-	Simple_Current_Data.Cirrus_ch1.Voltage = CS5490.GetURMS();
+	Simple_Current_Data.Cirrus_ch1.Voltage = Current_Cirrus.GetURMS(CHANNEL);
 #ifdef CIRRUS_RMS_FULL
-	Simple_Current_Data.Cirrus_ch1.Current = CS5490.GetIRMS();
+	Simple_Current_Data.Cirrus_ch1.Current = Current_Cirrus.GetIRMS(CHANNEL);
 #endif
-	Simple_Current_Data.Cirrus_ch1.Power = CS5490.GetPRMSSigned();
-	Simple_Current_Data.Cirrus_PF = CS5490.GetPowerFactor();
-	Simple_Current_Data.Cirrus_Temp = CS5490.GetTemperature();
-	CS5490.GetEnergy(&energy_day_conso, &energy_day_surplus);
+	Simple_Current_Data.Cirrus_ch1.Power = Current_Cirrus.GetPRMSSigned(CHANNEL);
+	Simple_Current_Data.Cirrus_PF = Current_Cirrus.GetPowerFactor(CHANNEL);
+	Simple_Current_Data.Cirrus_Temp = Current_Cirrus.GetTemperature();
+	Current_Cirrus.GetEnergy(CHANNEL2 &energy_day_conso, &energy_day_surplus);
 
 #ifdef USE_SSR
 	// On choisi le premier channel qui mesure la consommation et le surplus
@@ -109,7 +143,7 @@ void Simple_Get_Data(void)
 		Gestion_SSR_CallBack();
 #endif
 
-//	uint32_t err = CS5490.GetErrorCount();
+//	uint32_t err = Current_Cirrus.GetErrorCount();
 //	if (err > 0)
 //		print_debug("erreur = " + (String)err);
 
@@ -117,7 +151,7 @@ void Simple_Get_Data(void)
 	if (log)
 	{
 		double temp;
-		RMS_Data data = CS5490.GetLog(&temp);
+		RMS_Data data = Current_Cirrus.GetLog(CHANNEL2 &temp);
 		log_cumul.Voltage = data.Voltage;
 		log_cumul.Power_ch1 = data.Power;
 		log_cumul.Temp = temp;
@@ -216,9 +250,9 @@ void append_data(void)
 	File temp = Data_Partition->open(CSV_Filename, "a");
 	if (temp)
 	{
-		// Time, Pconso_rms, Pprod_rms, U_rms, Tcs, TDS1, TDS2
+		// Time, Pch1_rms, Uch1_rms, Tcs
 		String data = String(RTC_Local.getUNIXDateTime()) + '\t' + (String) log_cumul.Power_ch1 + '\t'
-				+ (String) log_cumul.Voltage + '\t' + (String) log_cumul.Temp;
+				+ (String) log_cumul.Voltage + '\t' + (String) log_cumul.Temp + "\r\n";
 		temp.print(data);
 		temp.close();
 	}

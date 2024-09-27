@@ -890,7 +890,6 @@ String GetURI(CB_SERVER_PARAM)
 #ifdef USE_ASYNC_WEBSERVER
 void send_html(AsyncWebServerRequest *request, String filefs, String format, bool zipped, PART_TYPE &partition)
 {
-	taskYIELD();
 	AsyncWebServerResponse *response = request->beginResponse(partition, filefs, format);
 	if (zipped)
 	{
@@ -903,8 +902,8 @@ void send_html(AsyncWebServerRequest *request, String filefs, String format, boo
 void send_html(String filefs, String format, PART_TYPE &partition)
 {
 	File file = partition.open(filefs, "r");	// Open the file
-	server.streamFile(file, format); 	            // then send it to the client
-	file.close();                                 // then close the file
+	server.streamFile(file, format); 	        // then send it to the client
+	file.close();                             // then close the file
 }
 #endif
 
