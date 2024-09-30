@@ -92,7 +92,7 @@ const unsigned char oled128_initbuf[] PROGMEM = {
     SH110X_DISPLAYOFF,               // 0xAE
     SH110X_SETDISPLAYCLOCKDIV, 0x51, // 0xd5, 0x51,
     SH110X_MEMORYMODE,               // 0x20
-    SH110X_SETCONTRAST, 0x4F,        // 0x81, 0x4F
+    SH110X_SETCONTRAST, 0xDF,        // 0x81, 0x4F
     SH110X_DCDC, 0x8A,               // 0xAD, 0x8A
 #if ((defined(OLED_TOP_DOWN)) || (defined(OLED_LEFT_RIGHT)))
 		SH110X_SEGREMAP,
@@ -170,7 +170,7 @@ static void SH1107_WriteCommand2(unsigned char c, unsigned char d)
 //
 bool SH1107_Init(uint8_t pin_SDA, uint8_t pin_SCL, uint16_t I2C_Address, uint32_t I2C_Clock)
 {
-	unsigned char uc[4];
+	unsigned char uc[2] = {SH110X_COMMAND, SH110X_DISPLAYON};
 
 	oled_1107.oled_addr = I2C_Address;
 	oled_1107.ucScreen = ucBackBuffer;  // default buffer
@@ -200,8 +200,6 @@ bool SH1107_Init(uint8_t pin_SDA, uint8_t pin_SCL, uint16_t I2C_Address, uint32_
 	_I2CWrite((unsigned char*) oled128_initbuf, sizeof(oled128_initbuf));
 
 	delay(100);
-	uc[0] = SH110X_COMMAND; // command
-	uc[1] = SH110X_DISPLAYON;
 	_I2CWrite(uc, 2);
 
 	return true;
@@ -212,8 +210,7 @@ bool SH1107_Init(uint8_t pin_SDA, uint8_t pin_SCL, uint16_t I2C_Address, uint32_
 //
 static void SH1107_InvertBytes(uint8_t *pData, uint8_t bLen)
 {
-	uint8_t i;
-	for (i = 0; i < bLen; i++)
+	for (uint8_t i = 0; i < bLen; i++)
 	{
 		*pData = ~(*pData);
 		pData++;
@@ -909,7 +906,7 @@ void SH1107_SetTextWrap(int bWrap)
 //
 int SH1107_WriteString(int iScroll, int x, int y, char *szMsg, int iSize, int bInvert, int bRender)
 {
-	int i, iFontOff, iLen, iFontSkip;
+	int i, iFontOff, iLen, iFontSkip, result;
 	unsigned char c, *s, ucTemp[40];
 
 	if (x == -1 || y == -1) // use the cursor position
@@ -926,49 +923,51 @@ int SH1107_WriteString(int iScroll, int x, int y, char *szMsg, int iSize, int bI
 		return -1; // can't draw off the display
 
 	SH1107_SetPosition(oled_1107.iCursorX, oled_1107.iCursorY, bRender);
-	if (iSize == FONT_8x8) // 8x8 font
+	result = 0;
+	i = 0;
+	switch (iSize)
 	{
-		i = 0;
-		iFontSkip = iScroll & 7; // number of columns to initially skip
-		while (oled_1107.iCursorX < oled_1107.oled_x && szMsg[i] != 0
-				&& oled_1107.iCursorY < oled_1107.oled_y / 8)
+		case FONT_8x8: // 8x8 font
 		{
-			if (iScroll < 8) // only display visible characters
+			iFontSkip = iScroll & 7; // number of columns to initially skip
+			while ((szMsg[i] != 0) && (oled_1107.iCursorX < oled_1107.oled_x)
+					&& (oled_1107.iCursorY < oled_1107.oled_y / 8))
 			{
-				c = (unsigned char) szMsg[i];
-				iFontOff = (int) (c - 32) * 7;
-				// we can't directly use the pointer to FLASH memory, so copy to a local buffer
-				ucTemp[0] = 0;
-				memcpy_P(&ucTemp[1], &ucFont[iFontOff], 7);
-				if (bInvert)
-					SH1107_InvertBytes(ucTemp, 8);
-				//         SH1107_CachedWrite(ucTemp, 8);
-				iLen = 8 - iFontSkip;
-				if (oled_1107.iCursorX + iLen > oled_1107.oled_x) // clip right edge
-					iLen = oled_1107.oled_x - oled_1107.iCursorX;
-				SH1107_WriteDataBlock(&ucTemp[iFontSkip], iLen, bRender); // write character pattern
-				oled_1107.iCursorX += iLen;
-				if (oled_1107.iCursorX >= oled_1107.oled_x - 7 && oled_1107.oled_wrap) // word wrap enabled?
+				if (iScroll < 8) // only display visible characters
 				{
-					oled_1107.iCursorX = 0; // start at the beginning of the next line
-					oled_1107.iCursorY++;
-					SH1107_SetPosition(oled_1107.iCursorX, oled_1107.iCursorY, bRender);
+					c = (unsigned char) szMsg[i];
+					iFontOff = (int) (c - 32) * 7;
+					// we can't directly use the pointer to FLASH memory, so copy to a local buffer
+					ucTemp[0] = 0;
+					memcpy_P(&ucTemp[1], &ucFont[iFontOff], 7);
+					if (bInvert)
+						SH1107_InvertBytes(ucTemp, 8);
+					//         SH1107_CachedWrite(ucTemp, 8);
+					iLen = 8 - iFontSkip;
+					if (oled_1107.iCursorX + iLen > oled_1107.oled_x) // clip right edge
+						iLen = oled_1107.oled_x - oled_1107.iCursorX;
+					SH1107_WriteDataBlock(&ucTemp[iFontSkip], iLen, bRender); // write character pattern
+					oled_1107.iCursorX += iLen;
+					if (oled_1107.iCursorX >= oled_1107.oled_x - 7 && oled_1107.oled_wrap) // word wrap enabled?
+					{
+						oled_1107.iCursorX = 0; // start at the beginning of the next line
+						oled_1107.iCursorY++;
+						SH1107_SetPosition(oled_1107.iCursorX, oled_1107.iCursorY, bRender);
+					}
+					iFontSkip = 0;
 				}
-				iFontSkip = 0;
-			}
-			iScroll -= 8;
-			i++;
-		} // while
+				iScroll -= 8;
+				i++;
+			} // while
 //     SH1107_CachedFlush(); // write any remaining data
-		return 0;
-	} // 8x8
-	else
-		if (iSize == FONT_16x32) // 16x32 font
+			break;
+		} // 8x8
+
+		case FONT_16x32: // 16x32 font
 		{
-			i = 0;
 			iFontSkip = iScroll & 15; // number of columns to initially skip
-			while (oled_1107.iCursorX < oled_1107.oled_x
-					&& oled_1107.iCursorY < (oled_1107.oled_y / 8) - 3 && szMsg[i] != 0)
+			while ((szMsg[i] != 0) && (oled_1107.iCursorX < oled_1107.oled_x)
+					&& (oled_1107.iCursorY < (oled_1107.oled_y / 8) - 3))
 			{
 				if (iScroll < 16) // if characters are visible
 				{
@@ -1014,222 +1013,224 @@ int SH1107_WriteString(int iScroll, int x, int y, char *szMsg, int iSize, int bI
 				iScroll -= 16;
 				i++;
 			} // while
-			return 0;
+			break;
 		} // 16x32
-		else
-			if (iSize == FONT_12x16) // 6x8 stretched to 12x16
+
+		case FONT_12x16: // 6x8 stretched to 12x16
+		{
+			iFontSkip = iScroll % 12; // number of columns to initially skip
+			while ((szMsg[i] != 0) && (oled_1107.iCursorX < oled_1107.oled_x)
+					&& (oled_1107.iCursorY < (oled_1107.oled_y / 8) - 1))
 			{
-				i = 0;
-				iFontSkip = iScroll % 12; // number of columns to initially skip
-				while (oled_1107.iCursorX < oled_1107.oled_x
-						&& oled_1107.iCursorY < (oled_1107.oled_y / 8) - 1 && szMsg[i] != 0)
-				{
 // stretch the 'normal' font instead of using the big font
-					if (iScroll < 12) // if characters are visible
+				if (iScroll < 12) // if characters are visible
+				{
+					int tx, ty;
+					c = szMsg[i] - 32;
+					unsigned char uc1, uc2, ucMask, *pDest;
+					s = (unsigned char*) &ucSmallFont[(int) c * 5];
+					ucTemp[0] = 0; // first column is blank
+					memcpy_P(&ucTemp[1], s, 6);
+					if (bInvert)
+						SH1107_InvertBytes(ucTemp, 6);
+					// Stretch the font to double width + double height
+					memset(&ucTemp[6], 0, 24); // write 24 new bytes
+					for (tx = 0; tx < 6; tx++)
 					{
-						int tx, ty;
-						c = szMsg[i] - 32;
-						unsigned char uc1, uc2, ucMask, *pDest;
-						s = (unsigned char*) &ucSmallFont[(int) c * 5];
-						ucTemp[0] = 0; // first column is blank
-						memcpy_P(&ucTemp[1], s, 6);
-						if (bInvert)
-							SH1107_InvertBytes(ucTemp, 6);
-						// Stretch the font to double width + double height
-						memset(&ucTemp[6], 0, 24); // write 24 new bytes
-						for (tx = 0; tx < 6; tx++)
+						ucMask = 3;
+						pDest = &ucTemp[6 + tx * 2];
+						uc1 = uc2 = 0;
+						c = ucTemp[tx];
+						for (ty = 0; ty < 4; ty++)
 						{
-							ucMask = 3;
-							pDest = &ucTemp[6 + tx * 2];
-							uc1 = uc2 = 0;
-							c = ucTemp[tx];
-							for (ty = 0; ty < 4; ty++)
-							{
-								if (c & (1 << ty)) // a bit is set
-									uc1 |= ucMask;
-								if (c & (1 << (ty + 4)))
-									uc2 |= ucMask;
-								ucMask <<= 2;
-							}
-							pDest[0] = uc1;
-							pDest[1] = uc1; // double width
-							pDest[12] = uc2;
-							pDest[13] = uc2;
+							if (c & (1 << ty)) // a bit is set
+								uc1 |= ucMask;
+							if (c & (1 << (ty + 4)))
+								uc2 |= ucMask;
+							ucMask <<= 2;
 						}
-						// smooth the diagonal lines
-						for (tx = 0; tx < 5; tx++)
+						pDest[0] = uc1;
+						pDest[1] = uc1; // double width
+						pDest[12] = uc2;
+						pDest[13] = uc2;
+					}
+					// smooth the diagonal lines
+					for (tx = 0; tx < 5; tx++)
+					{
+						uint8_t c0, c1, ucMask2;
+						c0 = ucTemp[tx];
+						c1 = ucTemp[tx + 1];
+						pDest = &ucTemp[6 + tx * 2];
+						ucMask = 1;
+						ucMask2 = 2;
+						for (ty = 0; ty < 7; ty++)
 						{
-							uint8_t c0, c1, ucMask2;
-							c0 = ucTemp[tx];
-							c1 = ucTemp[tx + 1];
-							pDest = &ucTemp[6 + tx * 2];
-							ucMask = 1;
-							ucMask2 = 2;
-							for (ty = 0; ty < 7; ty++)
+							if (((c0 & ucMask) && !(c1 & ucMask) && !(c0 & ucMask2) && (c1 & ucMask2))
+									|| (!(c0 & ucMask) && (c1 & ucMask) && (c0 & ucMask2) && !(c1 & ucMask2)))
 							{
-								if (((c0 & ucMask) && !(c1 & ucMask) && !(c0 & ucMask2) && (c1 & ucMask2))
-										|| (!(c0 & ucMask) && (c1 & ucMask) && (c0 & ucMask2) && !(c1 & ucMask2)))
+								if (ty < 3) // top half
 								{
-									if (ty < 3) // top half
+									pDest[1] |= (1 << ((ty * 2) + 1));
+									pDest[2] |= (1 << ((ty * 2) + 1));
+									pDest[1] |= (1 << ((ty + 1) * 2));
+									pDest[2] |= (1 << ((ty + 1) * 2));
+								}
+								else
+									if (ty == 3) // on the border
+									{
+										pDest[1] |= 0x80;
+										pDest[2] |= 0x80;
+										pDest[13] |= 1;
+										pDest[14] |= 1;
+									}
+									else // bottom half
+									{
+										pDest[13] |= (1 << (2 * (ty - 4) + 1));
+										pDest[14] |= (1 << (2 * (ty - 4) + 1));
+										pDest[13] |= (1 << ((ty - 3) * 2));
+										pDest[14] |= (1 << ((ty - 3) * 2));
+									}
+							}
+							else
+								if (!(c0 & ucMask) && (c1 & ucMask) && (c0 & ucMask2) && !(c1 & ucMask2))
+								{
+									if (ty < 4) // top half
 									{
 										pDest[1] |= (1 << ((ty * 2) + 1));
-										pDest[2] |= (1 << ((ty * 2) + 1));
-										pDest[1] |= (1 << ((ty + 1) * 2));
 										pDest[2] |= (1 << ((ty + 1) * 2));
 									}
 									else
-										if (ty == 3) // on the border
-										{
-											pDest[1] |= 0x80;
-											pDest[2] |= 0x80;
-											pDest[13] |= 1;
-											pDest[14] |= 1;
-										}
-										else // bottom half
-										{
-											pDest[13] |= (1 << (2 * (ty - 4) + 1));
-											pDest[14] |= (1 << (2 * (ty - 4) + 1));
-											pDest[13] |= (1 << ((ty - 3) * 2));
-											pDest[14] |= (1 << ((ty - 3) * 2));
-										}
-								}
-								else
-									if (!(c0 & ucMask) && (c1 & ucMask) && (c0 & ucMask2) && !(c1 & ucMask2))
 									{
-										if (ty < 4) // top half
-										{
-											pDest[1] |= (1 << ((ty * 2) + 1));
-											pDest[2] |= (1 << ((ty + 1) * 2));
-										}
-										else
-										{
-											pDest[13] |= (1 << (2 * (ty - 4) + 1));
-											pDest[14] |= (1 << ((ty - 3) * 2));
-										}
+										pDest[13] |= (1 << (2 * (ty - 4) + 1));
+										pDest[14] |= (1 << ((ty - 3) * 2));
 									}
-								ucMask <<= 1;
-								ucMask2 <<= 1;
-							}
+								}
+							ucMask <<= 1;
+							ucMask2 <<= 1;
 						}
-						iLen = 12 - iFontSkip;
-						if (oled_1107.iCursorX + iLen > oled_1107.oled_x) // clip right edge
-							iLen = oled_1107.oled_x - oled_1107.iCursorX;
+					}
+					iLen = 12 - iFontSkip;
+					if (oled_1107.iCursorX + iLen > oled_1107.oled_x) // clip right edge
+						iLen = oled_1107.oled_x - oled_1107.iCursorX;
+					SH1107_SetPosition(oled_1107.iCursorX, oled_1107.iCursorY, bRender);
+					SH1107_WriteDataBlock(&ucTemp[6 + iFontSkip], iLen, bRender);
+					SH1107_SetPosition(oled_1107.iCursorX, oled_1107.iCursorY + 1, bRender);
+					SH1107_WriteDataBlock(&ucTemp[18 + iFontSkip], iLen, bRender);
+					oled_1107.iCursorX += iLen;
+					if (oled_1107.iCursorX >= oled_1107.oled_x - 11 && oled_1107.oled_wrap) // word wrap enabled?
+					{
+						oled_1107.iCursorX = 0; // start at the beginning of the next line
+						oled_1107.iCursorY += 2;
 						SH1107_SetPosition(oled_1107.iCursorX, oled_1107.iCursorY, bRender);
-						SH1107_WriteDataBlock(&ucTemp[6 + iFontSkip], iLen, bRender);
-						SH1107_SetPosition(oled_1107.iCursorX, oled_1107.iCursorY + 1, bRender);
-						SH1107_WriteDataBlock(&ucTemp[18 + iFontSkip], iLen, bRender);
-						oled_1107.iCursorX += iLen;
-						if (oled_1107.iCursorX >= oled_1107.oled_x - 11 && oled_1107.oled_wrap) // word wrap enabled?
-						{
-							oled_1107.iCursorX = 0; // start at the beginning of the next line
-							oled_1107.iCursorY += 2;
-							SH1107_SetPosition(oled_1107.iCursorX, oled_1107.iCursorY, bRender);
-						}
-						iFontSkip = 0;
-					} // if characters are visible
-					iScroll -= 12;
-					i++;
-				} // while
-				return 0;
-			} // 12x16
-			else
-				if (iSize == FONT_16x16) // 8x8 stretched to 16x16
-				{
-					i = 0;
-					iFontSkip = iScroll & 15; // number of columns to initially skip
-					while (oled_1107.iCursorX < oled_1107.oled_x
-							&& oled_1107.iCursorY < (oled_1107.oled_y / 8) - 1 && szMsg[i] != 0)
-					{
+					}
+					iFontSkip = 0;
+				} // if characters are visible
+				iScroll -= 12;
+				i++;
+			} // while
+			break;
+		} // 12x16
+
+		case FONT_16x16: // 8x8 stretched to 16x16
+		{
+			iFontSkip = iScroll & 15; // number of columns to initially skip
+			while ((szMsg[i] != 0) && (oled_1107.iCursorX < oled_1107.oled_x)
+					&& (oled_1107.iCursorY < (oled_1107.oled_y / 8) - 1))
+			{
 // stretch the 'normal' font instead of using the big font
-						if (iScroll < 16) // if characters are visible
-						{
-							int tx, ty;
-							c = szMsg[i] - 32;
-							unsigned char uc1, uc2, ucMask, *pDest;
-							s = (unsigned char*) &ucFont[(int) c * 7];
-							ucTemp[0] = 0;
-							memcpy_P(&ucTemp[1], s, 7);
-							if (bInvert)
-								SH1107_InvertBytes(ucTemp, 8);
-							// Stretch the font to double width + double height
-							memset(&ucTemp[8], 0, 32); // write 32 new bytes
-							for (tx = 0; tx < 8; tx++)
-							{
-								ucMask = 3;
-								pDest = &ucTemp[8 + tx * 2];
-								uc1 = uc2 = 0;
-								c = ucTemp[tx];
-								for (ty = 0; ty < 4; ty++)
-								{
-									if (c & (1 << ty)) // a bit is set
-										uc1 |= ucMask;
-									if (c & (1 << (ty + 4)))
-										uc2 |= ucMask;
-									ucMask <<= 2;
-								}
-								pDest[0] = uc1;
-								pDest[1] = uc1; // double width
-								pDest[16] = uc2;
-								pDest[17] = uc2;
-							}
-							iLen = 16 - iFontSkip;
-							if (oled_1107.iCursorX + iLen > oled_1107.oled_x) // clip right edge
-								iLen = oled_1107.oled_x - oled_1107.iCursorX;
-							SH1107_SetPosition(oled_1107.iCursorX, oled_1107.iCursorY, bRender);
-							SH1107_WriteDataBlock(&ucTemp[8 + iFontSkip], iLen, bRender);
-							SH1107_SetPosition(oled_1107.iCursorX, oled_1107.iCursorY + 1, bRender);
-							SH1107_WriteDataBlock(&ucTemp[24 + iFontSkip], iLen, bRender);
-							oled_1107.iCursorX += iLen;
-							if (oled_1107.iCursorX >= oled_1107.oled_x - 15 && oled_1107.oled_wrap) // word wrap enabled?
-							{
-								oled_1107.iCursorX = 0; // start at the beginning of the next line
-								oled_1107.iCursorY += 2;
-								SH1107_SetPosition(oled_1107.iCursorX, oled_1107.iCursorY, bRender);
-							}
-							iFontSkip = 0;
-						} // if characters are visible
-						iScroll -= 16;
-						i++;
-					} // while
-					return 0;
-				} // 16x16
-				else
-					if (iSize == FONT_6x8) // 6x8 font
+				if (iScroll < 16) // if characters are visible
+				{
+					int tx, ty;
+					c = szMsg[i] - 32;
+					unsigned char uc1, uc2, ucMask, *pDest;
+					s = (unsigned char*) &ucFont[(int) c * 7];
+					ucTemp[0] = 0;
+					memcpy_P(&ucTemp[1], s, 7);
+					if (bInvert)
+						SH1107_InvertBytes(ucTemp, 8);
+					// Stretch the font to double width + double height
+					memset(&ucTemp[8], 0, 32); // write 32 new bytes
+					for (tx = 0; tx < 8; tx++)
 					{
-						i = 0;
-						iFontSkip = iScroll % 6;
-						while (oled_1107.iCursorX < oled_1107.oled_x
-								&& oled_1107.iCursorY < (oled_1107.oled_y / 8) && szMsg[i] != 0)
+						ucMask = 3;
+						pDest = &ucTemp[8 + tx * 2];
+						uc1 = uc2 = 0;
+						c = ucTemp[tx];
+						for (ty = 0; ty < 4; ty++)
 						{
-							if (iScroll < 6) // if characters are visible
-							{
-								c = szMsg[i] - 32;
-								// we can't directly use the pointer to FLASH memory, so copy to a local buffer
-								ucTemp[0] = 0;
-								memcpy_P(&ucTemp[1], &ucSmallFont[(int) c * 5], 5);
-								if (bInvert)
-									SH1107_InvertBytes(ucTemp, 6);
-								iLen = 6 - iFontSkip;
-								if (oled_1107.iCursorX + iLen > oled_1107.oled_x) // clip right edge
-									iLen = oled_1107.oled_x - oled_1107.iCursorX;
-								SH1107_WriteDataBlock(&ucTemp[iFontSkip], iLen, bRender); // write character pattern
-								//         SH1107_CachedWrite(ucTemp, 6);
-								oled_1107.iCursorX += iLen;
-								iFontSkip = 0;
-								if (oled_1107.iCursorX >= oled_1107.oled_x - 5 && oled_1107.oled_wrap) // word wrap enabled?
-								{
-									oled_1107.iCursorX = 0; // start at the beginning of the next line
-									oled_1107.iCursorY++;
-									SH1107_SetPosition(oled_1107.iCursorX, oled_1107.iCursorY, bRender);
-								}
-							} // if characters are visible
-							iScroll -= 6;
-							i++;
+							if (c & (1 << ty)) // a bit is set
+								uc1 |= ucMask;
+							if (c & (1 << (ty + 4)))
+								uc2 |= ucMask;
+							ucMask <<= 2;
 						}
+						pDest[0] = uc1;
+						pDest[1] = uc1; // double width
+						pDest[16] = uc2;
+						pDest[17] = uc2;
+					}
+					iLen = 16 - iFontSkip;
+					if (oled_1107.iCursorX + iLen > oled_1107.oled_x) // clip right edge
+						iLen = oled_1107.oled_x - oled_1107.iCursorX;
+					SH1107_SetPosition(oled_1107.iCursorX, oled_1107.iCursorY, bRender);
+					SH1107_WriteDataBlock(&ucTemp[8 + iFontSkip], iLen, bRender);
+					SH1107_SetPosition(oled_1107.iCursorX, oled_1107.iCursorY + 1, bRender);
+					SH1107_WriteDataBlock(&ucTemp[24 + iFontSkip], iLen, bRender);
+					oled_1107.iCursorX += iLen;
+					if (oled_1107.iCursorX >= oled_1107.oled_x - 15 && oled_1107.oled_wrap) // word wrap enabled?
+					{
+						oled_1107.iCursorX = 0; // start at the beginning of the next line
+						oled_1107.iCursorY += 2;
+						SH1107_SetPosition(oled_1107.iCursorX, oled_1107.iCursorY, bRender);
+					}
+					iFontSkip = 0;
+				} // if characters are visible
+				iScroll -= 16;
+				i++;
+			} // while
+			break;
+		} // 16x16
+
+		case FONT_6x8: // 6x8 font
+		{
+			iFontSkip = iScroll % 6;
+			while ((szMsg[i] != 0) && (oled_1107.iCursorX < oled_1107.oled_x)
+					&& (oled_1107.iCursorY < (oled_1107.oled_y / 8)))
+			{
+				if (iScroll < 6) // if characters are visible
+				{
+					c = szMsg[i] - 32;
+					// we can't directly use the pointer to FLASH memory, so copy to a local buffer
+					ucTemp[0] = 0;
+					memcpy_P(&ucTemp[1], &ucSmallFont[(int) c * 5], 5);
+					if (bInvert)
+						SH1107_InvertBytes(ucTemp, 6);
+					iLen = 6 - iFontSkip;
+					if (oled_1107.iCursorX + iLen > oled_1107.oled_x) // clip right edge
+						iLen = oled_1107.oled_x - oled_1107.iCursorX;
+					SH1107_WriteDataBlock(&ucTemp[iFontSkip], iLen, bRender); // write character pattern
+					//         SH1107_CachedWrite(ucTemp, 6);
+					oled_1107.iCursorX += iLen;
+					iFontSkip = 0;
+					if (oled_1107.iCursorX >= oled_1107.oled_x - 5 && oled_1107.oled_wrap) // word wrap enabled?
+					{
+						oled_1107.iCursorX = 0; // start at the beginning of the next line
+						oled_1107.iCursorY++;
+						SH1107_SetPosition(oled_1107.iCursorX, oled_1107.iCursorY, bRender);
+					}
+				} // if characters are visible
+				iScroll -= 6;
+				i++;
+			}
 //    SH1107_CachedFlush(); // write any remaining data      
-						return 0;
-					} // 6x8
-	return -1; // invalid size
+			break;
+		} // 6x8
+
+		default:
+			result = -1;
+	}
+
+	return result;
 } /* SH1107_WriteString() */
 
 //

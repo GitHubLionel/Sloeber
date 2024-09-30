@@ -34,6 +34,8 @@
 #define CALIB_GAIN_V2 	0b111100 // Gain V2
 #define CALIB_GAIN_IV 	0b111110 // Gain for all channel available
 
+// Note: There is no instruction to calibrage P and Q offset since
+// we just write Pavg and Qavg with no charge
 
 #define CFG2VAL     0x10420A // Enable Highpass filters and APCM calculation
 #define DATARDY     0x800000

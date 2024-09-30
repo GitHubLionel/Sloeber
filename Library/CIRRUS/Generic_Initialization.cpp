@@ -7,8 +7,14 @@
  * Generic initialization.
  * After CIRRUS_Communication.begin() and CIRRUS_Base.begin(), we need to validate the connexion
  * and set the calibration and configuration.
- * If use Flash, set Flash_op_load to true to load the calibration and configuration, false to save.
- * Flash_id is the char number of the Cirrus.
+ * @PARAM:
+ * - Cirrus: the Cirrus to be initialized
+ * - CS_Calib: the calibration params relating to the Cirrus
+ * - CS_Config: the configuration params relating to the Cirrus
+ * - print_data: if true then print all the data read (U, I, P, ...)
+ * If use Flash:
+ * - set Flash_op_load to true to load the calibration and configuration, false to save.
+ * - Flash_id is the char number ('1' or '2') of the Cirrus.
  */
 bool CIRRUS_Generic_Initialization(CIRRUS_Base &Cirrus, CIRRUS_Calib_typedef *CS_Calib,
 		CIRRUS_Config_typedef *CS_Config, bool print_data, bool Flash_op_load, char Flash_id)
@@ -130,21 +136,42 @@ void handleCirrus(CB_SERVER_PARAM)
 					Wifi_Request = csw_BAUD;
 					strcpy(Request, (const char*) pserver->arg("BAUD").c_str());
 				}
-#ifdef CIRRUS_CALIBRATION
 				else
-					// Demande calibration sans charge
-					if (pserver->hasArg("NOLOAD"))
+					// Changement de la vitesse
+					if (pserver->hasArg("CS"))
 					{
-						Wifi_Request = csw_NOLOAD;
-						strcpy(Request, "NOLOAD");
+						Wifi_Request = csw_CS;
+						strcpy(Request, (const char*) pserver->arg("CS").c_str());
 					}
 					else
-						// Demande calibration gain (avec charge)
-						if (pserver->hasArg("GAIN"))
+						// Changement de la vitesse
+						if (pserver->hasArg("LOCK"))
 						{
-							Wifi_Request = csw_GAIN;
-							strcpy(Request, (const char*) pserver->arg("GAIN").c_str());
+							Wifi_Request = csw_LOCK;
+							strcpy(Request, (const char*) pserver->arg("LOCK").c_str());
 						}
+						else
+							// Changement de la vitesse
+							if (pserver->hasArg("FLASH"))
+							{
+								Wifi_Request = csw_FLASH;
+								strcpy(Request, (const char*) pserver->arg("FLASH").c_str());
+							}
+#ifdef CIRRUS_CALIBRATION
+							else
+								// Demande calibration sans charge
+								if (pserver->hasArg("IACOFF"))
+								{
+									Wifi_Request = csw_IACOFF;
+									strcpy(Request, "IACOFF");
+								}
+								else
+									// Demande calibration gain (avec charge)
+									if (pserver->hasArg("GAIN"))
+									{
+										Wifi_Request = csw_GAIN;
+										strcpy(Request, (const char*) pserver->arg("GAIN").c_str());
+									}
 #endif // CALIBRATION
 
 	String result = "";

@@ -101,7 +101,7 @@ void IHM_Print0(const char *text)
 #endif
 #ifdef OLED_SH1107
 	SH1107_Fill(0x0, 0);
-	SH1107_WriteString(0, 0, 2, (char*) text, FONT_NORMAL, 0);
+	SH1107_WriteString(0, 0, 2, (char*) text, FONT_SMALL, 0);
 	SH1107_DumpBuffer();
 #endif
 #ifdef DEFAULT_OUTPUT
@@ -142,7 +142,7 @@ void IHM_Print(uint8_t line, const char *text, bool update_screen)
   	SSD1327_Display();
 #endif
 #ifdef OLED_SH1107
-	SH1107_WriteString(0, 0, line, (char*) text, FONT_NORMAL, 0);
+	SH1107_WriteString(0, 0, line, (char*) text, FONT_SMALL, 0);
   if (update_screen)
   	SH1107_DumpBuffer();
 #endif
@@ -288,7 +288,7 @@ void IHM_IPAddress(const char *ip)
 #endif
 #ifdef OLED_SH1107
 	SH1107_Fill(0x0, 0);
-	SH1107_WriteString(0, 0, 2, (char*) ip, FONT_NORMAL, 0);
+	SH1107_WriteString(0, 0, 2, (char*) ip, FONT_SMALL, 0);
 	SH1107_DumpBuffer();
 //	delay(2000);
 //  SH1107_Fill(0x0, 1);

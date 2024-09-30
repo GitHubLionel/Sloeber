@@ -367,6 +367,10 @@ CIRRUS_Base* CIRRUS_Communication::SelectCirrus(uint8_t position, CIRRUS_Channel
 		Selected_Pin = 0;
 
 	CurrentCirrus = cs;
+
+	if (SelectChange_cb != NULL)
+		SelectChange_cb(*CurrentCirrus);
+
 	return cs;
 }
 
@@ -512,6 +516,30 @@ void CIRRUS_Interrupt_DO_Action_SSR()
 // Gestion de la communication avec Cirrus_Connect
 // ********************************************************************************
 
+void CIRRUS_Communication::COM_ChangeCirrus(uint8_t *Request)
+{
+	// we must have 2 cirrus
+	if (GetNumberCirrus() == 2)
+	{
+		int id = strtol((char*) Request, NULL, 10);
+		if (GetSelectedID() != id)
+		{
+			if (id == 0)
+			{
+				SelectCirrus(0, Channel_1);
+				CurrentCirrus->print_str("Cirrus 1 selected\r\n");
+			}
+			else
+			{
+				SelectCirrus(1, Channel_1);
+				CurrentCirrus->print_str("Cirrus 2 selected\r\n");
+			}
+		}
+	}
+	else
+		CurrentCirrus->print_str("Only one Cirrus is present\r\n");
+}
+
 #ifdef LOG_CIRRUS_CONNECT
 //#define DEBUG_CONNECT
 
@@ -552,13 +580,13 @@ uint8_t CIRRUS_Communication::UART_Message_Cirrus(uint8_t *RxBuffer)
 //  ************** Lecture/écriture registre du Cirrus ************************
 	if (Search_Balise(RxBuffer, "REG=", LOG_ETX_STR, (char*) message, &len) != NULL)
 	{
-		char response[50];
+		char response[50] = {0};
 		COM_Register(message, response);
 		// Expédition du résultat au format ":résultat en hexa (sans 0x)\03"
 		// : et \03 sont les caractères de début et de fin du message
 		char *presponse = &response[0];
-		if (response[0] != '#') // Ce n'est pas un message d'information
-			presponse += 2;
+		if (response[0] != '#') // This is not an info message
+			presponse += 2; // Skip 0x
 		sprintf((char*) Cirrus_message, ":%s\03\r\n", presponse);
 		CurrentCirrus->print_str((char*) Cirrus_message);
 		return 1;
@@ -595,7 +623,10 @@ uint8_t CIRRUS_Communication::UART_Message_Cirrus(uint8_t *RxBuffer)
 	if (strstr((char*) RxBuffer, "FLASH=") != NULL)
 	{
 		// Sauvegarde dans la FLASH
-		Register_To_FLASH('1');
+		char id = '1';
+		if (Selected != -1) // In case we have several Cirrus
+			id += Selected;
+		Register_To_FLASH(id);
 		CurrentCirrus->print_str("FLASH Data OK\r\n");
 		return 1;
 	}
@@ -604,29 +635,14 @@ uint8_t CIRRUS_Communication::UART_Message_Cirrus(uint8_t *RxBuffer)
 //  ************** Changement de Cirrus ***************************************
 	if (Search_Balise(RxBuffer, "CS=", LOG_ETX_STR, (char*) message, &len) != NULL)
 	{
-		// we must have 2 cirrus
-		if (GetNumberCirrus() != 2)
-		{
-			return 1;
-		}
-
-		if (strcmp((char*) message, "0") == 0)
-		{
-			SelectCirrus(0, Channel_1);
-			CurrentCirrus->print_str("Cirrus 1 selected\r\n");
-		}
-		else
-		{
-			SelectCirrus(1, Channel_1);
-			CurrentCirrus->print_str("Cirrus 2 selected\r\n");
-		}
+		COM_ChangeCirrus((uint8_t*) message);
 		return 1;
 	}
 
 //  ************** Message lock/unlock IHM pour calibration du Cirrus ****************
 	if (strstr((char*) RxBuffer, "LOCK=") != NULL)
 	{
-		// Toggle flag Calibration
+		// Toggle lock IHM
 		if (Is_IHM_Locked())
 			Do_Lock_IHM(false);
 		else
@@ -664,7 +680,7 @@ String CIRRUS_Communication::Handle_Common_Request(CS_Common_Request Common_Requ
 			COM_Register((uint8_t*) Request, response);
 			break;
 		}
-			// Demande des scales (U_Calib, I_Max)
+		// Demande des scales (U_Calib, I_Max)
 		case csw_SCALE:
 		{
 			float scale[4] = {0};
@@ -676,43 +692,72 @@ String CIRRUS_Communication::Handle_Common_Request(CS_Common_Request Common_Requ
 			CS_Calib->I2_MAX = scale[3];
 			break;
 		}
-			// Demande de plusieurs registres (graphe, dump)
+		// Demande de plusieurs registres (graphe, dump)
 		case csw_REG_MULTI:
 		{
 			COM_Register_Multi((uint8_t*) Request, response);
 			break;
 		}
-			// Changement de la vitesse
+		// Changement de la vitesse
 		case csw_BAUD:
 		{
 			COM_ChangeBaud((uint8_t*) Request, response);
 			break;
 		}
+		// Changement de Cirrus
+		case csw_CS:
+		{
+			COM_ChangeCirrus((uint8_t*) Request);
+			break;
+		}
+		// Lock de l'IHM
+		case csw_LOCK:
+		{
+			bool status = (*Request == '1');
+			// Toggle lock IHM
+			Do_Lock_IHM(status);
+			if (Is_IHM_Locked())
+				print_debug("IHM Locked\r\n");
+			else
+				print_debug("IHM unLocked\r\n");
+			break;
+		}
+		// Sauvegarde dans la FLASH
+		case csw_FLASH:
+		{
+			char id = '1';
+			if (Selected != -1) // In case we have several Cirrus
+				id += Selected;
+			Register_To_FLASH(id);
+			CurrentCirrus->print_str("FLASH Data OK\r\n");
+			break;
+		}
+
 #ifdef CIRRUS_CALIBRATION
-			// Demande calibration sans charge
-		case csw_NOLOAD:
+		// Demande calibration sans charge (I AC Offset)
+		case csw_IACOFF:
 		{
 			Calibration = true;
-			CS_Calibration.NoCharge(CS_Calib, false);
+			CS_Calibration.IACOffset(CS_Calib);
 			Calibration = false;
-			strcpy(response, "NOLOAD_OK");
+			strcpy(response, "IACOffset_OK");
 
 			// Redémarrage du Cirrus
 			CIRRUS_Restart(*GetCurrentCirrus(), CS_Calib, CS_Config);
 			break;
 		}
-			// Demande calibration gain (avec charge)
+		// Demande calibration gain avec charge (I AC et U AC Gain)
 		case csw_GAIN:
 		{
-			float V1_Ref, R;
+			float V_Ref, R;
 			uint8_t *Request2 = (uint8_t*) Request;
 			char *pbuffer = strtok((char*) Request2, ";#");
 
 			R = strtof(pbuffer, NULL);
-			V1_Ref = strtof(strtok(NULL, ";#"), NULL);
+			V_Ref = strtof(strtok(NULL, ";#"), NULL);
 
 			Calibration = true;
-			CS_Calibration.WithCharge(CS_Calib, V1_Ref, R);
+			CS_Calibration.Gain(CS_Calib, V_Ref, R);
 			Calibration = false;
 			strcpy(response, "GAIN_OK");
 

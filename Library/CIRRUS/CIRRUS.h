@@ -78,10 +78,10 @@ typedef union Bit_List
 	public:
 		Bit_List()
 		{
-			LSB = MSB = HSB = CHECK = 0;
+			LSB = MSB = HSB = CHECK = 0x00;
 		}
 
-		Bit_List(const uint8_t _LSB, const uint8_t _MSB, const uint8_t _HSB, const uint8_t _CHECK = 0)
+		Bit_List(const uint8_t _LSB, const uint8_t _MSB, const uint8_t _HSB, const uint8_t _CHECK = 0x00)
 		{
 			LSB = _LSB;
 			MSB = _MSB;
@@ -96,7 +96,7 @@ typedef union Bit_List
 
 		void Clear(void)
 		{
-			LSB = MSB = HSB = CHECK = 0;
+			LSB = MSB = HSB = CHECK = 0x00;
 		}
 
 		uint32_t ToInt(void)
@@ -104,6 +104,14 @@ typedef union Bit_List
 			return Bit32;
 		}
 
+		void Negate(void)
+		{
+//			LSB = LSB | 0x80;
+//			MSB = MSB | 0x80;
+//			HSB = HSB | 0x80;
+			Bit32 = Bit32 | 0x800000;
+			CHECK = 0x00;
+		}
 } Bit_List;
 
 /**
@@ -324,7 +332,10 @@ typedef enum {
 	csw_SCALE,
 	csw_REG_MULTI,
 	csw_BAUD,
-	csw_NOLOAD,
+	csw_CS,
+	csw_LOCK,
+	csw_FLASH,
+	csw_IACOFF,
 	csw_GAIN,
 	csw_NONE
 } CS_Common_Request;
@@ -456,6 +467,9 @@ class CIRRUS_Base;
  */
 typedef std::deque<CIRRUS_Base*> CirrusList;
 
+// Callback pour le changement de jour : pour minuit et la mise à jour date
+typedef void (*CIRRUS_selectchange_cb)(CIRRUS_Base &cirrus);
+
 /**
  * Cirrus Communication class
  * The purpose of this class is to manage the communication with the Cirrus in UART or SPI (with the define)
@@ -500,6 +514,7 @@ class CIRRUS_Communication
 			return CurrentCirrus;
 		}
 
+		// Return the number of Cirrus present
 		uint8_t GetNumberCirrus(void);
 
 		// Ensure the managment of several Cirrus
@@ -518,6 +533,17 @@ class CIRRUS_Communication
 #ifdef CIRRUS_FLASH
 		void Register_To_FLASH(char id_cirrus);
 #endif
+
+		/**
+		 * Set the callback when we change the Cirrus
+		 * Should be used only if we have several Cirrus
+		 */
+		void setCirrusChangeCallback(const CIRRUS_selectchange_cb &callback)
+		{
+			SelectChange_cb = callback;
+		}
+
+		void COM_ChangeCirrus(uint8_t *Request);
 
 		// Communication UART with Cirrus_Connect or Wifi with CIRRUS_Config
 #ifdef LOG_CIRRUS_CONNECT
@@ -553,16 +579,24 @@ class CIRRUS_Communication
 		SPISettings spisettings = SPISettings(2000000, MSBFIRST, SPI_MODE3);  // A priori mode 1 ou 3 SPI_MODE3
 #endif
 
+		// The current Cirrus
 		CIRRUS_Base *CurrentCirrus = NULL;
 
 		// Cirrus Reset pin
 		uint8_t Cirrus_RESET_Pin = 0;
 
+		// The list of the Cirrus in case we have several Cirrus
 		CirrusList m_Cirrus;
+		// The number of the current Cirrus in the Cirrus list
 		int8_t Selected = -1;
+		// The GPIO pin of the current Cirrus
 		uint8_t Selected_Pin = 0;
 
+		// Flag to know if we have started the communication
 		bool Comm_started = false;
+
+		// Callback when we change Cirrus in case we have several Cirrus
+		CIRRUS_selectchange_cb SelectChange_cb = NULL;
 
 #ifdef LOG_CIRRUS_CONNECT
 		// Une commande pour le Cirrus est en attente de traitement
@@ -669,7 +703,7 @@ class CIRRUS_Base
 		bool Check_Positive_Power(CIRRUS_Channel channel);
 
 		// Set settings
-		void set_settle_time(uint32_t owr_samples);
+		void set_settle_time_ms(float owr_samples);
 		void set_sample_count(uint32_t N);
 		void set_calibration_scale(float scale);
 
@@ -686,11 +720,19 @@ class CIRRUS_Base
 		void send_instruction(uint8_t instruction);
 
 		// Calibration do
-		void do_dc_offset_calibration(bool only_I);
-		void do_ac_offset_calibration(void);
+		typedef enum {
+			Base_real,
+			Base_22,
+			Base_23,
+			Base_24,
+			Base_d24
+		} Print_Base_def;
+		void print_calibration(const char *message, Print_Base_def base, const Bit_List &val);
 		void do_gain_calibration(float calib_vac, float calib_r);
+		void do_Iac_offset_calibration(void);
+		void do_dc_offset_calibration(bool only_I);
 		void set_phase_compensations(void);
-		void do_noload_power_calibration();
+		void do_power_offset_calibration();
 		void set_temp_calibrations(void);
 
 		// The pin to select the Cirrus in case we have several Cirrus
@@ -708,8 +750,8 @@ class CIRRUS_Base
 		Bit_List* copy_blist(Bit_List *src, Bit_List *dest, bool full);
 
 		Bit_List* int_to_blist(uint32_t integer, Bit_List *list);
-		uint32_t blist_to_int(Bit_List *bt);
-		float twoscompl_to_real(Bit_List *twoscompl);
+		uint32_t blist_to_int(const Bit_List *bt);
+		float twoscompl_to_real(const Bit_List *twoscompl);
 		Bit_List* real_to_twoscompl(float num, Bit_List *list);
 
 		// Checksum

@@ -18,6 +18,7 @@
 #define  CS_RES_CALIB            "Calibration in progress...\r\n"
 #define  CS_RES_PIVOR            "PIVOR! P,I or V out of range: "
 #define  CS_RES_REMEMBER         "Remember to store these values\r\n" 
-#define  CS_RES_NOLINE           "It's assumed no line and no voltage/current are applied to the CIRRUS\r\n"
+#define  CS_RES_CAL_DC_OFF       "It's assumed no line voltage and no current are applied to the CIRRUS\r\n"
+#define  CS_RES_CAL_AC_OFF       "It's assumed line voltage is fullscale and no current are applied to the CIRRUS\r\n"
 #define  CS_RES_LOAD             "A load is assumed to be present: V_RMS = %.2f V, I_RMS = %.2f A, R = %.2f Ohm, P_RMS = %.2f W\r\n"
 #define  CS_RES_NOLOADPOWER      "It's assumed full scale voltage and no current (no load) are applied to the CIRRUS\r\n"

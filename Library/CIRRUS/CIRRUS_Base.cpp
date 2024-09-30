@@ -57,6 +57,7 @@ static char buffer[1500]; // Buffer pour les textes, ATTENTION aux chaines resso
 //#define USE_CHECKSUN
 
 // Pour les conversions
+const float over_pow2_22 = 1.0 / (4194304.0 - 1.0);
 const float over_pow2_23 = 1.0 / (8388608.0 - 1.0);
 const float over_pow2_24 = 1.0 / (16777216.0 - 1.0);
 const uint32_t pow2_23 = 8388608;
@@ -345,6 +346,7 @@ void CIRRUS_Base::Configuration(uint32_t sample_count_ms, CIRRUS_Config_typedef 
 	// period is fixed at N/4000 = 1 second, regardless the line frequency.
 	set_sample_count(4 * Sample_Count_ms);
 	Ready_TimeOut = Sample_Count_ms + 10;
+	set_settle_time_ms(7.5); // Default
 
 	if (start)
 	{
@@ -654,7 +656,7 @@ inline Bit_List* CIRRUS_Base::int_to_blist(uint32_t integer, Bit_List *list)
  @bt list (or list) of 3 bytes (LSB,..,HSB)
  @return an unsigned integer
  */
-inline uint32_t CIRRUS_Base::blist_to_int(Bit_List *bt)
+inline uint32_t CIRRUS_Base::blist_to_int(const Bit_List *bt)
 {
 	return bt->Bit32;
 //  return (((uint32_t)(bt->tab[0])) + (((uint32_t)(bt->tab[1]))<<8) + (((uint32_t)(bt->tab[2]))<<16));
@@ -665,7 +667,7 @@ inline uint32_t CIRRUS_Base::blist_to_int(Bit_List *bt)
  @bt list (or list) of three bytes (LSB,..,HSB)
  @return  a number >-1.0 and <1.0
  */
-float CIRRUS_Base::twoscompl_to_real(Bit_List *twoscompl)
+float CIRRUS_Base::twoscompl_to_real(const Bit_List *twoscompl)
 {
 	float num;
 	num = (float) blist_to_int(twoscompl);
@@ -1008,7 +1010,9 @@ void CIRRUS_Base::Soft_reset(void)
 	// The official, documented, reset
 	send_instruction(SOFT_RESET);
 	comm_checksum = false;  // Initial state, no checksum
+	CorrectBug();
 	CSDelay(10);
+	Com->UART_Change_Baud(600);
 }
 
 /**
@@ -1882,10 +1886,10 @@ float CIRRUS_Base::get_frequency(void)
  conversion and calibration commands
  Default: owr_samples=30
  */
-void CIRRUS_Base::set_settle_time(uint32_t owr_samples)
+void CIRRUS_Base::set_settle_time_ms(float owr_samples)
 {
 	Bit_List samp;
-	int_to_blist(owr_samples, &samp);
+	int_to_blist((int)(4 * owr_samples), &samp);
 	write_register(P16_T_SETTLE, PAGE16, &samp);
 }
 
@@ -1935,7 +1939,7 @@ void CIRRUS_Base::set_gain_calibrations(Bit_List *v_gain, Bit_List *i_gain, CIRR
 		write_register(P16_I1_GAIN, PAGE16, i_gain);
 	}
 	else
-		if (channel == Channel_2)
+		if (twochannel && (channel == Channel_2))
 		{
 			write_register(P16_V2_GAIN, PAGE16, v_gain);
 			write_register(P16_I2_GAIN, PAGE16, i_gain);
@@ -1955,7 +1959,7 @@ void CIRRUS_Base::set_dc_offset_calibrations(Bit_List *v_off, Bit_List *i_off,
 		write_register(P16_V1_DCOFF, PAGE16, v_off);
 	}
 	else
-		if (channel == Channel_2)
+		if (twochannel && (channel == Channel_2))
 		{
 			write_register(P16_I2_DCOFF, PAGE16, i_off);
 			write_register(P16_V2_DCOFF, PAGE16, v_off);
@@ -1971,7 +1975,7 @@ void CIRRUS_Base::set_ac_offset_calibrations(Bit_List *i_acoff, CIRRUS_Channel c
 	if (channel == Channel_1)
 		write_register(P16_I1_ACOFF, PAGE16, i_acoff);
 	else
-		if (channel == Channel_2)
+		if (twochannel && (channel == Channel_2))
 			write_register(P16_I2_ACOFF, PAGE16, i_acoff);
 }
 
@@ -1987,7 +1991,7 @@ void CIRRUS_Base::set_no_load_calibrations(Bit_List *p_off, Bit_List *q_off, CIR
 		write_register(P16_Q1_OFF, PAGE16, q_off);
 	}
 	else
-		if (channel == Channel_2)
+		if (twochannel && (channel == Channel_2))
 		{
 			write_register(P16_P2_OFF, PAGE16, p_off);
 			write_register(P16_Q2_OFF, PAGE16, q_off);
@@ -1995,11 +1999,260 @@ void CIRRUS_Base::set_no_load_calibrations(Bit_List *p_off, Bit_List *q_off, CIR
 }
 
 /**
+ * Help fonction to print calibration message
+ */
+void CIRRUS_Base::print_calibration(const char *message, Print_Base_def base, const Bit_List &val)
+{
+	double real_val;
+	switch (base)
+	{
+		case Base_real: real_val = twoscompl_to_real(&val); break;
+		case Base_22: real_val = blist_to_int(&val) * over_pow2_22; break;
+		case Base_23: real_val = blist_to_int(&val) * over_pow2_23; break;
+		case Base_24: real_val = blist_to_int(&val) * over_pow2_24; break;
+		case Base_d24: real_val = val.Bit32 * over_pow2_24; break;
+		default: real_val = 0;
+	}
+	sprintf(buffer, "%s: %.6f, (%d, %d, %d) = 0x%.6X\r\n", message,
+			real_val, val.LSB, val.MSB, val.HSB, (unsigned int) val.Bit32);
+	print_str(buffer);
+}
+
+/**
+ * Perform gain calibration for current and voltage with pure resistive load
+ * IAC offset should be done before
+ * calib_vac : the voltage mesured
+ * calib_r : the resistance of the charge
+ */
+void CIRRUS_Base::do_gain_calibration(float calib_vac, float calib_r)
+{
+	Bit_List i_gain, v_gain, i_acoff;
+	Bit_List temp;
+	Bit_List temp1(0, 0, 64);  // 1.0 value
+	uint8_t piv;
+	float init_scale_setting;
+	float calib_iac = calib_vac / calib_r;
+//	float i_ac_offset;
+
+	sprintf(buffer, CS_RES_LOAD, calib_vac, calib_iac, calib_r, calib_vac * calib_iac);
+	print_str(buffer);
+
+	if (Scale->I_SCALE == 0)
+	{
+		print_str(CS_RES_NOCALIB);
+		return;
+	}
+
+	stop_conversion();
+
+	// Restaure initial calibration
+	Soft_reset();
+//	// set I and V Gain to 1.0
+//	// 1.0 = 0x400000 and 64 = 0x40.
+//	set_gain_calibrations(&temp1, &temp1, Channel_1);
+//	if (twochannel)
+//		set_gain_calibrations(&temp1, &temp1, Channel_2);
+
+	// set T_Settle to 2000 ms and sample count to a big number
+	set_settle_time_ms(2000);
+	set_sample_count(16000);
+	set_highpass_filter(true, true);
+
+	// Set scale register for current (AN366REV2.pdf page 10)
+	// init_scale_setting = Iref/Imax*0.6 = calib_iac/Imax*0.6
+	// et Imax = I1_SCALE * 0.6
+	init_scale_setting = 0.6 * calib_iac / (Scale->I_SCALE * 0.6);
+	real_to_twoscompl(init_scale_setting, &temp);
+
+	sprintf(buffer, "INIT_SCALE_SETTING:  %.4f = 0x%.6X \r\n", init_scale_setting,
+			(unsigned int) temp.Bit32);
+	print_str(buffer);
+	write_register(P18_Scale, PAGE18, &temp);
+
+	start_conversion();
+	while (!(data_ready()))
+	{
+		print_str(CS_RES_CALIB);
+		CSDelay(3000);
+	}
+
+	// clear DRDY
+	clear_data_ready();
+
+	// perform gain calibration for all available channel
+	send_instruction(CALIB_GAIN_IV);
+
+	// wait till done, but poll quite often to get an idea of the process
+	CSDelay(3000);
+	while (!(data_ready()))
+	{
+		print_str(CS_RES_CALIB);
+		CSDelay(3000);
+	}
+
+	// clear DRDY
+	clear_data_ready();
+	stop_conversion();
+
+	//check IOR and VOR status bits
+	piv = pivor();
+	if (piv != 0)
+	{
+		print_int(CS_RES_PIVOR, piv);
+		if (piv >= 4)
+			return;
+	}
+
+	// get and store I & V Gain registers
+	// First channel
+	read_register(P16_I1_GAIN, PAGE16, &i_gain);
+	read_register(P16_V1_GAIN, PAGE16, &v_gain);
+
+	// print result
+	print_calibration("V1 GAIN", Base_22, v_gain);
+	print_calibration("I1 GAIN", Base_22, i_gain);
+
+//	// Update the I AC offset
+//	// Get the old value ...
+//	read_register(P16_I1_ACOFF, PAGE16, &i_acoff);
+//	print_calibration("I1_ACOFF old", Base_d24, i_acoff);
+////	sprintf(buffer, "I1_ACOFF old: %.6f, (%d, %d, %d) = 0x%.6X\r\n", i_acoff.Bit32 * over_pow2_24,
+////			i_acoff.LSB, i_acoff.MSB, i_acoff.HSB, (unsigned int) i_acoff.Bit32);
+////	print_str(buffer);
+//
+//	i_ac_offset = i_acoff.Bit32;
+//
+//	// then multiply by the I gain ...
+//	i_ac_offset *= (i_gain.Bit32 * over_pow2_22);
+//
+//	// then update I AC offset
+//	i_acoff.Bit32 = (uint32_t) (i_ac_offset);
+//	write_register(P16_I1_ACOFF, PAGE16, &i_acoff);
+//	print_calibration("I1_ACOFF new", Base_d24, i_acoff);
+////	sprintf(buffer, "I1_ACOFF new: %.6f, (%d, %d, %d) = 0x%.6X\r\n", i_acoff.Bit32 * over_pow2_24,
+////			i_acoff.LSB, i_acoff.MSB, i_acoff.HSB, (unsigned int) i_acoff.Bit32);
+////	print_str(buffer);
+
+	// Second channel
+	if (twochannel)
+	{
+		read_register(P16_I2_GAIN, PAGE16, &i_gain);
+		read_register(P16_V2_GAIN, PAGE16, &v_gain);
+
+		// print result
+		print_calibration("V2 GAIN", Base_22, v_gain);
+		print_calibration("I2 GAIN", Base_22, i_gain);
+
+//		// Update the I AC offset
+//		// Get the old value ...
+//		read_register(P16_I2_ACOFF, PAGE16, &i_acoff);
+//		print_calibration("I2_ACOFF old", Base_d24, i_acoff);
+//	//	sprintf(buffer, "I1_ACOFF old: %.6f, (%d, %d, %d) = 0x%.6X\r\n", i_acoff.Bit32 * over_pow2_24,
+//	//			i_acoff.LSB, i_acoff.MSB, i_acoff.HSB, (unsigned int) i_acoff.Bit32);
+//	//	print_str(buffer);
+//
+//		i_ac_offset = i_acoff.Bit32;
+//
+//		// then multiply by the I gain ...
+//		i_ac_offset *= (i_gain.Bit32 * over_pow2_22);
+//
+//		// then update I AC offset
+//		i_acoff.Bit32 = (uint32_t) (i_ac_offset);
+//		write_register(P16_I2_ACOFF, PAGE16, &i_acoff);
+//		print_calibration("I2_ACOFF new", Base_d24, i_acoff);
+//	//	sprintf(buffer, "I1_ACOFF new: %.6f, (%d, %d, %d) = 0x%.6X\r\n", i_acoff.Bit32 * over_pow2_24,
+//	//			i_acoff.LSB, i_acoff.MSB, i_acoff.HSB, (unsigned int) i_acoff.Bit32);
+//	//	print_str(buffer);
+	}
+
+	print_str(CS_RES_REMEMBER);
+}
+
+/**
+ * Perform IAC offset calibration for current
+ * Line voltage is fullscale and no current are applied to the CIRRUS
+ * The differential on IIn1+- (and IIn2+- for channel 2) should be 0 V
+ * This calibration must be done after gain calibration
+ */
+void CIRRUS_Base::do_Iac_offset_calibration(void)
+{
+	Bit_List i_acoff;
+	Bit_List Zero(0);
+	uint8_t piv;
+
+	print_str(CS_RES_CAL_AC_OFF);
+	stop_conversion();
+	set_settle_time_ms(2000);
+	set_sample_count(16000);
+	set_highpass_filter(true, true); // So DC offset is not used
+
+	// set the I AC offset channel to zero
+	set_ac_offset_calibrations(&Zero, Channel_1);
+	set_ac_offset_calibrations(&Zero, Channel_2);
+
+	start_conversion();
+	while (!(data_ready()))
+	{
+		print_str(CS_RES_CALIB);
+		CSDelay(3000);
+	}
+
+	// clear DRDY
+	clear_data_ready();
+
+	// perform AC offset calibration
+	// AC offset register will hold the square of the RMS offset
+	if (twochannel)
+		send_instruction(CALIB_ACOFFS_IALL);
+	else
+		send_instruction(CALIB_ACOFFS_I1);
+
+	CSDelay(4000);
+	while (!(data_ready()))
+	{
+		print_str(CS_RES_CALIB);
+		CSDelay(3000);
+	}
+
+	// clear DRDY
+	clear_data_ready();
+	stop_conversion();
+
+	piv = pivor();
+	if (piv != 0)
+	{
+		print_int(CS_RES_PIVOR, piv);
+		if (piv >= 4)
+			return;
+	}
+
+	// get and store I AC offset registers
+	read_register(P16_I1_ACOFF, PAGE16, &i_acoff);
+
+	// print result
+	print_calibration("I1 AC OFFSET (I1_ACOFF)", Base_24, i_acoff);
+
+	// Second channel
+	if (twochannel)
+	{
+		// get and store I AC offset registers
+		read_register(P16_I2_ACOFF, PAGE16, &i_acoff);
+
+		// print result
+		print_calibration("I2 AC OFFSET (I2_ACOFF)", Base_24, i_acoff);
+	}
+
+	print_str(CS_RES_REMEMBER);
+}
+
+/**
  * Perform DC offset calibration for current and voltage
+ * No line voltage and no current are applied to the CIRRUS
  * The differential on VIN+- and IIn1+- (and IIn2+- for channel 2) should be 0 V
- * only_I : only current is performed
+ * This calibration must be done after gain calibration
  * NOTE : HPF is disabled for the calibration
  * NOTE : if HPF is used, DC offset calibration is not necessary
+ * @PARAM : only_I : only current is performed
  */
 void CIRRUS_Base::do_dc_offset_calibration(bool only_I)
 {
@@ -2009,10 +2262,10 @@ void CIRRUS_Base::do_dc_offset_calibration(bool only_I)
 //	Bit_List temp1, temp2;
 	uint8_t piv;
 
-	print_str(CS_RES_NOLINE);
+	print_str(CS_RES_CAL_DC_OFF);
 	stop_conversion();
 	// set T_Settle to 2000ms and SampleCount to a large number
-	set_settle_time(8000); // will add 2 sec to the time (2000 * 4)
+	set_settle_time_ms(2000);
 	set_sample_count(16000);
 	set_highpass_filter(false, false); // disable HPF
 
@@ -2055,12 +2308,15 @@ void CIRRUS_Base::do_dc_offset_calibration(bool only_I)
 	read_register(P16_V1_DCOFF, PAGE16, &v_off);
 
 	// print result
-	sprintf(buffer, "V1 DC OFFSET (V1_DCOFF): %.6f, (%d, %d, %d) = 0x%.6X\r\n",
-			twoscompl_to_real(&v_off), v_off.LSB, v_off.MSB, v_off.HSB, (unsigned int) v_off.Bit32);
-	print_str(buffer);
-	sprintf(buffer, "I1 DC OFFSET (I1_DCOFF): %.6f, (%d, %d, %d) = 0x%.6X\r\n",
-			twoscompl_to_real(&i_off), i_off.LSB, i_off.MSB, i_off.HSB, (unsigned int) i_off.Bit32);
-	print_str(buffer);
+	print_calibration("V1 DC OFFSET (V1_DCOFF)", Base_real, v_off);
+	print_calibration("I1 DC OFFSET (I1_DCOFF)", Base_real, i_off);
+
+//	sprintf(buffer, "V1 DC OFFSET (V1_DCOFF): %.6f, (%d, %d, %d) = 0x%.6X\r\n",
+//			twoscompl_to_real(&v_off), v_off.LSB, v_off.MSB, v_off.HSB, (unsigned int) v_off.Bit32);
+//	print_str(buffer);
+//	sprintf(buffer, "I1 DC OFFSET (I1_DCOFF): %.6f, (%d, %d, %d) = 0x%.6X\r\n",
+//			twoscompl_to_real(&i_off), i_off.LSB, i_off.MSB, i_off.HSB, (unsigned int) i_off.Bit32);
+//	print_str(buffer);
 
 	// Deuxième channel
 	if (twochannel)
@@ -2069,230 +2325,20 @@ void CIRRUS_Base::do_dc_offset_calibration(bool only_I)
 		read_register(P16_V2_DCOFF, PAGE16, &v_off);
 
 		// print result
-		sprintf(buffer, "V2 DC OFFSET (V2_DCOFF): %.6f, (%d, %d, %d) = 0x%.6X\r\n",
-				twoscompl_to_real(&v_off), v_off.LSB, v_off.MSB, v_off.HSB, (unsigned int) v_off.Bit32);
-		print_str(buffer);
-		sprintf(buffer, "I2 DC OFFSET (I2_DCOFF): %.6f, (%d, %d, %d) = 0x%.6X\r\n",
-				twoscompl_to_real(&i_off), i_off.LSB, i_off.MSB, i_off.HSB, (unsigned int) i_off.Bit32);
-		print_str(buffer);
+		print_calibration("V2 DC OFFSET (V2_DCOFF)", Base_real, v_off);
+		print_calibration("I2 DC OFFSET (I2_DCOFF)", Base_real, i_off);
+
+//		sprintf(buffer, "V2 DC OFFSET (V2_DCOFF): %.6f, (%d, %d, %d) = 0x%.6X\r\n",
+//				twoscompl_to_real(&v_off), v_off.LSB, v_off.MSB, v_off.HSB, (unsigned int) v_off.Bit32);
+//		print_str(buffer);
+//		sprintf(buffer, "I2 DC OFFSET (I2_DCOFF): %.6f, (%d, %d, %d) = 0x%.6X\r\n",
+//				twoscompl_to_real(&i_off), i_off.LSB, i_off.MSB, i_off.HSB, (unsigned int) i_off.Bit32);
+//		print_str(buffer);
 	}
 
 	print_str(CS_RES_REMEMBER);
 }
 
-/**
- * Perform AC offset calibration for current
- * The differential on IIn1+- (and IIn2+- for channel 2) should be 0 V
- * You must select channel before
- */
-void CIRRUS_Base::do_ac_offset_calibration(void)
-{
-	Bit_List i_acoff;
-	Bit_List Zero(0);
-	uint8_t piv;
-
-	print_str(CS_RES_NOLINE);
-	stop_conversion();
-	set_settle_time(8000); // will add 2 sec to the time (2000 * 4)
-	set_sample_count(16000);
-	set_highpass_filter(true, true); // So DC offset is not used
-
-	// set the I AC offset channel to zero
-	set_ac_offset_calibrations(&Zero, currentchannel);
-
-	// clear DRDY
-	clear_data_ready();
-
-	// perform AC offset calibration
-	// AC offset register will hold the square of the RMS offset
-	send_instruction(CALIB_ACOFFS_I1);
-
-	CSDelay(4000);
-	while (!(data_ready()))
-	{
-		print_str(CS_RES_CALIB);
-		CSDelay(3000);
-	}
-
-	piv = pivor();
-	if (piv != 0)
-	{
-		print_int(CS_RES_PIVOR, piv);
-		if (piv >= 4)
-			return;
-	}
-
-	// get and store I AC offset registers
-	read_register(P16_I1_ACOFF, PAGE16, &i_acoff);
-
-	// print result
-	sprintf(buffer, "I1 AC OFFSET (I1_ACOFF): %.6f, (%d, %d, %d) = 0x%.6X\r\n",
-			blist_to_int(&i_acoff) * over_pow2_24, i_acoff.LSB, i_acoff.MSB, i_acoff.HSB,
-			(unsigned int) i_acoff.Bit32);
-	print_str(buffer);
-
-	// Configuration deuxième channel
-	if (twochannel)
-	{
-		set_ac_offset_calibrations(&Zero, Channel_2);
-
-		// clear DRDY
-		clear_data_ready();
-
-		// perform AC offset calibration
-		// AC offset register will hold the square of the RMS offset
-		send_instruction(CALIB_ACOFFS_I2);
-
-		CSDelay(4000);
-		while (!(data_ready()))
-		{
-			print_str(CS_RES_CALIB);
-			CSDelay(3000);
-		}
-
-		piv = pivor();
-		if (piv != 0)
-		{
-			print_int(CS_RES_PIVOR, piv);
-			if (piv >= 4)
-				return;
-		}
-
-		// get and store I AC offset registers
-		read_register(P16_I2_ACOFF, PAGE16, &i_acoff);
-
-		// print result
-		sprintf(buffer, "I2 AC OFFSET (I2_ACOFF): %.6f, (%d, %d, %d) = 0x%.6X\r\n",
-				blist_to_int(&i_acoff) * over_pow2_24, i_acoff.LSB, i_acoff.MSB, i_acoff.HSB,
-				(unsigned int) i_acoff.Bit32);
-		print_str(buffer);
-	}
-
-	print_str(CS_RES_REMEMBER);
-}
-
-/**
- * Perform gain calibration for current and voltage with pure resistive load
- * calib_vac : the voltage mesured
- * calib_r : the resistance of the charge
- */
-void CIRRUS_Base::do_gain_calibration(float calib_vac, float calib_r)
-{
-	const float over_pow2_22 = 1.0 / (4194304.0 - 1.0);
-	Bit_List i_gain, v_gain, i_acoff;
-	Bit_List temp;
-	Bit_List temp1(0, 0, 64);  // 1.0 value
-	uint8_t piv;
-	float init_scale_setting;
-	float calib_iac = calib_vac / calib_r;
-	float i_ac_offset;
-
-	sprintf(buffer, CS_RES_LOAD, calib_vac, calib_iac, calib_r, calib_vac * calib_iac);
-	print_str(buffer);
-
-	if (Scale->I_SCALE == 0)
-	{
-		print_str(CS_RES_NOCALIB);
-		return;
-	}
-
-	stop_conversion();
-	// set I and V Gain to 1.0
-	// 1.0 = 0x400000 and 64 = 0x40.
-	set_gain_calibrations(&temp1, &temp1, Channel_1);
-	if (twochannel)
-		set_gain_calibrations(&temp1, &temp1, Channel_2);
-
-	// set T_Settle to 2000 ms and sample count to a big number
-	set_settle_time(8000); // will add 2 sec to the time (2000 * 4)
-	set_sample_count(16000);
-	set_highpass_filter(true, true);
-
-	// Set scale register for current (AN366REV2.pdf page 10)
-	// init_scale_setting = Iref/Imax*0.6 = calib_iac/Imax*0.6
-	// et Imax = I1_SCALE * 0.6
-	init_scale_setting = 0.6 * calib_iac / (Scale->I_SCALE * 0.6);
-	real_to_twoscompl(init_scale_setting, &temp);
-
-	sprintf(buffer, "INIT_SCALE_SETTING:  %.4f = 0x%.6X \r\n", init_scale_setting,
-			(unsigned int) temp.Bit32);
-	print_str(buffer);
-	write_register(P18_Scale, PAGE18, &temp);
-
-	// clear DRDY
-	clear_data_ready();
-
-	// perform gain calibration
-	send_instruction(CALIB_GAIN_IV);
-
-	// wait till done, but poll quite often to get an idea of the process
-	CSDelay(3000);
-	while (!(data_ready()))
-	{
-		print_str(CS_RES_CALIB);
-		CSDelay(3000);
-	}
-
-	//check IOR and VOR status bits
-	piv = pivor();
-	if (piv != 0)
-	{
-		print_int(CS_RES_PIVOR, piv);
-		if (piv >= 4)
-			return;
-	}
-
-	// get and store I & V Gain registers
-	// Premier channel
-	read_register(P16_I1_GAIN, PAGE16, &i_gain);
-	read_register(P16_V1_GAIN, PAGE16, &v_gain);
-
-	// print result
-	sprintf(buffer, "V1 GAIN: %.6f, (%d, %d, %d) = 0x%.6X\r\n", blist_to_int(&v_gain) * over_pow2_22,
-			v_gain.LSB, v_gain.MSB, v_gain.HSB, (unsigned int) v_gain.Bit32);
-	print_str(buffer);
-	sprintf(buffer, "I1 GAIN: %.6f, (%d, %d, %d) = 0x%.6X\r\n", blist_to_int(&i_gain) * over_pow2_22,
-			i_gain.LSB, i_gain.MSB, i_gain.HSB, (unsigned int) i_gain.Bit32);
-	print_str(buffer);
-
-	// Update the I AC offset
-	// Get the old value ...
-	read_register(P16_I1_ACOFF, PAGE16, &i_acoff);
-	sprintf(buffer, "I1_ACOFF old: %.6f, (%d, %d, %d) = 0x%.6X\r\n", i_acoff.Bit32 * over_pow2_24,
-			i_acoff.LSB, i_acoff.MSB, i_acoff.HSB, (unsigned int) i_acoff.Bit32);
-	print_str(buffer);
-
-	i_ac_offset = i_acoff.Bit32;
-
-	// then multiply by the I gain ...
-	i_ac_offset *= (i_gain.Bit32 * over_pow2_22);
-
-	// then update I AC offset
-	i_acoff.Bit32 = (uint32_t) (i_ac_offset);
-	write_register(P16_I1_ACOFF, PAGE16, &i_acoff);
-	sprintf(buffer, "I1_ACOFF new: %.6f, (%d, %d, %d) = 0x%.6X\r\n", i_acoff.Bit32 * over_pow2_24,
-			i_acoff.LSB, i_acoff.MSB, i_acoff.HSB, (unsigned int) i_acoff.Bit32);
-	print_str(buffer);
-
-	// Deuxième channel
-	if (twochannel)
-	{
-		read_register(P16_I2_GAIN, PAGE16, &i_gain);
-		read_register(P16_V2_GAIN, PAGE16, &v_gain);
-
-		// print result
-		sprintf(buffer, "V2 GAIN: %.6f, (%d, %d, %d) = 0x%.6X\r\n",
-				blist_to_int(&v_gain) * over_pow2_22, v_gain.LSB, v_gain.MSB, v_gain.HSB,
-				(unsigned int) v_gain.Bit32);
-		print_str(buffer);
-		sprintf(buffer, "I2 GAIN: %.6f, (%d, %d, %d) = 0x%.6X\r\n",
-				blist_to_int(&i_gain) * over_pow2_22, i_gain.LSB, i_gain.MSB, i_gain.HSB,
-				(unsigned int) i_gain.Bit32);
-		print_str(buffer);
-	}
-
-	print_str(CS_RES_REMEMBER);
-}
 
 void CIRRUS_Base::set_phase_compensations(void)
 {
@@ -2300,46 +2346,80 @@ void CIRRUS_Base::set_phase_compensations(void)
 //  pass
 }
 
-void CIRRUS_Base::do_noload_power_calibration()
+/**
+ * P and Q offset calibration
+ * All others calibrations should be done and present in register
+ * Apply full scale voltage and zero load current
+ * Load must be off during calibration
+ */
+void CIRRUS_Base::do_power_offset_calibration()
 {
-	Bit_List temp, reg;
+	Bit_List reg;
 
 	print_str(CS_RES_NOLOADPOWER);
 	stop_conversion();
-	write_register(P16_P1_OFF, PAGE16, &temp);
-	write_register(P16_Q1_OFF, PAGE16, &temp);
-	// Deuxième channel
+
+	// Init offset to zero
+	// First channel
+	write_register(P16_P1_OFF, PAGE16, &reg);
+	write_register(P16_Q1_OFF, PAGE16, &reg);
+	// second channel
 	if (twochannel)
 	{
-		write_register(P16_P2_OFF, PAGE16, &temp);
-		write_register(P16_Q2_OFF, PAGE16, &temp);
+		write_register(P16_P2_OFF, PAGE16, &reg);
+		write_register(P16_Q2_OFF, PAGE16, &reg);
 	}
-	set_settle_time(8000);
+	// Set long sample count
+	set_settle_time_ms(2000);
 	set_sample_count(16000);
-	set_highpass_filter(true, true);
+	set_highpass_filter(true, false);
 	clear_data_ready();
 	start_conversion();
 
+	// Read P and Q avg and negate then to configure P and Q offset
 	if (wait_for_ready(true))
 	{
-		read_register(P16_P1_AVG, PAGE16, &reg);
-		reg.HSB = reg.HSB | 0x80; // negate the value
-		write_register(P16_P1_OFF, PAGE16, &reg);
-		read_register(P16_Q1_AVG, PAGE16, &reg);
-		reg.HSB = reg.HSB | 0x80; // negate the value
-		write_register(P16_Q1_OFF, PAGE16, &reg);
+		// P offset
+		if (read_register(P16_P1_AVG, PAGE16, &reg))
+		{
+			reg.HSB = reg.HSB | 0x80; // negate the value
+//			reg.Negate();
+//			reg = -reg;
+//			reg.CHECK = 0x00;
+			write_register(P16_P1_OFF, PAGE16, &reg);
+			print_calibration("P1 Offset", Base_23, reg);
+		}
+
+		// Q offset
+		if (read_register(P16_Q1_AVG, PAGE16, &reg))
+		{
+			reg.HSB = reg.HSB | 0x80; // negate the value
+//			reg.Negate();
+			write_register(P16_Q1_OFF, PAGE16, &reg);
+			print_calibration("Q1 Offset", Base_23, reg);
+		}
 
 		if (twochannel)
 		{
-			read_register(P16_P2_AVG, PAGE16, &reg);
-			reg.HSB = reg.HSB | 0x80; // negate the value
-			write_register(P16_P2_OFF, PAGE16, &reg);
-			read_register(P16_Q2_AVG, PAGE16, &reg);
-			reg.HSB = reg.HSB | 0x80; // negate the value
-			write_register(P16_Q2_OFF, PAGE16, &reg);
+			if (read_register(P16_P2_AVG, PAGE16, &reg))
+			{
+				reg.HSB = reg.HSB | 0x80; // negate the value
+//			reg.Negate();
+				write_register(P16_P2_OFF, PAGE16, &reg);
+				print_calibration("P2 Offset", Base_23, reg);
+			}
+
+			if (read_register(P16_Q2_AVG, PAGE16, &reg))
+			{
+				reg.HSB = reg.HSB | 0x80; // negate the value
+//			reg.Negate();
+				write_register(P16_Q2_OFF, PAGE16, &reg);
+				print_calibration("Q2 Offset", Base_23, reg);
+			}
 		}
 
 		print_str("No load power calibration done.\r\n");
+		print_str(CS_RES_REMEMBER);
 	}
 	else
 		print_str("No load power calibration fail.\r\n");
