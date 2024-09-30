@@ -25,6 +25,11 @@
 //#define USE_SAVE_CRASH   // Permet de sauvegarder les données du crash
 #include "Debug_utils.h"		// Some utils functions for debug
 
+// Calibration
+#ifdef CIRRUS_CALIBRATION
+#include "CIRRUS_Calibration.h"
+#endif
+
 // Use DS18B20
 #define USE_DS
 
@@ -148,13 +153,18 @@ DS18B20 DS(DS18B20_GPIO);
 
 #define TWO_CIRRUS
 
-//CIRRUS_Calib_typedef CS1_Calib = CS_CALIB0;
-//CIRRUS_Config_typedef CS1_Config = CS_CONFIG0;
+CIRRUS_Calib_typedef CS1_Calib = CS_CALIB0;
+CIRRUS_Config_typedef CS1_Config = CS_CONFIG0;
+CIRRUS_Calib_typedef CS2_Calib = CS_CALIB0;
+CIRRUS_Config_typedef CS2_Config = CS_CONFIG0;
 
 // Cirrus1 (CS5484 pour le tri)
-CIRRUS_Calib_typedef CS1_Calib = {242.00, 53.55, 0x3CC756, 0x40D6B0, 0x7025B9, 0x0, 0x0, 242.00,
-		17.00, 0x3CC756, 0x4303EE, 0x8A6100, 0x0, 0x0};
-CIRRUS_Config_typedef CS1_Config = {0xC00000, 0x44E2EB, 0x2AA, 0x731F0, 0x51D67C, 0x0}; // 0x400000
+//CIRRUS_Calib_typedef CS1_Calib = {242.00, 33.15, 0x3CC756, 0x40D6B0, 0x7025B9, 0x0, 0x0, 242.00,
+//		33.15, 0x3CC756, 0x4303EE, 0x8A6100, 0x0, 0x0};
+
+//CIRRUS_Calib_typedef CS1_Calib = {242.00, 33.15, 0x3C5C3B, 0x401665, 0x532144, 0x0, 0x0,
+//		242.00, 33.15, 0x3C5C3B, 0x3FE51B, 0x81EF04, 0x0, 0x0};
+//CIRRUS_Config_typedef CS1_Config = {0xC00000, 0x44E2EB, 0x2AA, 0x731F0, 0x51D67C, 0x0}; // 0x400000
 
 // Config1 = 0x44E2EB : version ZC sur DO0
 // Config1 = 0x00E4EB : version ZC sur DO0, P1 négatif sur DO3
@@ -163,9 +173,12 @@ CIRRUS_Config_typedef CS1_Config = {0xC00000, 0x44E2EB, 0x2AA, 0x731F0, 0x51D67C
 // Config1 = 0x22E51B : version ZC sur DO0, EPG2 output (P1 avg) sur DO2, P2 négatif sur DO3
 
 // Cirrus2 (5480 pour le tri)
-CIRRUS_Calib_typedef CS2_Calib = {260.00, 16.50, 0x3CC00B, 0x41B8D9, 0x5CF11, 0x9, 0x800009, 224.50,
-		60.00, 0x400000, 0x400000, 0x0, 0x0, 0x0};
-CIRRUS_Config_typedef CS2_Config = {0xC02000, 0x44E2E4, 0x1002AA, 0x931F0, 0x6C77D9, 0x0};
+//CIRRUS_Calib_typedef CS2_Calib = {242.00, 33.15, 0x3CC00B, 0x41B8D9, 0x5CF11, 0x9, 0x800009, 242.00,
+//		33.15, 0x400000, 0x400000, 0x0, 0x0, 0x0};
+
+//CIRRUS_Calib_typedef CS2_Calib = {242.00, 33.15, 0x3BEEE2, 0x3FE47F, 0x8FC5F9, 0x0, 0x0,
+//		242.00, 33.15, 0x3BEEE2, 0x3FB374, 0x278251, 0x0, 0x0};
+//CIRRUS_Config_typedef CS2_Config = {0xC02000, 0x44E2E4, 0x1002AA, 0x931F0, 0x6C77D9, 0x0};
 
 #ifdef CIRRUS_USE_UART
 #if CIRRUS_UART_HARD == 1
@@ -186,6 +199,10 @@ CIRRUS_CS548x Cirrus1 = CIRRUS_CS548x(CS_Com, true); // CS5484
 CIRRUS_CS548x Cirrus2 = CIRRUS_CS548x(CS_Com); // CS5480
 #else
 CIRRUS_CS548x Cirrus1 = CIRRUS_CS548x(CS_Com, true); // CS5484
+#endif
+#ifdef CIRRUS_CALIBRATION
+CIRRUS_Calibration CS_Calibration = CIRRUS_Calibration(Cirrus1);
+extern bool Calibration;
 #endif
 
 bool Cirrus_OK = false;
@@ -211,6 +228,7 @@ bool UserAnalyseMessage(void);
 void handleInitialization(CB_SERVER_PARAM);
 void handleOperation(CB_SERVER_PARAM);
 void handleCirrus(CB_SERVER_PARAM);
+void Selectchange_cb(CIRRUS_Base &cirrus);
 
 // ********************************************************************************
 // Task functions
@@ -222,43 +240,46 @@ void Display_Task_code(void *parameter)
 	uint8_t line = 0;
 	for (EVER)
 	{
-		// Cirrus message
-		if (Cirrus_OK)
+		if (!Calibration)
 		{
-			Simple_Get_Data();
-			line = Simple_Update_IHM(RTC_Local.the_time, "", false);
-		}
-		else
-		{
-			line = 0;
-			IHM_Clear();
-			IHM_Print(line++, RTC_Local.the_time);
-			UART_Message = "Cirrus failled";
-		}
+			// Cirrus message
+			if (Cirrus_OK)
+			{
+				Simple_Get_Data();
+				line = Simple_Update_IHM(RTC_Local.the_time, "", false);
+			}
+			else
+			{
+				line = 0;
+				IHM_Clear();
+				IHM_Print(line++, RTC_Local.the_time);
+				UART_Message = "Cirrus failled";
+			}
 
-		// DS18B20 message
-		if (DS_Count > 0)
-		{
-			Temp_str = "DS: " + DS.get_Temperature_Str(0) + "` " + DS.get_Temperature_Str(1) + "` ";
-			IHM_Print(line++, (const char*) Temp_str.c_str());
-		}
+			// DS18B20 message
+			if (DS_Count > 0)
+			{
+				Temp_str = "DS: " + DS.get_Temperature_Str(0) + "` " + DS.get_Temperature_Str(1) + "` ";
+				IHM_Print(line++, (const char*) Temp_str.c_str());
+			}
 
-		// Keyboard info message
-		if (count_Extra_Display != 0)
-		{
-			IHM_Print(line++, Extra_str.c_str());
-			count_Extra_Display--;
-			if (count_Extra_Display == 0)
-				Extra_str = "";
-		}
+			// Keyboard info message
+			if (count_Extra_Display != 0)
+			{
+				IHM_Print(line++, Extra_str.c_str());
+				count_Extra_Display--;
+				if (count_Extra_Display == 0)
+					Extra_str = "";
+			}
 
-		// Idle counter
+			// Idle counter
 #if USE_IDLE_TASK == true
-		IHM_Print(line++, (const char*) TaskList.GetIdleStr().c_str());
+			IHM_Print(line++, (const char*) TaskList.GetIdleStr().c_str());
 #endif
 
-		// Refresh display
-		IHM_Display();
+			// Refresh display
+			IHM_Display();
+		}
 
 		// Test extinction de l'écran
 		IHM_CheckTurnOff();
@@ -386,6 +407,7 @@ void setup()
 	// Initialisation du Cirrus
 	// Start the communication
 	CS_Com.begin();
+	CS_Com.setCirrusChangeCallback(Selectchange_cb);
 
 #ifdef TWO_CIRRUS
 	// Add Cirrus
@@ -409,14 +431,14 @@ void setup()
 
 	// Initialisation Cirrus1 : phase 1, phase 2
 	if (Cirrus_OK)
-		Cirrus_OK = CIRRUS_Generic_Initialization(Cirrus1, &CS1_Calib, &CS1_Config, false, false, '1');
+		Cirrus_OK = CIRRUS_Generic_Initialization(Cirrus1, &CS1_Calib, &CS1_Config, false, true, '1');
 
 	// Configure second Cirrus : Cirrus2
 	CS_Com.SelectCirrus(1);
 
 	// Initialisation Cirrus2 : phase 3, production
 	if (Cirrus_OK)
-		Cirrus_OK = CIRRUS_Generic_Initialization(Cirrus2, &CS2_Calib, &CS2_Config, false, false, '2');
+		Cirrus_OK = CIRRUS_Generic_Initialization(Cirrus2, &CS2_Calib, &CS2_Config, false, true, '2');
 
 	// On revient sur le premier Cirrus : Cirrus1
 	CS_Com.SelectCirrus(0);
@@ -611,48 +633,6 @@ void handleOperation(CB_SERVER_PARAM)
 	}
 #endif
 
-	if (pserver->hasArg("Toggle_IHM"))
-	{
-		bool status = (pserver->arg("Toggle_IHM")).equals("1");
-		if (CS_Com.Is_IHM_Locked() != status)
-		{
-			// Toggle flag Calibration
-			CS_Com.Do_Lock_IHM(status);
-			if (CS_Com.Is_IHM_Locked())
-				print_debug("IHM Locked\r\n");
-			else
-				print_debug("IHM unLocked\r\n");
-		}
-	}
-
-	if (pserver->hasArg("Toggle_CS"))
-	{
-		// we must have 2 cirrus
-		if (CS_Com.GetNumberCirrus() == 2)
-		{
-			int id = (pserver->arg("Toggle_CS")).toInt() - 1;
-			if (CS_Com.GetSelectedID() != id)
-			{
-				if (id == 0)
-				{
-					CS_Com.SelectCirrus(0, Channel_1);
-					Simple_Set_Cirrus(Cirrus1);
-					print_debug("Cirrus 1 selected\r\n");
-				}
-				else
-				{
-					CS_Com.SelectCirrus(1, Channel_1);
-#ifdef TWO_CIRRUS
-					Simple_Set_Cirrus(Cirrus2);
-#endif
-					print_debug("Cirrus 2 selected\r\n");
-				}
-			}
-		}
-		else
-			print_debug("Only one Cirrus is present\r\n");
-	}
-
 	pserver->send(204, "text/plain", "");
 }
 
@@ -667,6 +647,14 @@ String Handle_Wifi_Request(CS_Common_Request Wifi_Request, char *Request)
 	}
 	else
 		return CS_Com.Handle_Common_Request(Wifi_Request, Request, &CS1_Calib, &CS1_Config);
+}
+
+void Selectchange_cb(CIRRUS_Base &cirrus)
+{
+	Simple_Set_Cirrus(cirrus);
+#ifdef CIRRUS_CALIBRATION
+	CS_Calibration.SetCirrus(cirrus);
+#endif
 }
 
 // ********************************************************************************

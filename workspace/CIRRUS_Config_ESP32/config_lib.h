@@ -113,13 +113,13 @@
 #ifdef CIRRUS_USE_UART
 #define CIRRUS_UART_BAUD	512000
 #endif
-//#define CIRRUS_FLASH
+#define CIRRUS_FLASH
 #define LOG_CIRRUS_CONNECT
-//#define CIRRUS_CALIBRATION
+#define CIRRUS_CALIBRATION
 //#define DEBUG_CIRRUS
 //#define DEBUG_CIRRUS_BAUD
 
-//#define CIRRUS_RMS_FULL  // To have U, I and P RMS. Otherwise only U and P RMS
+#define CIRRUS_RMS_FULL  // To have U, I and P RMS. Otherwise only U and P RMS
 #define CIRRUS_SIMPLE_IS_CS5490	false  // Only used in Simple_Get_Data. true for CS5490, false for CS548x
 
 /**********************************************************
