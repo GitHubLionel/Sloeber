@@ -21,9 +21,10 @@ class CIRRUS_Calibration
 		{
 			Current_Cirrus = &cirrus;
 		}
-		void Complete(CIRRUS_Calib_typedef *Calib_base, float V1_Ref, float R);
+		void Complete(CIRRUS_Calib_typedef *Calib_base, Cirrus_DoGain_typedef gain, float param1 = -1, float param2 = -1);
+		void Gain(CIRRUS_Calib_typedef *Calib_base, Cirrus_DoGain_typedef gain, float param1 = -1, float param2 = -1);
 		void IACOffset(CIRRUS_Calib_typedef *Calib_base);
-		void Gain(CIRRUS_Calib_typedef *Calib_base, float V_Ref, float R);
+		void PQOffset(CIRRUS_Calib_typedef *Calib_base);
 	protected:
 		CIRRUS_Base *Current_Cirrus = NULL;
 };

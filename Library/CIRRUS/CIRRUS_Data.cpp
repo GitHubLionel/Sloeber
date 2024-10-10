@@ -37,7 +37,7 @@ bool CIRRUS_RMSData::GetData(unsigned long reftime, bool reset_ready)
 	if (_log_count == 0)
 		_startLog = reftime;
 
-	if (Cirrus->wait_for_ready(reset_ready))
+	if (Cirrus->wait_for_data_ready(reset_ready))
 	{
 		Cirrus->get_data(CIRRUS_RMS_Voltage, &_inst_data.Voltage);
 #ifdef CIRRUS_RMS_FULL
@@ -109,7 +109,7 @@ CIRRUS_CS5490::~CIRRUS_CS5490()
 	DeleteAndNull(RMSData);
 }
 
-String CIRRUS_CS5490::GetName(void)
+const String CIRRUS_CS5490::GetName(void)
 {
 	return "CS5490";
 }
@@ -138,7 +138,7 @@ CIRRUS_CS548x::~CIRRUS_CS548x()
 	DeleteAndNull(RMSData_ch2);
 }
 
-String CIRRUS_CS548x::GetName(void)
+const String CIRRUS_CS548x::GetName(void)
 {
 	if (isCS5484)
 	  return "CS5484";

@@ -81,7 +81,8 @@ typedef union Bit_List
 			LSB = MSB = HSB = CHECK = 0x00;
 		}
 
-		Bit_List(const uint8_t _LSB, const uint8_t _MSB, const uint8_t _HSB, const uint8_t _CHECK = 0x00)
+		Bit_List(const uint8_t _LSB, const uint8_t _MSB, const uint8_t _HSB,
+				const uint8_t _CHECK = 0x00)
 		{
 			LSB = _LSB;
 			MSB = _MSB;
@@ -256,6 +257,13 @@ typedef union
 		};
 } CIRRUS_Scale_typedef;
 
+typedef enum
+{
+	gain_Full_IUScale,
+	gain_Full_UScale,
+	gain_IUScale
+} Cirrus_DoGain_typedef;
+
 /**
  * Structure contenant les valeurs de calibration
  * Scale factor : U et I
@@ -327,7 +335,8 @@ typedef enum
 /**
  * Common request enumeration
  */
-typedef enum {
+typedef enum
+{
 	csw_REG,
 	csw_SCALE,
 	csw_REG_MULTI,
@@ -335,8 +344,9 @@ typedef enum {
 	csw_CS,
 	csw_LOCK,
 	csw_FLASH,
-	csw_IACOFF,
 	csw_GAIN,
+	csw_IACOFF,
+	csw_PQOFF,
 	csw_NONE
 } CS_Common_Request;
 
@@ -646,7 +656,7 @@ class CIRRUS_Base
 		bool SetUARTBaud(uint32_t baud, bool change_UART);
 		bool set_uart_baudrate(uint32_t baud);
 #endif
-		virtual String GetName(void);
+		virtual const String GetName(void);
 		virtual bool IsTwoChannel(void)
 		{
 			return false;
@@ -677,7 +687,7 @@ class CIRRUS_Base
 		void softsoft_reset(void);
 
 		// Get data functions
-		bool wait_for_ready(bool clear_ready);
+		bool wait_for_data_ready(bool clear_ready);
 		float get_instantaneous_voltage(void);
 		float get_instantaneous_current(void);
 		float get_instantaneous_power(void);
@@ -719,21 +729,19 @@ class CIRRUS_Base
 		void write_register(uint8_t register_no, uint8_t page_no, Bit_List *thedata);
 		void send_instruction(uint8_t instruction);
 
+		// Calibration set
+		void set_gain_calibrations(Bit_List *v_gain, Bit_List *i_gain, CIRRUS_Channel channel);
+		void set_dc_offset_calibrations(Bit_List *v_off, Bit_List *i_off, CIRRUS_Channel channel);
+		void set_Iac_offset_calibrations(Bit_List *i_acoff, CIRRUS_Channel channel);
+		void set_power_offset_calibrations(Bit_List *p_off, Bit_List *q_off, CIRRUS_Channel channel);
+		void set_phase_compensations(void);
+		void set_temp_calibrations(void);
+
 		// Calibration do
-		typedef enum {
-			Base_real,
-			Base_22,
-			Base_23,
-			Base_24,
-			Base_d24
-		} Print_Base_def;
-		void print_calibration(const char *message, Print_Base_def base, const Bit_List &val);
-		void do_gain_calibration(float calib_vac, float calib_r);
+		void do_gain_calibration(Cirrus_DoGain_typedef dogain, float param1 = -1, float param2 = -1);
 		void do_Iac_offset_calibration(void);
 		void do_dc_offset_calibration(bool only_I);
-		void set_phase_compensations(void);
 		void do_power_offset_calibration();
-		void set_temp_calibrations(void);
 
 		// The pin to select the Cirrus in case we have several Cirrus
 		uint8_t Cirrus_Pin = 0;
@@ -827,7 +835,9 @@ class CIRRUS_Base
 		uint8_t P18_VSweil_LEVEL;
 
 		// Scale factors
+		// Pointer to the current scale : Scale_ch1 or Scale_ch2
 		CIRRUS_Scale_typedef *Scale = NULL;
+		// Scale for channel 1 and channel 2
 		CIRRUS_Scale_typedef Scale_ch1;
 		CIRRUS_Scale_typedef Scale_ch2;
 
@@ -858,10 +868,16 @@ class CIRRUS_Base
 		void data_reset(void);
 
 		// Calibration
-		void set_gain_calibrations(Bit_List *v_gain, Bit_List *i_gain, CIRRUS_Channel channel);
-		void set_dc_offset_calibrations(Bit_List *v_off, Bit_List *i_off, CIRRUS_Channel channel);
-		void set_ac_offset_calibrations(Bit_List *i_acoff, CIRRUS_Channel channel);
-		void set_no_load_calibrations(Bit_List *p_off, Bit_List *q_off, CIRRUS_Channel channel);
+		typedef enum
+		{
+			Base_real,
+			Base_22,
+			Base_23,
+			Base_24,
+			Base_d24
+		} Print_Base_def;
+		void print_calibration(const char *message, Print_Base_def base, const Bit_List &val);
+		bool CheckPivor(void);
 };
 
 // ********************************************************************************
@@ -1046,7 +1062,7 @@ class CIRRUS_CS5490: public CIRRUS_Base
 			Initialize();
 		}
 		~CIRRUS_CS5490();
-		String GetName(void);
+		const String GetName(void);
 
 		/**
 		 * Get direct access to RMS data class
@@ -1180,7 +1196,7 @@ class CIRRUS_CS548x: public CIRRUS_Base
 			Initialize();
 		}
 		~CIRRUS_CS548x();
-		String GetName(void);
+		const String GetName(void);
 		virtual bool IsTwoChannel(void)
 		{
 			return true;
@@ -1233,7 +1249,8 @@ bool CIRRUS_Generic_Initialization(CIRRUS_Base &Cirrus, CIRRUS_Calib_typedef *CS
 bool CIRRUS_Generic_Initialization(CIRRUS_Base &Cirrus, CIRRUS_Calib_typedef *CS_Calib,
 		CIRRUS_Config_typedef *CS_Config, bool print_data, bool Flash_op_load = false, char Flash_id = '1');
 #endif
-void CIRRUS_Restart(CIRRUS_Base &Cirrus, CIRRUS_Calib_typedef *CS_Calib, CIRRUS_Config_typedef *CS_Config);
+void CIRRUS_Restart(CIRRUS_Base &Cirrus, CIRRUS_Calib_typedef *CS_Calib,
+		CIRRUS_Config_typedef *CS_Config);
 
 /**
  * For the general response for a Wifi "/getCirrus" request

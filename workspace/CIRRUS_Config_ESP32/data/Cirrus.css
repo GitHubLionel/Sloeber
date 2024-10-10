@@ -49,6 +49,15 @@ hr {
 /*  margin-bottom: 10px;*/
 }
 
+.ihm {
+  background-color: #13ed25;
+  color: #ffffff;
+  font-size: 1.0em;
+ /* font-weight: bold;*/
+  padding: 1px 5px 1px 5px;
+/*  margin-bottom: 10px;*/
+}
+
 .right {
   float: right;
 }
@@ -77,7 +86,7 @@ hr {
   outline: none;
   cursor: pointer;
   padding: 10px 3px 10px 3px;
-  width: 14.28%;    /* percent is function of the number of page */
+  width: 12.5%;    /* percent is function of the number of page */
 }
 
 .tablink:hover {
@@ -174,9 +183,134 @@ button {
   margin: 0 auto 3rem;
 }
 
+/* Toggle button*/
+.switch {
+  position: relative;
+  display: block;
+  vertical-align: top;
+  width: 95px; /* La largeur du toggle */
+  height: 30px;
+  padding: 3px;
+  margin:0;
+  border-radius: 18px;
+  box-shadow: inset 0 -1px white, inset 0 1px 1px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  box-sizing:content-box;
+}
+.switch-input {
+    position: absolute;
+    top: 0;
+    left: 0;
+    opacity: 0;
+  box-sizing:content-box;
+}
+.switch-label {
+  position: relative;
+  display: block;
+  height: inherit;
+  font-size: 15px;
+  border-radius: inherit;
+}
+.switch-label:before, .switch-label:after {
+  position: absolute;
+  top: 50%;
+  margin-top: -.5em;
+  line-height: 1;
+  -webkit-transition: inherit;
+  -moz-transition: inherit;
+  -o-transition: inherit;
+  transition: inherit;
+  box-sizing:content-box;
+}
+.switch-label:before {
+  content: attr(data-off);
+  right: 11px; /* la position du texte */
+  color: #888888;
+  text-shadow: 0 1px rgba(255, 255, 255, 0.5);
+}
+.switch-label:after {
+  content: attr(data-on);
+  left: 11px;
+  color: #FFFFFF;
+  text-shadow: 0 1px rgba(0, 0, 0, 0.2);
+  opacity: 0;
+}
+.switch-input:checked ~ .switch-label {
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.15), inset 0 0 3px rgba(0, 0, 0, 0.2);
+}
+.switch-input:checked ~ .switch-label:before {
+  opacity: 0;
+}
+.switch-input:checked ~ .switch-label:after {
+  opacity: 1;
+}
+.switch-handle {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 28px;
+  height: 28px;
+  border-radius: 100%;
+}
+.switch-handle:before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  margin: -6px 0 0 -6px;
+  width: 12px;
+  height: 12px;
+  border-radius: 6px;
+  box-shadow: inset 0 1px rgba(0, 0, 0, 0.02);
+}
+.switch-input:checked ~ .switch-handle {
+  left: 54px;
+  box-shadow: -1px 1px 5px rgba(0, 0, 0, 0.2);
+}
+.switch-flat {
+  padding: 0;
+  background: #FFF;
+  background-image: none;
+}
+.switch-flat .switch-label {
+  border: solid 2px #eceeef;
+}
+.switch-flat .switch-label:after {
+  color: #a20dbd;
+}
+.switch-flat .switch-handle {
+  background: #dadada;
+  width: 22px;
+  height: 22px;
+  box-shadow: none;
+}
+.switch-flat .switch-handle:before {
+  background: #ffffff;
+}
+.switch-flat .switch-input:checked ~ .switch-label {
+  background: #FFF;
+  border-color: #a20dbd;
+}
+.switch-flat .switch-input:checked ~ .switch-handle {
+  left: 67px; /* La position  du toggle à droite */
+  background: #a20dbd;
+  box-shadow: none;
+}
+/* Toggle Transition */
+.switch-label, .switch-handle {
+  transition: All 0.3s ease;
+  -webkit-transition: All 0.3s ease;
+  -moz-transition: All 0.3s ease;
+  -o-transition: All 0.3s ease;
+}
+
+.label_form {
+  color: black;
+}
 
 #m_Config {background-color: white;}
 #m_CS_Register {background-color: white;}
+#m_CS_Calibration {background-color: white;}
 #m_CS_Config0_2 {background-color: white;}
 #m_CS_Config1 {background-color: white;}
 #m_CS_Mesure {background-color: white;}

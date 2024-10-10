@@ -7,7 +7,7 @@
 /**
  * Enchaine la calibration sans charge puis la calibration avec charge
  */
-void CIRRUS_Calibration::Complete(CIRRUS_Calib_typedef *Calib_base, float V1_Ref, float R)
+void CIRRUS_Calibration::Complete(CIRRUS_Calib_typedef *Calib_base, Cirrus_DoGain_typedef gain, float param1, float param2)
 {
 	if (Current_Cirrus == NULL)
 	{
@@ -17,49 +17,14 @@ void CIRRUS_Calibration::Complete(CIRRUS_Calib_typedef *Calib_base, float V1_Ref
 	}
 
 	// Gain calibration
-	Gain(Calib_base, V1_Ref, R);
+	Gain(Calib_base, gain, param1, param2);
 
 	// IAC offset calibration
 	IACOffset(Calib_base);
 }
 
 /**
- * Calibration n°2 : IAC offset
- * Line voltage is fullscale and no current are applied to the CIRRUS
- */
-void CIRRUS_Calibration::IACOffset(CIRRUS_Calib_typedef *Calib_base)
-{
-	if (Current_Cirrus == NULL)
-	{
-		IHM_Clear(true);
-		IHM_Print(1, "No Cirrus !", true);
-		return;
-	}
-
-	IHM_Clear(true);
-	IHM_Print(1, "IAC off cal ...", true);
-
-	// Delais pour déconnecter
-	delay(5000);
-//	if (with_DC)
-//		Current_Cirrus->do_dc_offset_calibration(true);
-	Current_Cirrus->do_Iac_offset_calibration();
-
-	// Update Calib_base
-	Bit_List i_acoff;
-	// get I AC offset registers
-	Current_Cirrus->read_register(P16_I1_ACOFF, PAGE16, &i_acoff);
-	Calib_base->I1ACOFF = i_acoff.Bit32;
-
-	IHM_Print(2, "Ended.    ");
-	IHM_Print(3, "Reconnect ...", true);
-	// Delais pour reconnecter
-	delay(5000);
-	IHM_Clear(true);
-}
-
-/**
- * Séquence de calibration n°2 :
+ * Séquence de calibration n°1 :
  * Charge connue : tension, résistance R=U²/P
  * Test radiateur 1000 W sous 220 V ==> R = 48.4 et tension mesurée par Saia, ...
  * R = 48.4 théorique, 49.1 mesuré à l'ohmmètre
@@ -67,7 +32,7 @@ void CIRRUS_Calibration::IACOffset(CIRRUS_Calib_typedef *Calib_base)
  * V1_Ref : tension mesurée lors du test
  * R : résistance de la charge
  */
-void CIRRUS_Calibration::Gain(CIRRUS_Calib_typedef *Calib_base, float V_Ref, float R)
+void CIRRUS_Calibration::Gain(CIRRUS_Calib_typedef *Calib_base, Cirrus_DoGain_typedef gain, float param1, float param2)
 {
 	if (Current_Cirrus == NULL)
 	{
@@ -98,7 +63,7 @@ void CIRRUS_Calibration::Gain(CIRRUS_Calib_typedef *Calib_base, float V_Ref, flo
 
 	// Set base calibration (soft reset)
 //	Current_Cirrus->Calibration(&Calib);
-	Current_Cirrus->do_gain_calibration(V_Ref, R);
+	Current_Cirrus->do_gain_calibration(gain, param1,param2);
 
 //	Current_Cirrus->Get_Parameters(&Calib, &Config);
 //	Current_Cirrus->Print_Calib(&Calib);
@@ -121,6 +86,90 @@ void CIRRUS_Calibration::Gain(CIRRUS_Calib_typedef *Calib_base, float V_Ref, flo
 //	Calib_base->I2ACOFF = reg.Bit32;
 
 	IHM_Print(2, "Ended.    ", true);
+}
+
+/**
+ * Calibration n°2 : IAC offset
+ * Line voltage is fullscale and no current are applied to the CIRRUS
+ */
+void CIRRUS_Calibration::IACOffset(CIRRUS_Calib_typedef *Calib_base)
+{
+	if (Current_Cirrus == NULL)
+	{
+		IHM_Clear(true);
+		IHM_Print(1, "No Cirrus !", true);
+		return;
+	}
+
+	IHM_Clear(true);
+	IHM_Print(1, "IAC off cal ...", true);
+
+	// Delais pour déconnecter
+	delay(5000);
+//	if (with_DC)
+//		Current_Cirrus->do_dc_offset_calibration(true);
+	Current_Cirrus->do_Iac_offset_calibration();
+
+	// Update Calib_base
+	Bit_List i_acoff;
+	// get I AC offset registers
+	Current_Cirrus->read_register(P16_I1_ACOFF, PAGE16, &i_acoff);
+	Calib_base->I1ACOFF = i_acoff.Bit32;
+
+	if (Current_Cirrus->IsTwoChannel())
+	{
+		Current_Cirrus->read_register(P16_I2_ACOFF, PAGE16, &i_acoff);
+		Calib_base->I2ACOFF = i_acoff.Bit32;
+	}
+
+	IHM_Print(2, "Ended.    ");
+	IHM_Print(3, "Reconnect ...", true);
+	// Delais pour reconnecter
+	delay(5000);
+	IHM_Clear(true);
+}
+/**
+ * Calibration n°3 : P and Q offset
+ * Line voltage is fullscale and no current are applied to the CIRRUS
+ */
+void CIRRUS_Calibration::PQOffset(CIRRUS_Calib_typedef *Calib_base)
+{
+	if (Current_Cirrus == NULL)
+	{
+		IHM_Clear(true);
+		IHM_Print(1, "No Cirrus !", true);
+		return;
+	}
+
+	IHM_Clear(true);
+	IHM_Print(1, "p&Q off cal ...", true);
+
+	// Delais pour déconnecter
+	delay(5000);
+
+	Current_Cirrus->do_power_offset_calibration();
+
+	// Update Calib_base
+	Bit_List offset;
+	// get P and Q offset registers
+	Current_Cirrus->read_register(P16_P1_OFF, PAGE16, &offset);
+	Calib_base->P1OFF = offset.Bit32;
+	Current_Cirrus->read_register(P16_Q1_OFF, PAGE16, &offset);
+	Calib_base->Q1OFF = offset.Bit32;
+
+	if (Current_Cirrus->IsTwoChannel())
+	{
+		Current_Cirrus->read_register(P16_P2_OFF, PAGE16, &offset);
+		Calib_base->P2OFF = offset.Bit32;
+		Current_Cirrus->read_register(P16_Q2_OFF, PAGE16, &offset);
+		Calib_base->Q2OFF = offset.Bit32;
+	}
+
+	IHM_Print(2, "Ended.    ");
+	IHM_Print(3, "Reconnect ...", true);
+	// Delais pour reconnecter
+	delay(5000);
+	IHM_Clear(true);
 }
 
 // ********************************************************************************

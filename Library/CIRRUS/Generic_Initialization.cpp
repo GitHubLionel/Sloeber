@@ -137,21 +137,21 @@ void handleCirrus(CB_SERVER_PARAM)
 					strcpy(Request, (const char*) pserver->arg("BAUD").c_str());
 				}
 				else
-					// Changement de la vitesse
+					// Changement de Cirrus
 					if (pserver->hasArg("CS"))
 					{
 						Wifi_Request = csw_CS;
 						strcpy(Request, (const char*) pserver->arg("CS").c_str());
 					}
 					else
-						// Changement de la vitesse
+						// LOCK IHM
 						if (pserver->hasArg("LOCK"))
 						{
 							Wifi_Request = csw_LOCK;
 							strcpy(Request, (const char*) pserver->arg("LOCK").c_str());
 						}
 						else
-							// Changement de la vitesse
+							// Sauvegarde dans la FLASH
 							if (pserver->hasArg("FLASH"))
 							{
 								Wifi_Request = csw_FLASH;
@@ -159,19 +159,27 @@ void handleCirrus(CB_SERVER_PARAM)
 							}
 #ifdef CIRRUS_CALIBRATION
 							else
-								// Demande calibration sans charge
-								if (pserver->hasArg("IACOFF"))
+								// Demande calibration gain (avec charge)
+								if (pserver->hasArg("GAIN"))
 								{
-									Wifi_Request = csw_IACOFF;
-									strcpy(Request, "IACOFF");
+									Wifi_Request = csw_GAIN;
+									strcpy(Request, (const char*) pserver->arg("GAIN").c_str());
 								}
 								else
-									// Demande calibration gain (avec charge)
-									if (pserver->hasArg("GAIN"))
+									// Demande calibration IAC offset (sans charge)
+									if (pserver->hasArg("IACOFF"))
 									{
-										Wifi_Request = csw_GAIN;
-										strcpy(Request, (const char*) pserver->arg("GAIN").c_str());
+										Wifi_Request = csw_IACOFF;
+										strcpy(Request, "IACOFF");
 									}
+									else
+										// Demande calibration P et Q offset (sans charge)
+										if (pserver->hasArg("IACOFF"))
+										{
+											Wifi_Request = csw_PQOFF;
+											strcpy(Request, "PQOFF");
+										}
+
 #endif // CALIBRATION
 
 	String result = "";

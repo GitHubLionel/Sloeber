@@ -516,24 +516,31 @@ void CIRRUS_Interrupt_DO_Action_SSR()
 // Gestion de la communication avec Cirrus_Connect
 // ********************************************************************************
 
+/**
+ * Change current Cirrus when we have several Cirrus
+ * Request should be '1', or '2' ...
+ */
 void CIRRUS_Communication::COM_ChangeCirrus(uint8_t *Request)
 {
-	// we must have 2 cirrus
-	if (GetNumberCirrus() == 2)
+	// we must have more than one cirrus
+	if (GetNumberCirrus() > 1)
 	{
-		int id = strtol((char*) Request, NULL, 10);
+		// Request is 1 or 2
+		int id = strtol((char*) Request, NULL, 10) - 1;
 		if (GetSelectedID() != id)
 		{
-			if (id == 0)
-			{
-				SelectCirrus(0, Channel_1);
-				CurrentCirrus->print_str("Cirrus 1 selected\r\n");
-			}
-			else
-			{
-				SelectCirrus(1, Channel_1);
-				CurrentCirrus->print_str("Cirrus 2 selected\r\n");
-			}
+			SelectCirrus(id, Channel_1);
+			char message[30];
+			sprintf(message, "Cirrus %d selected\r\n", id + 1);
+			CurrentCirrus->print_str(message);
+//			if (id == 1)
+//			{
+//				CurrentCirrus->print_str("Cirrus 2 selected\r\n");
+//			}
+//			else
+//			{
+//				CurrentCirrus->print_str("Cirrus 1 selected\r\n");
+//			}
 		}
 	}
 	else
@@ -674,14 +681,13 @@ String CIRRUS_Communication::Handle_Common_Request(CS_Common_Request Common_Requ
 
 	switch (Common_Request)
 	{
-		// Demande d'un registre
-		case csw_REG:
+		case csw_REG: // Demande d'un registre
 		{
 			COM_Register((uint8_t*) Request, response);
 			break;
 		}
-		// Demande des scales (U_Calib, I_Max)
-		case csw_SCALE:
+
+		case csw_SCALE: // Demande des scales (U_Calib, I_Max)
 		{
 			float scale[4] = {0};
 			COM_Scale((uint8_t*) Request, &scale[0], response);
@@ -692,26 +698,26 @@ String CIRRUS_Communication::Handle_Common_Request(CS_Common_Request Common_Requ
 			CS_Calib->I2_MAX = scale[3];
 			break;
 		}
-		// Demande de plusieurs registres (graphe, dump)
-		case csw_REG_MULTI:
+
+		case csw_REG_MULTI: // Demande de plusieurs registres (graphe, dump)
 		{
 			COM_Register_Multi((uint8_t*) Request, response);
 			break;
 		}
-		// Changement de la vitesse
-		case csw_BAUD:
+
+		case csw_BAUD: // Changement de la vitesse
 		{
 			COM_ChangeBaud((uint8_t*) Request, response);
 			break;
 		}
-		// Changement de Cirrus
-		case csw_CS:
+
+		case csw_CS: // Changement de Cirrus
 		{
 			COM_ChangeCirrus((uint8_t*) Request);
 			break;
 		}
-		// Lock de l'IHM
-		case csw_LOCK:
+
+		case csw_LOCK: // Lock de l'IHM
 		{
 			bool status = (*Request == '1');
 			// Toggle lock IHM
@@ -722,8 +728,8 @@ String CIRRUS_Communication::Handle_Common_Request(CS_Common_Request Common_Requ
 				print_debug("IHM unLocked\r\n");
 			break;
 		}
-		// Sauvegarde dans la FLASH
-		case csw_FLASH:
+
+		case csw_FLASH: // Sauvegarde dans la FLASH
 		{
 			char id = '1';
 			if (Selected != -1) // In case we have several Cirrus
@@ -734,8 +740,47 @@ String CIRRUS_Communication::Handle_Common_Request(CS_Common_Request Common_Requ
 		}
 
 #ifdef CIRRUS_CALIBRATION
-		// Demande calibration sans charge (I AC Offset)
-		case csw_IACOFF:
+			// Demande calibration gain (I AC et U AC Gain)
+			// Request param is: empty or Iref#spire or Uref#Iref#spire
+		case csw_GAIN:
+		{
+			float p1, p2, p3;
+			uint8_t *Request2 = (uint8_t*) Request;
+			char *pbuffer = strtok((char*) Request2, ";#");
+
+			Calibration = true;
+			if (pbuffer == NULL)
+			{
+				CS_Calibration.Gain(CS_Calib, gain_Full_IUScale);
+			}
+			else
+			{
+				p1 = strtof(pbuffer, NULL);
+				pbuffer = strtok(NULL, ";#");
+				p2 = strtof(pbuffer, NULL);
+				pbuffer = strtok(NULL, ";#");
+				if (pbuffer == NULL)
+				{
+					// Here p1 = Iref and p2 = nb spire
+					CS_Calibration.Gain(CS_Calib, gain_Full_UScale, p1 * p2);
+				}
+				else
+				{
+					// Here p1 = Uref, p2 = Iref and p3 = nb spire
+					p3 = strtof(pbuffer, NULL);
+					CS_Calibration.Gain(CS_Calib, gain_IUScale, p1, p2 * p3);
+				}
+			}
+
+			Calibration = false;
+			strcpy(response, "GAIN_OK");
+
+			// Redémarrage du Cirrus
+			CIRRUS_Restart(*GetCurrentCirrus(), CS_Calib, CS_Config);
+			break;
+		}
+
+		case csw_IACOFF: // Demande calibration I AC Offset
 		{
 			Calibration = true;
 			CS_Calibration.IACOffset(CS_Calib);
@@ -746,25 +791,19 @@ String CIRRUS_Communication::Handle_Common_Request(CS_Common_Request Common_Requ
 			CIRRUS_Restart(*GetCurrentCirrus(), CS_Calib, CS_Config);
 			break;
 		}
-		// Demande calibration gain avec charge (I AC et U AC Gain)
-		case csw_GAIN:
+
+		case csw_PQOFF: // Demande calibration P et Q Offset
 		{
-			float V_Ref, R;
-			uint8_t *Request2 = (uint8_t*) Request;
-			char *pbuffer = strtok((char*) Request2, ";#");
-
-			R = strtof(pbuffer, NULL);
-			V_Ref = strtof(strtok(NULL, ";#"), NULL);
-
 			Calibration = true;
-			CS_Calibration.Gain(CS_Calib, V_Ref, R);
+			CS_Calibration.PQOffset(CS_Calib);
 			Calibration = false;
-			strcpy(response, "GAIN_OK");
+			strcpy(response, "PQOffset_OK");
 
 			// Redémarrage du Cirrus
 			CIRRUS_Restart(*GetCurrentCirrus(), CS_Calib, CS_Config);
 			break;
 		}
+
 #endif // CALIBRATION
 		default:
 			;
@@ -832,6 +871,7 @@ bool CIRRUS_Communication::COM_ChangeBaud(uint8_t *Baud, char *response)
 
 #else
 	// On est en SPI, donc on ignore cette commande
+	strcpy(response, "BAUD_ERROR");
 	CurrentCirrus->print_str("Baud ignore, use SPI.\r\n");
 #endif
 	return true;
