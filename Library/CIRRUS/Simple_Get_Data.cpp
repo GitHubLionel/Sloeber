@@ -12,11 +12,11 @@ const String CSV_Filename = "/data.csv";
 // Data 200 ms
 volatile Simple_Data_Struct Simple_Current_Data; //{0,{0}};
 
-// Tension et puissance du premier Cirrus, premier channel
+// Voltage and signed power of first Cirrus, first channel
 volatile float Cirrus_voltage = 230.0;
 volatile float Cirrus_power_signed = 0.0;
 
-// Les données actualisées pour le SSR
+// Up to date data for SSR
 #ifdef USE_SSR
 extern Gestion_SSR_TypeDef Gestion_SSR_CallBack;
 #endif
@@ -203,7 +203,7 @@ uint8_t Simple_Update_IHM(const char *first_text, const char *last_text, bool di
 		if (display)
 			IHM_Display();
 
-		return 1;
+		return line;
 	}
 #endif
 

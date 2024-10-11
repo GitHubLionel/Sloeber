@@ -533,14 +533,6 @@ void CIRRUS_Communication::COM_ChangeCirrus(uint8_t *Request)
 			char message[30];
 			sprintf(message, "Cirrus %d selected\r\n", id + 1);
 			CurrentCirrus->print_str(message);
-//			if (id == 1)
-//			{
-//				CurrentCirrus->print_str("Cirrus 2 selected\r\n");
-//			}
-//			else
-//			{
-//				CurrentCirrus->print_str("Cirrus 1 selected\r\n");
-//			}
 		}
 	}
 	else
