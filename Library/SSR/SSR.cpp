@@ -30,7 +30,7 @@ portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 // Le channel pour la led SSR en PWM
 #define LED_CHANNEL	0
 #endif
-#endif
+#endif  // ESP32
 
 #define DEBUG_SSR           0          // Affichage de P_100 et SSR_COUNT
 
@@ -38,8 +38,16 @@ portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 volatile uint8_t SSR_PIN;
 volatile int8_t LED_PIN = -1;
 
+#ifdef SIMPLE_ZC_TEST
+#if !defined(ZERO_CROSS_TOP_Xms)
+#define ZERO_CROSS_TOP_Xms	20
+#endif
+#endif
+
+#if defined(ZERO_CROSS_TOP_Xms)
 volatile uint32_t Count_CS_ZC = 0; // Un compteur des tops ZC
-volatile bool Top_200ms = false;   // Un top 200 ms à utiliser avec la fonction ZC_Top200ms()
+volatile bool Top_Xms = false;   // Un top X ms à utiliser avec la fonction ZC_Top_Xms()
+#endif
 volatile bool Top_CS_ZC_Mux = false;   // Top ZC
 
 #define HALF_PERIOD_us    10000    // Fréquence de 50 Hz => période de 20 ms, top Cirrus 10 ms
@@ -68,6 +76,10 @@ volatile uint32_t SSR_COUNT = DELAY_MAX;
 // Le pourcentage d'utilisation du SSR
 volatile float P_100 = 0.0;
 
+// Le surplus cible du SSR
+float SSR_Target = 0.0;
+
+// Timer params
 volatile bool Tim_Interrupt_Enabled = false;
 volatile bool New_Timer_Parameters = false;
 // Indique si le SSR est activé ou pas
@@ -90,8 +102,6 @@ volatile Gestion_SSR_TypeDef Gestion_SSR_CallBack = NULL;
 // ********************************************************************************
 // Private functions
 // ********************************************************************************
-
-void SetLedPinLow(uint16_t val = 0);
 
 // Actualisation des paramètres du Timer
 void SSR_Update_Dimme_Timer();
@@ -146,6 +156,24 @@ void __attribute__((weak)) print_debug(const char *mess, bool ln = true)
 #endif
 
 /**
+ * Led command
+ */
+void IRAM_ATTR SetLedPinLow(uint16_t val = 0)
+{
+	if (LED_PIN != -1)
+#ifdef ESP8266
+		SET_PIN_LOW(LED_PIN);
+	(void) val;
+#else
+#if defined(ESP_IDF_VERSION) && (ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)) // ESP32 2.0.x
+		ledcWrite(LED_CHANNEL, val);
+#else
+		ledcWrite(LED_PIN, val);
+#endif
+#endif // ESP32
+}
+
+/**
  * Initialize the timer and start it for once time
  */
 void IRAM_ATTR startTimerAndTrigger(uint32_t delay)
@@ -166,7 +194,11 @@ void IRAM_ATTR startTimerAndTrigger(uint32_t delay)
 #endif // ESP32
 }
 
-// Send SSR pulse after delay
+/**
+ * Timer callback
+ * Send SSR pulse after delay
+ * Timer is stoped after SSR pulse (for ESP32, autoreload = false)
+ */
 void IRAM_ATTR onTimerSSR(void)
 {
 	TIMERMUX_ENTER();
@@ -185,6 +217,7 @@ void IRAM_ATTR onTimerSSR(void)
 #ifdef ESP8266
 			if (LED_PIN != -1)
 				SET_PIN_HIGH(LED_PIN);
+			Timer_SSR.stopTimer();
 #endif
 		}
 	}
@@ -192,14 +225,17 @@ void IRAM_ATTR onTimerSSR(void)
 }
 
 #ifdef SIMPLE_ZC_TEST
-// Un test simple pour vérifier le zéro cross du Cirrus
-// Toutes les secondes, on allume la led pendant 100 ms
+/**
+ * Zero cross interrupt callback
+ * Simple test to validate the zero cross interrupt
+ * Each second, we turn on the led for 100 ms
+ */
 void IRAM_ATTR onCirrusZC(void)
 {
-	Count_CS_ZC = Count_CS_ZC + 1; // ++ deprecated
-	// Comptage des ZC pour calculer le top 200 ms (donc 20 ZC)
-	if (!Top_200ms)
-		Top_200ms = (Count_CS_ZC % 20 == 0);
+	// Zero cross count for Top_Xms
+	Count_CS_ZC = Count_CS_ZC + 1; // ++ deprecated with volatile
+	if (!Top_Xms)
+		Top_Xms = (Count_CS_ZC % ZERO_CROSS_TOP_Xms == 0);
 
 	if (Count_CS_ZC == 100) // 1 s
 	{
@@ -211,16 +247,22 @@ void IRAM_ATTR onCirrusZC(void)
 			SET_PIN_LOW(LED_PIN);
 }
 #else
-// Zero cross was fired
-// Note : on est obligé de redéfinir l'interval à chaque fois car il est modifié
-// à chaque fois même si New_Timer_Parameters est false
+/**
+ * Zero cross interrupt callback
+ * Define and start the SSR timer according SSR_COUNT delay
+ * Note: we must redefine it even if SSR_COUNT has not changed (New_Timer_Parameters is false)
+ * because the delay has been changed in TimerSSR callback
+ */
 void IRAM_ATTR onCirrusZC(void)
 {
 	TIMERMUX_ENTER();
-	Count_CS_ZC = Count_CS_ZC + 1; // ++ deprecated
-	// Comptage des ZC pour calculer le top 200 ms (donc 20 ZC)
-	if (!Top_200ms)
-		Top_200ms = (Count_CS_ZC % 20 == 0);
+
+#if defined(ZERO_CROSS_TOP_Xms)
+	// Zero cross count for Top_Xms
+	Count_CS_ZC = Count_CS_ZC + 1; // ++ deprecated with volatile
+	if (!Top_Xms)
+		Top_Xms = (Count_CS_ZC % ZERO_CROSS_TOP_Xms == 0);
+#endif
 
 	if (Is_SSR_enabled_Mux && Tim_Interrupt_Enabled)
 	{
@@ -232,8 +274,12 @@ void IRAM_ATTR onCirrusZC(void)
 	}
 	TIMERMUX_EXIT();
 }
-#endif
+#endif // SIMPLE_ZC_TEST
 
+#if defined(ZERO_CROSS_TOP_Xms)
+/**
+ * Renvoie le nombre de zéro cross depuis le démarrage
+ */
 uint32_t ZC_Get_Count(void)
 {
 	TIMERMUX_ENTER();
@@ -246,29 +292,15 @@ uint32_t ZC_Get_Count(void)
  * Cette fonction retourne true si 200 ms se sont écoulé depuis sa dernière interrogation
  * Les 200 ms sont calculés par le comptage des tops zéro cross du cirrus, callback onCirrusZC()
  */
-bool ZC_Top200ms(void)
+bool ZC_Top_Xms(void)
 {
 	TIMERMUX_ENTER();
-	bool top = Top_200ms;
-	Top_200ms = false;
+	bool top = Top_Xms;
+	Top_Xms = false;
 	TIMERMUX_EXIT();
 	return top;
 }
-
-void SetLedPinLow(uint16_t val)
-{
-	if (LED_PIN != -1)
-#ifdef ESP8266
-		SET_PIN_LOW(LED_PIN);
-	(void) val;
-#else
-#if defined(ESP_IDF_VERSION) && (ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)) // ESP32 2.0.x
-		ledcWrite(LED_CHANNEL, val);
-#else
-		ledcWrite(LED_PIN, val);
 #endif
-#endif
-}
 
 // ********************************************************************************
 // Initialisation
@@ -563,9 +595,7 @@ bool SSR_Set_Percent(float percent)
 			percent = P_MAX;
 
 	// On change seulement si on a une différence supérieure à 1%
-	bool percent_change = (fabs(P_100 - percent) > 0.01);
-
-	if (percent_change)
+	if (fabs(P_100 - percent) > 0.01)
 	{
 		// Calcul du delais en us
 		uint32_t delay = lround(fabs(acos(percent / 50.0 - 1.0)) / M_PI * HALF_PERIOD_us);
@@ -581,8 +611,10 @@ bool SSR_Set_Percent(float percent)
     PrintVal("Pourcentage %", P_100, false);
     PrintVal("SSR_COUNT ", SSR_COUNT, true);
 #endif
+
+    return true;
 	}
-	return percent_change;
+	return false;
 }
 
 /**
@@ -591,6 +623,19 @@ bool SSR_Set_Percent(float percent)
 float SSR_Get_Percent(void)
 {
 	return P_100;
+}
+
+/**
+ * The target surplus
+ */
+void SSR_Set_Target(float target)
+{
+	SSR_Target = target;
+}
+
+float SSR_Get_Target(void)
+{
+	return SSR_Target;
 }
 
 // ********************************************************************************
@@ -646,37 +691,38 @@ void SSR_Update_Dimme_Timer()
 		}
 }
 
-volatile float Integral = 0.0;
-volatile float LastError = 0.0;
-volatile float Error, Derivative, Output, Percent;
-volatile float TotalOutput = 0.0;
-uint8_t Over_Count = 0;
-
 void SSR_Update_Surplus_Timer()
 {
+	static float Integral = 0.0;
+//	static float LastError = 0.0;
+	static float TotalOutput = 0.0;
+	static uint8_t Over_Count = 0;
+
 	// Aucun calcul si le SSR n'est pas actif
 	if (!Is_SSR_enabled)
 		return;
 
-//  float Kp = 0.2, Ki = 0.0001, Kd = 0.0;  // Bon Kd 0 ou 1
-	float Kp = 0.2, Ki = 0.0001;  // Kd = 0.0;
-	float Dt = 200.0;
-	float SetPoint = 0.0;
+//  const float Kp = 0.2, Ki = 0.0001, Kd = 0.0;  // Bon Kd 0 ou 1
+	const float Kp = 0.2, Ki = 0.0001;  // Kd = 0.0;
+	// Timer interval: need to be adjusted ?
+	const float Dt = 100.0;
+	// Desired value: here we want zero to have zero surplus
+	float SetPoint = SSR_Target;
 	float New_Dump_Power = Cirrus_voltage * Dump_Power_Relatif;
 
 	// calculate the difference between the desired value and the actual value
-	Error = SetPoint - Cirrus_power_signed;
+	float Error = SetPoint - Cirrus_power_signed;
 	// track error over time, scaled to the timer interval
-	Integral = Integral + (Error * Dt); // += deprecated
+	Integral += (Error * Dt);
 	// determine the amount of change from the last time checked
-//  Derivative = (Error - LastError) / Dt;
+//  float Derivative = (Error - LastError) / Dt;
 	// calculate how much drive the output in order to get to the
 	// desired setpoint.
-	Output = (Kp * Error) + (Ki * Integral); // + (Kd * Derivative);
+	float Output = (Kp * Error) + (Ki * Integral); // + (Kd * Derivative);
 	// remember the error for the next time around.
 //  LastError = Error;
 
-	TotalOutput = TotalOutput + (Output / 2); // += deprecated
+	TotalOutput += (Output / 2);
 
 	if (TotalOutput < 0)
 	{
@@ -696,7 +742,7 @@ void SSR_Update_Surplus_Timer()
 	if (Over_Count > TRY_MAX)
 	{
 		Integral = 0.0;
-		LastError = 0.0;
+//		LastError = 0.0;
 		TotalOutput = 0.0;
 		Over_Count = 0;
 	}

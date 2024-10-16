@@ -46,8 +46,14 @@ bool SSR_Set_Percent(float percent);
 float SSR_Get_Percent(void);
 bool SSR_Get_StateON(void);
 
+void SSR_Set_Target(float target);
+float SSR_Get_Target(void);
+
+// Fonction pour avoir un top zéro cross
+#if defined(ZERO_CROSS_TOP_Xms)
 uint32_t ZC_Get_Count(void);
-bool ZC_Top200ms(void);
+bool ZC_Top_Xms(void);
+#endif
 
 SSR_Action_typedef SSR_Get_Action(void);
 
