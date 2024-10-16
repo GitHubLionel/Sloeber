@@ -29,6 +29,11 @@
 //#define USE_SAVE_CRASH   // Permet de sauvegarder les données du crash
 #include "Debug_utils.h"		// Some utils functions for debug
 
+// Calibration
+#ifdef CIRRUS_CALIBRATION
+#include "CIRRUS_Calibration.h"
+#endif
+
 // Use DS18B20
 #define USE_DS
 
@@ -43,12 +48,6 @@
 
 // Active le clavier
 #define USE_KEYBOARD
-
-// Calibration
-//#define CALIBRATION
-#ifdef CALIBRATION
-#include "CIRRUS_Calibration.h"
-#endif
 
 // Liste des taches
 #include "Tasks_utils.h"       // Task list functions
@@ -169,8 +168,15 @@ TeleInfo TI(TI_RX_GPIO, 5000);
 //CIRRUS_Calib_typedef CS_Calib = CS_CALIB0;
 //CIRRUS_Config_typedef CS_Config = CS_CONFIG0;
 
-CIRRUS_Calib_typedef CS_Calib = {242.00, 53.55, 0x3CC756, 0x40D6B0, 0x7025B9, 0x0, 0x0,
-					242.00, 17.00, 0x3CC756, 0x4303EE, 0x8A6100, 0x0, 0x0};
+//CIRRUS_Calib_typedef CS_Calib = {242.00, 34.00, 0x3CC756, 0x40D6B0, 0x7025B9, 0x0, 0x0,
+//					242.00, 34.00, 0x3CC756, 0x4303EE, 0x8A6100, 0x0, 0x0};
+
+// Sans IAC
+//CIRRUS_Calib_typedef CS_Calib = {242.00, 34.00, 0x3C6C7B, 0x3E23FF, 0x000000, 0x000000, 0x000000,
+//		242.00, 34.00, 0x3C6C7B, 0x3DF7B2, 0x000000, 0x000000, 0x000000};
+
+CIRRUS_Calib_typedef CS_Calib = {242.00, 34.00, 0x3C6C7B, 0x3E23FF, 0xF12640, 0x000000, 0x000000,
+		242.00, 34.00, 0x3C6C7B, 0x3DF7B2, 0xF41D61, 0x000000, 0x000000};
 
 //CIRRUS_Calib_typedef CS_Calib = {242.00, 53.55, 0x3CC756, 0x40D6B0, 0x7025B9, 0x0, 0x0,
 //					242.00, 53.55, 0x3CC756, 0x40D6B0, 0x7025B9, 0x0, 0x0};
@@ -194,6 +200,10 @@ CIRRUS_SERIAL_MODE *csSerial = new CIRRUS_SERIAL_MODE(D7, D8); // D7=RX, D8=TX  
 
 CIRRUS_Communication CS_Com = CIRRUS_Communication(csSerial, CIRRUS_RESET_GPIO);
 CIRRUS_CS548x CS5480 = CIRRUS_CS548x(CS_Com);
+#ifdef CIRRUS_CALIBRATION
+CIRRUS_Calibration CS_Calibration = CIRRUS_Calibration(CS5480);
+extern bool Calibration;
+#endif
 
 bool Cirrus_OK = false;
 bool Mess_For_Cirrus_Connect = false;
@@ -239,6 +249,14 @@ void Display_Task_code(void *parameter)
 	uint8_t line = 0;
 	for (EVER)
 	{
+#ifdef CIRRUS_CALIBRATION
+		if (Calibration)
+		{
+			END_TASK_CODE();
+			continue;
+		}
+#endif
+
 		// Cirrus message
 		if (Cirrus_OK)
 			line = Update_IHM(RTC_Local.the_time, "", false);
@@ -609,6 +627,7 @@ void handleInitialization(CB_SERVER_PARAM)
 	else
 		message = "false#";
 	message += (String) SSR_Get_Dump_Power() + '#';
+	message += (String) SSR_Get_Target() + '#';
 	message += (String) SSR_Get_Percent() + '#';
 	if (SSR_Get_StateON())
 		message += "ON#";
@@ -699,13 +718,6 @@ void handleOperation(CB_SERVER_PARAM)
 #endif
 
 #ifdef USE_ZC_SSR
-	// La puissance du CE pour le mode zéro
-	if (pserver->hasArg("CEPower"))
-	{
-		float power = pserver->arg("CEPower").toFloat();
-		SSR_Set_Dump_Power(power);
-	}
-
 	// Change le mode d'action Pourcent/Zéro
 	// Ne pas oublier de redémarrer le SSR après
 	if (pserver->hasArg("SSRType"))
@@ -714,6 +726,17 @@ void handleOperation(CB_SERVER_PARAM)
 			SSR_Action(SSR_Action_Percent);
 		else
 			SSR_Action(SSR_Action_Surplus);
+	}
+
+	// La puissance du CE pour le mode zéro
+	if (pserver->hasArg("CEPower"))
+	{
+		float power = pserver->arg("CEPower").toFloat();
+		SSR_Set_Dump_Power(power);
+
+		print_debug("Operation: " + pserver->argName((int) 1) + "=" + pserver->arg((int) 1));
+		float target = pserver->arg("SSRTarget").toFloat();
+		SSR_Set_Target(target);
 	}
 
 	// Gestion dimmer en pourcentage

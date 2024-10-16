@@ -41,7 +41,7 @@
 #define USE_HTTPUPDATER
 //#define USE_MDNS
 
-#define USE_ASYNC_WEBSERVER
+//#define USE_ASYNC_WEBSERVER
 // Necessary for HTTPUPDATER with LITTLEFS in async server
 // MUST BE PUT IN DEFINE OF THE PROJECT
 //#define ESPASYNCHTTPUPDATESERVER_LITTLEFS
@@ -119,7 +119,7 @@
 //#define DEBUG_CIRRUS
 //#define DEBUG_CIRRUS_BAUD
 
-//#define CIRRUS_RMS_FULL  // To have U, I and P RMS. Otherwise only U and P RMS
+#define CIRRUS_RMS_FULL  // To have U, I and P RMS. Otherwise only U and P RMS
 //#define CIRRUS_SIMPLE_IS_CS5490	true  // Only used in Simple_Get_Data. true for CS5490, false for CS548x
 
 /**********************************************************
@@ -127,6 +127,7 @@
  **********************************************************/
 #define USE_SSR
 #define ZERO_CROSS_GPIO	GPIO_NUM_34
+//#define ZERO_CROSS_TOP_Xms	20	// Allow to have a top 200 ms created by the zero cross (10 * X ms)
 #define SSR_COMMAND_GPIO	GPIO_NUM_12
 #define SSR_LED_GPIO	GPIO_NUM_13
 
