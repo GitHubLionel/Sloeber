@@ -66,6 +66,194 @@ const uint32_t pow2_23 = 8388608;
 const uint32_t pow2_24 = 16777216;
 
 // ********************************************************************************
+// Config1 register structure
+// ********************************************************************************
+
+const uint8_t DO_Mode[] = {DO_EPG1, DO_EPG2, DO_EPG3, DO_EPG4,
+	DO_P1Sign, DO_P2Sign, DO_PSumSign,
+	DO_Q1Sign, DO_Q2Sign, DO_QSumSign,
+	DO_Reserved1,
+	DO_VZero, DO_IZero,
+	DO_Reserved2,
+	DO_Hi_Z, DO_Interrupt};
+
+const char *DO_Mode_str[] = {"EPG1", "EPG2", "EPG3", "EPG4",
+	"P1Sign", "P2Sign", "PSumSign",
+	"Q1Sign", "Q2Sign", "QSumSign",
+	"Reserved1",
+	"VZero", "IZero",
+	"Reserved2",
+	"Hi_Z", "Interrupt"};
+
+Config1_Register::Config1_Register(void)
+{
+	config1 = 0x00EEEE;
+	Create_Config1_Struct();
+}
+
+Config1_Register::Config1_Register(uint32_t config1_hex)
+{
+	SetConfig1(config1_hex);
+}
+
+void Config1_Register::SetConfig1(uint32_t config1_hex)
+{
+	config1 = config1_hex;
+	Create_Config1_Struct();
+}
+
+/**
+ * Set EPG block
+ * id: 1..4
+ * state: CIRRUS_ON / CIRRUS_OFF
+ */
+void Config1_Register::SetEPG(uint8_t id, CIRRUS_DO_OnOff state)
+{
+	config1_struct.EPG[id-1] = state;
+}
+
+/**
+ * Set DO pin mode
+ * id: 1..4
+ * state: CIRRUS_ON / CIRRUS_OFF
+ */
+void Config1_Register::SetDO(uint8_t id, CIRRUS_DO_OnOff state)
+{
+	config1_struct.DO[id-1] = state;
+}
+
+/**
+ * Set DO Mode: output control for DO pin
+ * id: 1..4
+ * mode: CIRRUS_DO_EPG1 ... CIRRUS_DO_Interrupt
+ */
+void Config1_Register::SetDO_Mode(uint8_t id, CIRRUS_DO_Mode mode)
+{
+	config1_struct.DO_Mode[id-1] = mode;
+}
+
+void Config1_Register::DO_Config1(Config1_Struct_typedef DO_struct)
+{
+	uint8_t lsb, msb, hsb;
+	Bit_List reg;
+
+	lsb = msb = hsb = 0;
+
+	// EPG
+	if (DO_struct.EPG1 == CIRRUS_ON)
+		hsb = 0b00000001;
+	if (DO_struct.EPG2 == CIRRUS_ON)
+		hsb = hsb | 0b00000010;
+	if (DO_struct.EPG3 == CIRRUS_ON)
+		hsb = hsb | 0b00000100;
+	if (DO_struct.EPG4 == CIRRUS_ON)
+		hsb = hsb | 0b00001000;
+	hsb = hsb << 4;
+
+	// DO
+	if (DO_struct.DO1 == CIRRUS_ON)
+		hsb = hsb | 0b00000001;
+	if (DO_struct.DO2 == CIRRUS_ON)
+		hsb = hsb | 0b00000010;
+	if (DO_struct.DO3 == CIRRUS_ON)
+		hsb = hsb | 0b00000100;
+	if (DO_struct.DO4 == CIRRUS_ON)
+		hsb = hsb | 0b00001000;
+
+	// Do Mode
+	lsb = DO_Mode[DO_struct.DO_Mode1];
+	lsb |= (DO_Mode[DO_struct.DO_Mode2] << 4);
+
+	msb = DO_Mode[DO_struct.DO_Mode3];
+	msb |= (DO_Mode[DO_struct.DO_Mode4] << 4);
+
+	reg.LSB = lsb;
+	reg.MSB = msb;
+	reg.HSB = hsb;
+	config1 = reg.Bit32;
+	config1_struct = DO_struct;
+
+//	create_blist(lsb, msb, hsb, &msg);
+//	write_register(P0_Config1, PAGE0, &msg);
+}
+
+void Config1_Register::Create_Config1_Struct(void)
+{
+	Bit_List reg;
+	uint8_t bit;
+//	CIRRUS_DO_Struct DO_Struct;
+
+//	read_register(P0_Config1, PAGE0, &reg);
+
+	reg.Bit32 = config1;
+	bit = reg.LSB;
+	config1_struct.DO_Mode1 = (CIRRUS_DO_Mode)(bit & 0b00001111);
+	config1_struct.DO_Mode2 = (CIRRUS_DO_Mode)(bit >> 4);
+
+	bit = reg.MSB;
+	config1_struct.DO_Mode3 = (CIRRUS_DO_Mode)(bit & 0b00001111);
+	config1_struct.DO_Mode4 = (CIRRUS_DO_Mode)(bit >> 4);
+
+	bit = reg.HSB;
+	config1_struct.EPG4 = (CIRRUS_DO_OnOff)((bit & 0b10000000) >> 7);
+	config1_struct.EPG3 = (CIRRUS_DO_OnOff)((bit & 0b01000000) >> 6);
+	config1_struct.EPG2 = (CIRRUS_DO_OnOff)((bit & 0b00100000) >> 5);
+	config1_struct.EPG1 = (CIRRUS_DO_OnOff)((bit & 0b00010000) >> 4);
+	config1_struct.DO4 = (CIRRUS_DO_OnOff)((bit & 0b00001000) >> 3);
+	config1_struct.DO3 = (CIRRUS_DO_OnOff)((bit & 0b00000100) >> 2);
+	config1_struct.DO2 = (CIRRUS_DO_OnOff)((bit & 0b00000010) >> 1);
+	config1_struct.DO1 = (CIRRUS_DO_OnOff)(bit & 0b00000001);
+
+//	return DO_Struct;
+}
+
+void Config1_Register::Print_Config1(char *mess)
+{
+//	CIRRUS_DO_Struct DO_Struct = Get_DO_Config1();
+
+	const char *digit[] = {"1", "2", "3", "4"};
+//	char mess[255] = {0};
+	int i;
+
+	strcpy(mess, "");
+	for (i = 0; i < 4; i++)
+	{
+		strcat(mess, "EPG");
+		strcat(mess, digit[i]);
+		if (config1_struct.EPG[i] == CIRRUS_ON)
+			strcat(mess, " = ON");
+		else
+			strcat(mess, " = OFF");
+		if (i != 3)
+			strcat(mess, ", ");
+	}
+	strcat(mess, "\r\n");
+	for (i = 0; i < 4; i++)
+	{
+		strcat(mess, "DO");
+		strcat(mess, digit[i]);
+		if (config1_struct.DO[i] == CIRRUS_ON)
+			strcat(mess, " = ON");
+		else
+			strcat(mess, " = OFF");
+		if (i != 3)
+			strcat(mess, ", ");
+	}
+	strcat(mess, "\r\n");
+	for (i = 0; i < 4; i++)
+	{
+		strcat(mess, "MODE");
+		strcat(mess, digit[i]);
+		strcat(mess, " = ");
+		strcat(mess, DO_Mode_str[config1_struct.DO_Mode[i]]);
+		if (i != 3)
+		  strcat(mess, ", ");
+	}
+	strcat(mess, "\r\n");
+//	print_str(mess);
+}
+
+// ********************************************************************************
 // Initialization
 // ********************************************************************************
 
@@ -416,105 +604,7 @@ void CIRRUS_Base::Get_Parameters(CIRRUS_Calib_typedef *calib, CIRRUS_Config_type
 	config->P_control = reg.Bit32;
 }
 
-void CIRRUS_Base::DO_Configuration(CIRRUS_DO_Struct DO_struct)
-{
-	uint8_t lsb_1, lsb_2, msb, hsb;
-	Bit_List msg;
 
-	lsb_1 = lsb_2 = msb = hsb = 0;
-	switch (DO_struct.DO1)
-	{
-		case CIRRUS_DO_Energy:
-			lsb_1 = DO_EPG1;
-			hsb = 0b00000001;
-			break;
-		case CIRRUS_DO_P1Sign:
-			lsb_1 = DO_P1Sign;
-			break;
-		case CIRRUS_DO_P2Sign:
-			lsb_1 = DO_P2Sign;
-			break;
-		case CIRRUS_DO_VZero:
-			lsb_1 = DO_VZero;
-			break;
-		case CIRRUS_DO_IZero:
-			lsb_1 = DO_IZero;
-			break;
-		case CIRRUS_DO_Interrupt:
-			lsb_1 = DO_Interrupt;
-			break;
-		case CIRRUS_DO_Nothing:
-			lsb_1 = DO_Nothing;
-			break;
-		default:
-			lsb_1 = DO_Nothing;
-			break;
-	}
-
-	switch (DO_struct.DO2)
-	{
-		case CIRRUS_DO_Energy:
-			lsb_2 = DO_EPG2;
-			hsb = hsb | 0b00000010;
-			break;
-		case CIRRUS_DO_P1Sign:
-			lsb_2 = DO_P1Sign;
-			break;
-		case CIRRUS_DO_P2Sign:
-			lsb_2 = DO_P2Sign;
-			break;
-		case CIRRUS_DO_VZero:
-			lsb_2 = DO_VZero;
-			break;
-		case CIRRUS_DO_IZero:
-			lsb_2 = DO_IZero;
-			break;
-		case CIRRUS_DO_Interrupt:
-			lsb_2 = DO_Interrupt;
-			break;
-		case CIRRUS_DO_Nothing:
-			lsb_2 = DO_Nothing;
-			break;
-		default:
-			lsb_2 = DO_Nothing;
-			break;
-	}
-	lsb_2 = (lsb_2 << 4) | lsb_1;
-
-	switch (DO_struct.DO3)
-	{
-		case CIRRUS_DO_Energy:
-			msb = DO_EPG3;
-			hsb = hsb | 0b00000100;
-			break;
-		case CIRRUS_DO_P1Sign:
-			msb = DO_P1Sign;
-			break;
-		case CIRRUS_DO_P2Sign:
-			msb = DO_P2Sign;
-			break;
-		case CIRRUS_DO_VZero:
-			msb = DO_VZero;
-			break;
-		case CIRRUS_DO_IZero:
-			msb = DO_IZero;
-			break;
-		case CIRRUS_DO_Interrupt:
-			msb = DO_Interrupt;
-			break;
-		case CIRRUS_DO_Nothing:
-			msb = DO_Nothing;
-			break;
-		default:
-			msb = DO_Nothing;
-			break;
-	}
-	msb = (DO_Nothing << 4) | msb;
-
-	hsb <<= 4;
-	create_blist(lsb_2, msb, hsb, &msg);
-	write_register(P0_Config1, PAGE0, &msg);
-}
 
 /**
  * Simple test the connexion

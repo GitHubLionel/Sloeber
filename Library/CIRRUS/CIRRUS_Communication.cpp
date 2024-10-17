@@ -653,6 +653,22 @@ uint8_t CIRRUS_Communication::UART_Message_Cirrus(uint8_t *RxBuffer)
 		return 1;
 	}
 
+//  ************** Print Config1 register ****************
+	if (strstr((char*) RxBuffer, "CONFIG1=") != NULL)
+	{
+		Bit_List reg;
+		char mess[255] = {0};
+		Config1_Register config1;
+		config1.Print_Config1(mess);
+		CurrentCirrus->print_str(mess);
+
+		CurrentCirrus->read_register(P0_Config1, PAGE0, &reg);
+		config1.SetConfig1(reg.Bit32);
+		config1.Print_Config1(mess);
+		CurrentCirrus->print_str(mess);
+		return 1;
+	}
+
 	return 0;
 } // end UART_Message_Cirrus()
 
@@ -721,6 +737,7 @@ String CIRRUS_Communication::Handle_Common_Request(CS_Common_Request Common_Requ
 			break;
 		}
 
+#ifdef CIRRUS_FLASH
 		case csw_FLASH: // Sauvegarde dans la FLASH
 		{
 			char id = '1';
@@ -730,6 +747,7 @@ String CIRRUS_Communication::Handle_Common_Request(CS_Common_Request Common_Requ
 			CurrentCirrus->print_str("FLASH Data OK\r\n");
 			break;
 		}
+#endif
 
 #ifdef CIRRUS_CALIBRATION
 			// Demande calibration gain (I AC et U AC Gain)
@@ -795,11 +813,13 @@ String CIRRUS_Communication::Handle_Common_Request(CS_Common_Request Common_Requ
 			CIRRUS_Restart(*GetCurrentCirrus(), CS_Calib, CS_Config);
 			break;
 		}
-
 #endif // CALIBRATION
 		default:
 			;
 	}
+#ifndef CIRRUS_CALIBRATION
+		(void) CS_Config; // For compiler
+#endif
 
 	// UnLock IHM
 	Do_Lock_IHM(false);

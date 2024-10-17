@@ -40,17 +40,23 @@
 #define CFG2VAL     0x10420A // Enable Highpass filters and APCM calculation
 #define DATARDY     0x800000
 
-// DO definition
-#define DO_EPG1		0b00000000
-#define DO_EPG2		0b00000001
-#define DO_EPG3		0b00000010
-#define DO_P1Sign	0b00000100
-#define DO_P2Sign	0b00000101
-#define DO_VZero	0b00001011
-#define DO_IZero	0b00001100
-#define DO_Interrupt	0b00001111
-#define DO_Nothing	0b00001110  // Default
-
+// DO Mode definition
+#define DO_EPG1		   0b00000000
+#define DO_EPG2		   0b00000001
+#define DO_EPG3		   0b00000010
+#define DO_EPG4		   0b00000011
+#define DO_P1Sign	   0b00000100
+#define DO_P2Sign	   0b00000101
+#define DO_PSumSign	 0b00000110
+#define DO_Q1Sign	   0b00000111
+#define DO_Q2Sign	   0b00001000
+#define DO_QSumSign	 0b00001001
+#define DO_Reserved1 0b00001010
+#define DO_VZero	   0b00001011
+#define DO_IZero	   0b00001100
+#define DO_Reserved2 0b00001101
+#define DO_Hi_Z   	 0b00001110  // Default
+#define DO_Interrupt 0b00001111
 
 // DO NOT write a "1" to any unpublished register bit or to a bit published as "0"
 // DO NOT write a "0" to any bit published as "1"

@@ -135,53 +135,91 @@ typedef enum
 	CIRRUS_RegBit_Error
 } CIRRUS_RegBit;
 
-typedef enum
-{
-	CIRRUS_Do1_Interrupt,
-	CIRRUS_Do1_Energy,
-	CIRRUS_Do2_Energy,
-	CIRRUS_Do3_Energy,
-	CIRRUS_Do1_P1Sign,
-	CIRRUS_Do1_P2Sign,
-	CIRRUS_Do1_V1Zero,
-	CIRRUS_Do1_V2Sign,
-	CIRRUS_Do_Nothing
-} CIRRUS_Do_Action_Simple;
-
-typedef enum
-{
-	CIRRUS_DO1,
-	CIRRUS_DO2,
-	CIRRUS_DO3
-} CIRRUS_DO_Number;
+//typedef enum
+//{
+//	CIRRUS_Do1_Interrupt,
+//	CIRRUS_Do1_Energy,
+//	CIRRUS_Do2_Energy,
+//	CIRRUS_Do3_Energy,
+//	CIRRUS_Do1_P1Sign,
+//	CIRRUS_Do1_P2Sign,
+//	CIRRUS_Do1_V1Zero,
+//	CIRRUS_Do1_V2Sign,
+//	CIRRUS_Do_Nothing
+//} CIRRUS_Do_Action_Simple;
+//
+//typedef enum
+//{
+//	CIRRUS_DO1,
+//	CIRRUS_DO2,
+//	CIRRUS_DO3
+//} CIRRUS_DO_Number;
 
 /**
  * Enumération des actions sur les DO
  */
 typedef enum
 {
-	CIRRUS_DO_Energy,
+	CIRRUS_DO_EPG1 = 0,
+	CIRRUS_DO_EPG2,
+	CIRRUS_DO_EPG3,
+	CIRRUS_DO_EPG4,
 	CIRRUS_DO_P1Sign,
 	CIRRUS_DO_P2Sign,
+	CIRRUS_DO_PSumSign,
+	CIRRUS_DO_Q1Sign,
+	CIRRUS_DO_Q2Sign,
+	CIRRUS_DO_QSumSign,
+	CIRRUS_DO_Reserved1,
 	CIRRUS_DO_VZero,
 	CIRRUS_DO_IZero,
-	CIRRUS_DO_Interrupt,
-	CIRRUS_DO_Nothing
-} CIRRUS_DO_Action;
+	CIRRUS_DO_Reserved2,
+	CIRRUS_DO_Hi_Z,
+	CIRRUS_DO_Interrupt
+} CIRRUS_DO_Mode;
+
+typedef enum
+{
+	CIRRUS_OFF = 0,
+	CIRRUS_ON
+} CIRRUS_DO_OnOff;
 
 typedef struct
 {
 		union
 		{
-				CIRRUS_DO_Action DO[3];
+				CIRRUS_DO_OnOff EPG[4] = {CIRRUS_OFF};
 				struct
 				{
-						CIRRUS_DO_Action DO1;
-						CIRRUS_DO_Action DO2;
-						CIRRUS_DO_Action DO3;
+						CIRRUS_DO_OnOff EPG1;
+						CIRRUS_DO_OnOff EPG2;
+						CIRRUS_DO_OnOff EPG3;
+						CIRRUS_DO_OnOff EPG4;
 				};
 		};
-} CIRRUS_DO_Struct;
+		union
+		{
+				CIRRUS_DO_OnOff DO[4] = {CIRRUS_OFF};
+				struct
+				{
+						CIRRUS_DO_OnOff DO1;
+						CIRRUS_DO_OnOff DO2;
+						CIRRUS_DO_OnOff DO3;
+						CIRRUS_DO_OnOff DO4;
+				};
+		};
+		union
+		{
+				CIRRUS_DO_Mode DO_Mode[4]= {CIRRUS_DO_Hi_Z};
+				struct
+				{
+						CIRRUS_DO_Mode DO_Mode1;
+						CIRRUS_DO_Mode DO_Mode2;
+						CIRRUS_DO_Mode DO_Mode3;
+						CIRRUS_DO_Mode DO_Mode4;
+				};
+		};
+} Config1_Struct_typedef;
 
 /**
  * Enumération des filtres possibles sur U et I
@@ -618,6 +656,34 @@ class CIRRUS_Communication
 };
 
 /**
+ * Config1 register class
+ */
+class Config1_Register
+{
+	public:
+		Config1_Register(void);
+		Config1_Register(uint32_t config1_hex);
+
+		void SetConfig1(uint32_t config1_hex);
+		uint32_t GetConfig1(void)
+		{
+			return config1;
+		}
+
+		void SetEPG(uint8_t id, CIRRUS_DO_OnOff state);
+		void SetDO(uint8_t id, CIRRUS_DO_OnOff state);
+		void SetDO_Mode(uint8_t id, CIRRUS_DO_Mode mode);
+
+		void Print_Config1(char *mess);
+
+	private:
+		uint32_t config1;
+		Config1_Struct_typedef config1_struct;
+		void DO_Config1(Config1_Struct_typedef DO_struct);
+		void Create_Config1_Struct(void);
+};
+
+/**
  * Cirrus Base class
  */
 class CIRRUS_Base
@@ -665,8 +731,6 @@ class CIRRUS_Base
 		void Load_From_FLASH(CIRRUS_Calib_typedef *calib, CIRRUS_Config_typedef *config);
 		void Save_To_FLASH(CIRRUS_Calib_typedef *calib, CIRRUS_Config_typedef *config);
 		void Register_To_FLASH(void);
-
-		void DO_Configuration(CIRRUS_DO_Struct DO_struct);
 
 		void CorrectBug(void);
 		void Soft_reset(void);
