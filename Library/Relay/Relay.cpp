@@ -21,8 +21,11 @@ void __attribute__((weak)) print_debug(const char *mess, bool ln = true)
  * Initialisation du relais.
  * gpio : values of gpio
  */
-void Relay_Initialize(uint8_t nbRelay, const uint8_t gpio[])
+bool Relay_Initialize(uint8_t nbRelay, const uint8_t gpio[])
 {
+	if (nbRelay > RELAY_MAX)
+		return false;
+
 	Nb_Relay = nbRelay;
 	for (int i=0; i<nbRelay; i++)
 	{
@@ -30,6 +33,7 @@ void Relay_Initialize(uint8_t nbRelay, const uint8_t gpio[])
 		pinMode(GPIO_Relay[i], OUTPUT);
 		digitalWrite(GPIO_Relay[i], LOW);
 	}
+	return true;
 }
 
 /**
