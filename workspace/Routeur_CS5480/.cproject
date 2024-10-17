@@ -40,6 +40,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/Debug_utils}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/RTCLocal}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/Server_utils}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/IniFiles}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/SSD1327}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/SH1107}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/DS18B20}&quot;"/>
@@ -78,6 +79,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/Debug_utils}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/RTCLocal}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/Server_utils}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/IniFiles}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/SSD1327}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/SH1107}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/DS18B20}&quot;"/>
@@ -116,6 +118,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/Debug_utils}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/RTCLocal}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/Server_utils}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/IniFiles}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/SSD1327}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/SH1107}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/DS18B20}&quot;"/>
@@ -187,6 +190,17 @@
 			<resource resourceType="PROJECT" workspacePath="/Routeur_CS5480"/>
 		</configuration>
 	</storageModule>
-	<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
 	<storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
+	<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets">
+		<buildTargets>
+			<target name="uploadWithProgrammerWithoutBuild" path="Release" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
+				<buildCommand>${sloeber.make_location}make</buildCommand>
+				<buildArguments>-j8</buildArguments>
+				<buildTarget>uploadWithProgrammerWithoutBuild</buildTarget>
+				<stopOnError>true</stopOnError>
+				<useDefaultCommand>false</useDefaultCommand>
+				<runAllBuilders>true</runAllBuilders>
+			</target>
+		</buildTargets>
+	</storageModule>
 </cproject>

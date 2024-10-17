@@ -18,6 +18,7 @@
 #include "SSR.h"
 #include "Keyboard.h"
 #include "Relay.h"
+#include "iniFiles.h"
 
 /**
  * Define de debug
@@ -217,7 +218,7 @@ extern volatile Graphe_Data log_cumul;
 // ********************************************************************************
 
 // Pin commande du relais
-uint8_t GPIO_Relay[] = {GPIO_NUM_23};    // GPIO_NUM_32
+uint8_t GPIO_Relay[] = {GPIO_NUM_23, GPIO_NUM_26, GPIO_NUM_25, GPIO_NUM_33};    // GPIO_NUM_32
 
 // ********************************************************************************
 // Définition Clavier
@@ -227,6 +228,12 @@ uint8_t GPIO_Relay[] = {GPIO_NUM_23};    // GPIO_NUM_32
 bool Toggle_Keyboard = true;
 uint16_t interval[] = {1250, 950, 650, 250};
 #endif
+
+// ********************************************************************************
+// Définition Fichier ini
+// ********************************************************************************
+
+IniFiles init_routeur = IniFiles("Conf.ini");
 
 // ********************************************************************************
 // Functions prototype
@@ -413,6 +420,9 @@ void setup()
 	// Création de la partition data
 	CreateOpenDataPartition(false, true);
 
+	// Initialisation fichier ini
+	init_routeur.Begin(true);
+
 	// **** 2- initialisation datetime ****
 	// Essaye de récupérer la dernière heure, utile pour un reboot
 	// Paramètres éventuellement à adapter : AutoSave et SaveDelay (par défaut toutes les 10 s)
@@ -470,13 +480,17 @@ void setup()
 #ifdef USE_ZC_SSR
 	SSR_Initialize(ZERO_CROSS_GPIO, SSR_COMMAND_GPIO, SSR_LED_GPIO);
 
-//	SSR_Compute_Dump_power(1000);
-	SSR_Set_Dump_Power(1000);  // Par défaut, voir page web
-//	SSR_Set_Dimme_Target(50);
-//  SSR_Action(SSR_Action_Dimme);
+	SSR_Set_Dump_Power(init_routeur.ReadFloat("SSR", "P_CE", 1000));  // Par défaut 1000, voir page web
+	SSR_Set_Target(init_routeur.ReadFloat("SSR", "Target", 0)); // Par défaut 0, voir page web
+	SSR_Set_Percent(init_routeur.ReadFloat("SSR", "Pourcent", 10)); // Par défaut à 10%, voir page web
 
-	SSR_Action(SSR_Action_Percent);  // Par défaut à 10%, voir page web
-//	SSR_Set_Percent(20);
+//	SSR_Compute_Dump_power();
+
+	if (init_routeur.ReadBool("SSR", "Action", true)) // Par défaut Percent, voir page web
+		SSR_Action(SSR_Action_Percent);
+	else
+		SSR_Action(SSR_Action_Surplus);
+
 	// NOTE : le SSR est éteint, on le démarre dans la page web
 #endif
 
@@ -489,7 +503,8 @@ void setup()
 #endif
 
 #ifdef USE_RELAY
-	Relay_Initialize(1, GPIO_Relay);
+	Relay_Initialize(4, GPIO_Relay);
+	Set_Relay_State(0, init_routeur.ReadBool("Relais", "Relais_On", false));
 #endif
 
 	// **** FIN- Attente connexion réseau
@@ -706,6 +721,7 @@ void handleOperation(CB_SERVER_PARAM)
 	if (pserver->hasArg("Toggle_Relay"))
 	{
 		Set_Relay_State(0, !Get_Relay_State(0));
+		init_routeur.WriteBool("Relais", "Relais_On", Get_Relay_State(0));
 	}
 #endif
 
@@ -726,6 +742,8 @@ void handleOperation(CB_SERVER_PARAM)
 			SSR_Action(SSR_Action_Percent);
 		else
 			SSR_Action(SSR_Action_Surplus);
+
+		init_routeur.WriteBool("SSR", "Action", (SSR_Get_Action() == SSR_Action_Percent), "True for percent action");
 	}
 
 	// La puissance du CE pour le mode zéro
@@ -733,18 +751,28 @@ void handleOperation(CB_SERVER_PARAM)
 	{
 		float power = pserver->arg("CEPower").toFloat();
 		SSR_Set_Dump_Power(power);
+		init_routeur.WriteFloat("SSR", "P_CE", power);
 
 		print_debug("Operation: " + pserver->argName((int) 1) + "=" + pserver->arg((int) 1));
 		float target = pserver->arg("SSRTarget").toFloat();
 		SSR_Set_Target(target);
+		init_routeur.WriteFloat("SSR", "Target", target);
+	}
+
+	if (pserver->hasArg("CheckPower"))
+	{
+		TaskList.SuspendTask("CIRRUS_Task");
+		delay(200);
+		SSR_Compute_Dump_power();
+		TaskList.ResumeTask("CIRRUS_Task");
 	}
 
 	// Gestion dimmer en pourcentage
-	if (pserver->hasArg("Dimmer") && (SSR_Get_Action() == SSR_Action_Percent))
+	if (pserver->hasArg("Pourcent") && (SSR_Get_Action() == SSR_Action_Percent))
 	{
-		float percent = pserver->arg("Dimmer").toFloat();
+		float percent = pserver->arg("Pourcent").toFloat();
 		SSR_Set_Percent(percent);
-//		SSR_Set_Dimme_Target(percent * 10);
+		init_routeur.WriteFloat("SSR", "Pourcent", percent);
 	}
 
 	// Allume ou éteint le SSR

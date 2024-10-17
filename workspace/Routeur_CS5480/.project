@@ -137,6 +137,11 @@
 			<locationURI>USER_LIB/Fonts</locationURI>
 		</link>
 		<link>
+			<name>user_lib/IniFiles</name>
+			<type>2</type>
+			<locationURI>USER_LIB/IniFiles</locationURI>
+		</link>
+		<link>
 			<name>user_lib/Keyboard</name>
 			<type>2</type>
 			<locationURI>USER_LIB/Keyboard</locationURI>

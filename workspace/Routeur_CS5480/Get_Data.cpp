@@ -30,6 +30,7 @@ volatile float Cirrus_power_signed = 0.0;
 // Les données actualisées pour le SSR
 #ifdef USE_SSR
 extern Gestion_SSR_TypeDef Gestion_SSR_CallBack;
+bool CIRRUS_get_rms_data(float *uRMS, float *pRMS);
 #endif
 
 // Le Cirrus CS5480
@@ -72,7 +73,6 @@ void __attribute__((weak)) print_debug(String mess, bool ln = true)
  */
 void Get_Data(void)
 {
-	static bool Data_acquisition = false;
 	static int countmessage = 0;
 	bool log = false;
 
@@ -153,6 +153,11 @@ void Get_Data(void)
 	countmessage++;
 
 	Data_acquisition = false;
+}
+
+bool CIRRUS_get_rms_data(float *uRMS, float *pRMS)
+{
+	return CS5480.get_rms_data(uRMS, pRMS);
 }
 
 // ********************************************************************************

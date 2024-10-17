@@ -9,10 +9,10 @@
   <link rel="stylesheet" href="Routeur.css">
   <link rel="shortcut icon" href="favicon.ico">
   <script type='text/javascript' src="FileSaver.min.js"></script>
-  <script type='text/javascript' src="CS5490/Page0.js"></script>
-  <script type='text/javascript' src="CS5490/Page16.js"></script>
-  <script type='text/javascript' src="CS5490/Page17.js"></script>
-  <script type='text/javascript' src="CS5490/Page18.js"></script>
+  <script type='text/javascript' src="CS5480/Page0.js"></script>
+  <script type='text/javascript' src="CS5480/Page16.js"></script>
+  <script type='text/javascript' src="CS5480/Page17.js"></script>
+  <script type='text/javascript' src="CS5480/Page18.js"></script>
   <script type='text/javascript' src="uPlot.iife.min.js"></script>
   <script type='text/javascript' src="graphe.js"></script>
   <script type='text/javascript' src="Routeur.js"></script>
@@ -117,13 +117,15 @@
         <label for="targetSSR">Surplus cible : </label>
         <input type="text" name="targetSSR" id="targetSSR" value="0">
         <button class="myButton" id="powerCE" onclick="sendCEPower()">Update</button>
+        <br>
+        <button class="myButton" id="checkLoad" onclick="checkLoadPower()">Test puissance CE</button>
       </div>
       <div id="rangePercent">
       <div class="range" style="--step:10; --min:00; --max:100">
-        <input id="Dimmer" type="range" min="00" max="100" step="1" value="10"  oninput="amount.value=Dimmer.value+'%'">
+        <input id="Pourcent" type="range" min="00" max="100" step="1" value="10"  oninput="amount.value=Pourcent.value+'%'">
       </div>
-      <output id="amount" name="amount" for="Dimmer" style="margin-left: 15px; margin-right: 15px;">10%</output>
-      <button class="myButton" onclick="setDimme()">Dimme pourcent</button>
+      <output id="amount" name="amount" for="Pourcent" style="margin-left: 15px; margin-right: 15px;">10%</output>
+      <button class="myButton" onclick="setPourcent()">Dimme pourcent</button>
       </div>
       </fieldset>
     </div>
