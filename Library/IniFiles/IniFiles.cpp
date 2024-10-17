@@ -8,6 +8,13 @@
 #define ALLOC_CHAR(field)	(char *) malloc((strlen(field) + 1) * sizeof(char))
 #define ALLOC_CHAR_SIZE(size)	(char *) malloc((size) * sizeof(char))
 
+/// An usefull shortcut to delete and null a pointer
+/// Note the use of brace {} to enclose the operations
+#define FREE_AND_NULL(p)	\
+	{ if ((p) != NULL) \
+		{ free(p);	\
+			(p) = NULL; }}
+
 /**
  * Les fichiers ini sont des fichiers textes contenant des informations formatées
  * Les données sont regroupées dans des sections repérées par des crochets : [section]
@@ -54,7 +61,7 @@ IniFiles::~IniFiles(void)
 	if (!FSaved)
 		SaveFile("");
 	FreeMemory();
-	free(FFileName);
+	FREE_AND_NULL(FFileName);
 }
 
 /**
@@ -62,27 +69,32 @@ IniFiles::~IniFiles(void)
  * 	Renvoie true si le fichier existe
  * 	ATTENTION : la partition doit être montée avant l'appel de la fonction
  */
-bool IniFiles::Begin(void)
+bool IniFiles::Begin(bool autosave)
 {
+	FAutoSave = autosave;
 	return ReadFile();
 }
 
 void IniFiles::SetFileName(const char *aFileName)
 {
 	if (FFileName)
-		free(FFileName);
+		FREE_AND_NULL(FFileName);
 
 	// Le / de la racine doit être présent
 	if (aFileName[0] != '/')
 	{
 		FFileName = ALLOC_CHAR_SIZE(strlen(aFileName) + 2);
-		strcpy(FFileName, "/");
-		strcat(FFileName, aFileName);
+		if (FFileName)
+		{
+			strcpy(FFileName, "/");
+			strcat(FFileName, aFileName);
+		}
 	}
 	else
 	{
 		FFileName = ALLOC_CHAR(aFileName);
-		strcpy(FFileName, aFileName);
+		if (FFileName)
+			strcpy(FFileName, aFileName);
 	}
 }
 
@@ -105,20 +117,20 @@ void IniFiles::FreeMemory()
 	for (i = 0; i < GetNbSections(); i++)
 	{
 		lSection = &FSections[i];
-		free(lSection->Section);
+		FREE_AND_NULL(lSection->Section);
 		if (lSection->Comment != NULL)
-			free(lSection->Comment);
+			FREE_AND_NULL(lSection->Comment);
 		for (j = 0; j < lSection->NbRecord; j++)
 		{
 			lRecord = &FSections[i].Record[j];
-			free(lRecord->Key);
+			FREE_AND_NULL(lRecord->Key);
 			if (lRecord->Value != NULL)
-				free(lRecord->Value);
+				FREE_AND_NULL(lRecord->Value);
 			if (lRecord->Comment != NULL)
-				free(lRecord->Comment);
+				FREE_AND_NULL(lRecord->Comment);
 		}
 		if (lSection->Record != NULL)
-			free(lSection->Record);
+			FREE_AND_NULL(lSection->Record);
 	}
 	FNbSection = 0;
 }
@@ -141,13 +153,13 @@ void IniFiles::AllocateRecord(TSection *aSection)
 	if ((aSection->Capacity - aSection->NbRecord) <= 0)
 	{
 		aSection->Capacity += CAPACITY_STEP;
-		lRecord = (TRecord *) malloc(aSection->Capacity * sizeof(TRecord));
+		lRecord = (TRecord*) malloc(aSection->Capacity * sizeof(TRecord));
 		// Transfert des records existant
 		if (aSection->Record != NULL)
 		{
 			for (int i = 0; i < aSection->NbRecord; i++)
 				lRecord[i] = aSection->Record[i];
-			free(aSection->Record);
+			FREE_AND_NULL(aSection->Record);
 		}
 		aSection->Record = lRecord;
 	}
@@ -199,6 +211,9 @@ bool IniFiles::ReadFile(void)
 	bool lSectionOpen = false;
 	TRecord *lRecord;
 	char line[MAX_LINESIZE];
+
+	if (FFileName == NULL)
+		return false;
 
 	File stream = FS_Partition->open(FFileName, "r");
 
@@ -291,6 +306,9 @@ bool IniFiles::WriteFile(const char *aFileName)
 	{
 		SetFileName(aFileName);
 	}
+
+	if (FFileName == NULL)
+		return false;
 
 	File stream = FS_Partition->open(FFileName, "w");
 
@@ -407,11 +425,11 @@ void IniFiles::SetValue(const char *aSection, const char *aKey, const char *aVal
 	if ((lRecord = GetRecord(aSection, aKey, true)) != NULL)
 	{
 		if (lRecord->Value != NULL)
-			free(lRecord->Value);
+			FREE_AND_NULL(lRecord->Value);
 		lRecord->Value = ALLOC_CHAR(aValue);
 		strcpy(lRecord->Value, aValue);
 		if (lRecord->Comment != NULL)
-			free(lRecord->Comment);
+			FREE_AND_NULL(lRecord->Comment);
 		if (strlen(aComment) != 0)
 		{
 			lRecord->Comment = ALLOC_CHAR(aComment);
@@ -421,6 +439,8 @@ void IniFiles::SetValue(const char *aSection, const char *aKey, const char *aVal
 			lRecord->Comment = NULL;
 	}
 	FSaved = false;
+	if (FAutoSave)
+		WriteFile("");
 }
 
 //---------------------------------------------------------------------------
@@ -475,7 +495,7 @@ void IniFiles::ReadString_Dest(const char *Section, const char *Name, const char
 {
 	char *str = ReadString(Section, Name, Default);
 	strcpy(Dest, str);
-	free(str);
+	FREE_AND_NULL(str);
 }
 
 //---------------------------------------------------------------------------
@@ -595,7 +615,7 @@ int IniFiles::ReadIntegerIndex(uint16_t id, const char *Section, const char *Nam
 	sprintf(IdentId, "%s%d", Name, id);
 
 	int result = ReadInteger(Section, IdentId, Default);
-	free(IdentId);
+	FREE_AND_NULL(IdentId);
 	return result;
 }
 
@@ -606,7 +626,7 @@ void IniFiles::WriteIntegerIndex(uint16_t id, const char *Section, const char *N
 	char *IdentId = ALLOC_CHAR_SIZE(strlen(Name) + 3);
 	sprintf(IdentId, "%s%d", Name, id);
 	WriteInteger(Section, IdentId, Value, Comment);
-	free(IdentId);
+	FREE_AND_NULL(IdentId);
 }
 
 //---------------------------------------------------------------------------
@@ -619,7 +639,7 @@ double IniFiles::ReadFloatIndex(uint16_t id, const char *Section, const char *Na
 	char *IdentId = ALLOC_CHAR_SIZE(strlen(Name) + 3);
 	sprintf(IdentId, "%s%d", Name, id);
 	double result = ReadFloat(Section, IdentId, Default);
-	free(IdentId);
+	FREE_AND_NULL(IdentId);
 	return result;
 }
 
@@ -630,7 +650,7 @@ void IniFiles::WriteFloatIndex(uint16_t id, const char *Section, const char *Nam
 	char *IdentId = ALLOC_CHAR_SIZE(strlen(Name) + 3);
 	sprintf(IdentId, "%s%d", Name, id);
 	WriteFloat(Section, IdentId, Value, Comment);
-	free(IdentId);
+	FREE_AND_NULL(IdentId);
 }
 
 //---------------------------------------------------------------------------

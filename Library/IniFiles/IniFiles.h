@@ -40,7 +40,7 @@ class IniFiles
 		IniFiles(const char *aFileName, char aComment = ';');
 		~IniFiles();
 
-		bool Begin(void);
+		bool Begin(bool autosave = false);
 
 		void SetFileName(const char *aFileName);
 		void SetComment(char lComment)
@@ -90,6 +90,7 @@ class IniFiles
 		uint16_t FNbSection = 0;
 		TSection FSections[MAX_SECTION];
 		bool FSaved = true;
+		bool FAutoSave = false;
 
 		bool ReadFile(void);
 		bool WriteFile(const char *aFileName);
