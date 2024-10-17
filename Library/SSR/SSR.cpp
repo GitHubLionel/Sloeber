@@ -69,6 +69,12 @@ volatile bool Top_CS_ZC_Mux = false;   // Top ZC
 float Dump_Power = 0.0;
 float Dump_Power_Relatif = 0.0;
 
+// Le surplus cible du SSR pour le PID
+float SSR_Target = 0.0;
+
+// Le pourcentage pour ce mode
+float SSR_Percent = 10.0;
+
 // Nombre de pas avant démarrage du SSR normalement entre [0 .. HALF_PERIOD_us]
 // mais restreint à [DELAY_MIN .. DELAY_MAX]
 volatile uint32_t SSR_COUNT = DELAY_MAX;
@@ -76,12 +82,8 @@ volatile uint32_t SSR_COUNT = DELAY_MAX;
 // Le pourcentage d'utilisation du SSR
 volatile float P_100 = 0.0;
 
-// Le surplus cible du SSR
-float SSR_Target = 0.0;
-
 // Timer params
 volatile bool Tim_Interrupt_Enabled = false;
-volatile bool New_Timer_Parameters = false;
 // Indique si le SSR est activé ou pas
 volatile bool Is_SSR_enabled = false;
 volatile bool Is_SSR_enabled_Mux = false;
@@ -91,6 +93,12 @@ SSR_Action_typedef current_action = SSR_Action_OFF;
 
 // La puissance cible en version dimmer
 float Dimme_Power = 0.0;
+
+// For PID
+static float Integral = 0.0;
+//	static float LastError = 0.0;
+static float TotalOutput = 0.0;
+static uint8_t Over_Count = 0;
 
 // La tension et la puissance en cours fournies par le Cirrus ou autre
 extern float Cirrus_voltage;
@@ -103,6 +111,8 @@ volatile Gestion_SSR_TypeDef Gestion_SSR_CallBack = NULL;
 // Private functions
 // ********************************************************************************
 
+bool Set_Percent(float percent, bool start_timer = true);
+
 // Actualisation des paramètres du Timer
 void SSR_Update_Dimme_Timer();
 void SSR_Update_Surplus_Timer();
@@ -111,6 +121,15 @@ void SSR_Update_Surplus_Timer();
 void SSR_Enable_Timer_Interrupt(bool enable);
 void SSR_Start_Timer(void);
 void SSR_Stop_Timer(void);
+
+inline void Restart_PID(void)
+{
+	// Reset parameters
+	Integral = 0.0;
+//	LastError = 0.0;
+	TotalOutput = 0.0;
+	Over_Count = 0;
+}
 
 // Fonction de DEBUG_SSR
 extern void PrintTerminal(const char *text);
@@ -264,13 +283,16 @@ void IRAM_ATTR onCirrusZC(void)
 		Top_Xms = (Count_CS_ZC % ZERO_CROSS_TOP_Xms == 0);
 #endif
 
-	if (Is_SSR_enabled_Mux && Tim_Interrupt_Enabled)
+	if (Is_SSR_enabled_Mux)
 	{
-		Top_CS_ZC_Mux = true;
-		startTimerAndTrigger(SSR_COUNT);
+		if (Tim_Interrupt_Enabled)
+		{
+			Top_CS_ZC_Mux = true;
+			startTimerAndTrigger(SSR_COUNT);
 
-		// Plus le délai est long, plus la led sera éteinte longtemps
-		SetLedPinLow(1023 - SSR_COUNT / 9);
+			// Plus le délai est long, plus la led sera éteinte longtemps
+			SetLedPinLow(1023 - SSR_COUNT / 9);
+		}
 	}
 	TIMERMUX_EXIT();
 }
@@ -389,7 +411,10 @@ float SSR_Compute_Dump_power(float default_Power)
 	float urms, prms;
 	float cumul_p = 0.0;
 	float cumul_u = 0.0;
-	float initial_p, initial_u, final_p, final_u, dump;
+	float initial_p, initial_u, final_p, final_u;
+
+	// Save current action
+	SSR_Action_typedef action = current_action;
 
 	// On récupère la puissance et la tension initiale sur 3 s
 	CIRRUS_get_rms_data(&urms, &prms);
@@ -431,11 +456,20 @@ float SSR_Compute_Dump_power(float default_Power)
 	SSR_Action(SSR_Action_OFF);
 	delay(2000); // Pour stabiliser
 
-	dump = (final_p - initial_p) / ((initial_u + final_u) / 2.0);
+	Dump_Power_Relatif = (final_p - initial_p) / ((initial_u + final_u) / 2.0);
 	// La charge ne devait pas être branchée, on utilise la puissance par défaut
-	if (dump < 0.5)
-		Dump_Power_Relatif = default_Power / 230.0;
+	if (Dump_Power_Relatif < 0.5)
+	{
+		if (default_Power != 0.0)
+		  Dump_Power_Relatif = default_Power / 230.0;
+		else
+			Dump_Power_Relatif = Dump_Power / 230.0;
+	}
 	PrintVal("Puissance de la charge relative", Dump_Power_Relatif, false);
+
+	// Restaure current action
+	SSR_Action(action);
+
 	return Dump_Power_Relatif;
 }
 
@@ -452,64 +486,32 @@ float SSR_Compute_Dump_power(float default_Power)
  */
 void SSR_Action(SSR_Action_typedef do_action, bool restart)
 {
-	float pourcent;
-
 	current_action = do_action;
-	New_Timer_Parameters = false;
 	SSR_Disable();
 
 	switch (current_action)
 	{
 		case SSR_Action_OFF:
-		{
-			SSR_Stop_Timer();
-			Gestion_SSR_CallBack = NULL;
-			New_Timer_Parameters = SSR_Set_Percent(0);
-			break;
-		}
 		case SSR_Action_FULL:
-		{
-			Gestion_SSR_CallBack = NULL;
-			New_Timer_Parameters = SSR_Set_Percent(100);
-			SSR_Start_Timer();
-			if (restart)
-				SSR_Enable();
-			break;
-		}
 		case SSR_Action_Percent:
 		{
 			Gestion_SSR_CallBack = NULL;
-			New_Timer_Parameters = SSR_Set_Percent(10);
-			SSR_Start_Timer();
-			if (restart)
-				SSR_Enable();
 			break;
 		}
 		case SSR_Action_Surplus:
 		{
-			// On démarre à zéro pourcent
-			New_Timer_Parameters = SSR_Set_Percent(0);
 			Gestion_SSR_CallBack = &SSR_Update_Surplus_Timer;
-			SSR_Start_Timer();
-			if (restart)
-				SSR_Enable();
 			break;
 		}
 		case SSR_Action_Dimme:
 		{
-			// Détermine le pourcentage de démarrage
-			if (Dump_Power_Relatif > 0.0)
-				pourcent = 100 * (Dimme_Power / (Dump_Power_Relatif * 230.0));
-			else
-				pourcent = 0.0;
-			New_Timer_Parameters = SSR_Set_Percent(pourcent);
 			Gestion_SSR_CallBack = &SSR_Update_Dimme_Timer;
-			SSR_Start_Timer();
-			if (restart)
-				SSR_Enable();
 			break;
 		}
 	}
+
+	if ((current_action != SSR_Action_OFF) && restart)
+		SSR_Enable();
 }
 
 /**
@@ -518,40 +520,6 @@ void SSR_Action(SSR_Action_typedef do_action, bool restart)
 SSR_Action_typedef SSR_Get_Action(void)
 {
 	return current_action;
-}
-
-// Fonction pour dimmer une puissance cible
-void SSR_Set_Dimme_Target(float target)
-{
-	float pourcent;
-
-	Dimme_Power = target;
-	// Détermine le pourcentage de démarrage
-	if (Dump_Power_Relatif > 0.0)
-		pourcent = 100 * (Dimme_Power / (Dump_Power_Relatif * 230.0));
-	else
-		pourcent = 0.0;
-	New_Timer_Parameters = SSR_Set_Percent(pourcent);
-}
-
-float SSR_Get_Dimme_Target(void)
-{
-	return Dimme_Power;
-}
-
-/**
- * Fonction pour définir directement la charge
- * On suppose que la puissance est donnée pour une tension de 230 V
- */
-void SSR_Set_Dump_Power(float dump)
-{
-	Dump_Power = fabs(dump);
-	Dump_Power_Relatif = Dump_Power / 230.0;
-}
-
-float SSR_Get_Dump_Power(void)
-{
-	return Dump_Power;
 }
 
 /**
@@ -564,10 +532,49 @@ bool SSR_Get_StateON(void)
 
 void SSR_Enable(void)
 {
+	Restart_PID();
+	Is_SSR_enabled_Mux = true;
+
+	// Restaure initial percent
+	P_100 = 0;
+	switch (current_action)
+	{
+		case SSR_Action_OFF:
+		{
+			Set_Percent(0);
+			break;
+		}
+		case SSR_Action_FULL:
+		{
+			Set_Percent(100);
+			break;
+		}
+		case SSR_Action_Percent:
+		{
+			Set_Percent(SSR_Percent);
+			break;
+		}
+		case SSR_Action_Surplus:
+		{
+			Restart_PID();
+			// On démarre à zéro pourcent
+			Set_Percent(0);
+			break;
+		}
+		case SSR_Action_Dimme:
+		{
+			float pourcent;
+			// Détermine le pourcentage de démarrage
+			if (Dump_Power_Relatif > 0.0)
+				pourcent = 100 * (Dimme_Power / (Dump_Power_Relatif * 230.0));
+			else
+				pourcent = 0.0;
+			Set_Percent(pourcent);
+			break;
+		}
+	}
+
 	Is_SSR_enabled = true;
-	TIMERMUX_ENTER();
-	Is_SSR_enabled_Mux = Is_SSR_enabled;
-	TIMERMUX_EXIT();
 }
 
 void SSR_Disable(void)
@@ -577,6 +584,8 @@ void SSR_Disable(void)
 	Is_SSR_enabled_Mux = Is_SSR_enabled;
 	Top_CS_ZC_Mux = false;
 	TIMERMUX_EXIT();
+	delay(10);
+	SSR_Stop_Timer();
 	// Etre sûr qu'il est low
 	SET_PIN_LOW(SSR_PIN);
 	SetLedPinLow();
@@ -586,43 +595,24 @@ void SSR_Disable(void)
 // Control functions
 // ********************************************************************************
 
-bool SSR_Set_Percent(float percent)
+/**
+ * Fonction pour définir directement la charge
+ * On suppose que la puissance est donnée pour une tension de 230 V
+ */
+void SSR_Set_Dump_Power(float dump)
 {
-	if (percent < P_MIN)
-		percent = P_MIN;
-	else
-		if (percent > P_MAX)
-			percent = P_MAX;
+	bool isrunning = SSR_Get_StateON();
+	SSR_Disable();
+	Dump_Power = fabs(dump);
+	Dump_Power_Relatif = Dump_Power / 230.0;
 
-	// On change seulement si on a une différence supérieure à 1%
-	if (fabs(P_100 - percent) > 0.01)
-	{
-		// Calcul du delais en us
-		uint32_t delay = lround(fabs(acos(percent / 50.0 - 1.0)) / M_PI * HALF_PERIOD_us);
-		SSR_Enable_Timer_Interrupt((bool) (delay < DELAY_MAX));
-
-		if (delay < DELAY_MIN)
-			delay = DELAY_MIN;
-		SSR_COUNT = delay;
-
-		P_100 = percent;
-
-#if DEBUG_SSR
-    PrintVal("Pourcentage %", P_100, false);
-    PrintVal("SSR_COUNT ", SSR_COUNT, true);
-#endif
-
-    return true;
-	}
-	return false;
+	if (isrunning)
+		SSR_Enable();
 }
 
-/**
- * Get the actual percent in [0..100]
- */
-float SSR_Get_Percent(void)
+float SSR_Get_Dump_Power(void)
 {
-	return P_100;
+	return Dump_Power;
 }
 
 /**
@@ -630,12 +620,56 @@ float SSR_Get_Percent(void)
  */
 void SSR_Set_Target(float target)
 {
+	bool isrunning = SSR_Get_StateON();
+	SSR_Disable();
 	SSR_Target = target;
+
+	if (isrunning)
+		SSR_Enable();
 }
 
 float SSR_Get_Target(void)
 {
 	return SSR_Target;
+}
+
+void SSR_Set_Percent(float percent)
+{
+	bool isrunning = SSR_Get_StateON();
+	SSR_Disable();
+	SSR_Percent = percent;
+
+	if (isrunning)
+		SSR_Enable();
+}
+
+float SSR_Get_Percent(void)
+{
+	return SSR_Percent;
+}
+
+/**
+ * Get the actual percent in [0..100]
+ */
+float SSR_Get_Current_Percent(void)
+{
+	return P_100;
+}
+
+// Fonction pour dimmer une puissance cible
+void SSR_Set_Dimme_Target(float target)
+{
+	bool isrunning = SSR_Get_StateON();
+	SSR_Disable();
+	Dimme_Power = target;
+
+	if (isrunning)
+		SSR_Enable();
+}
+
+float SSR_Get_Dimme_Target(void)
+{
+	return Dimme_Power;
 }
 
 // ********************************************************************************
@@ -669,6 +703,43 @@ void SSR_Stop_Timer(void)
 // SSR action
 // ********************************************************************************
 
+/**
+ * Compute SSR_COUNT
+ * Enable or disable timer according SSR_COUNT
+ * return true if percent has changed
+ */
+bool Set_Percent(float percent, bool start_timer)
+{
+	if (percent < P_MIN)
+		percent = P_MIN;
+	else
+		if (percent > P_MAX)
+			percent = P_MAX;
+
+	// On change seulement si on a une différence supérieure à 1%
+	if (fabs(P_100 - percent) > 0.01)
+	{
+		// Calcul du delais en us
+		uint32_t delay = lround(fabs(acos(percent / 50.0 - 1.0)) / M_PI * HALF_PERIOD_us);
+		if (start_timer)
+			SSR_Enable_Timer_Interrupt((bool) (delay < DELAY_MAX));
+
+		if (delay < DELAY_MIN)
+			delay = DELAY_MIN;
+		SSR_COUNT = delay;
+
+		P_100 = percent;
+
+#if DEBUG_SSR
+    PrintVal("Pourcentage %", P_100, false);
+    PrintVal("SSR_COUNT ", SSR_COUNT, true);
+#endif
+
+    return true;
+	}
+	return false;
+}
+
 void SSR_Update_Dimme_Timer()
 {
 #define DELTA_TARGET   2
@@ -682,22 +753,21 @@ void SSR_Update_Dimme_Timer()
 
 	if (target < -DELTA_TARGET)
 	{
-		New_Timer_Parameters = SSR_Set_Percent(P_100 + EPSILON);
+		Set_Percent(P_100 + EPSILON);
 	}
 	else
 		if (target > DELTA_TARGET)
 		{
-			New_Timer_Parameters = SSR_Set_Percent(P_100 - EPSILON);
+			Set_Percent(P_100 - EPSILON);
 		}
 }
 
+/**
+ * PID controler to control the surplus allowed
+ * Don't use derivative part (Kd = 0)
+ */
 void SSR_Update_Surplus_Timer()
 {
-	static float Integral = 0.0;
-//	static float LastError = 0.0;
-	static float TotalOutput = 0.0;
-	static uint8_t Over_Count = 0;
-
 	// Aucun calcul si le SSR n'est pas actif
 	if (!Is_SSR_enabled)
 		return;
@@ -740,14 +810,9 @@ void SSR_Update_Surplus_Timer()
 
 	// On est toujours en erreur, on réinitialise
 	if (Over_Count > TRY_MAX)
-	{
-		Integral = 0.0;
-//		LastError = 0.0;
-		TotalOutput = 0.0;
-		Over_Count = 0;
-	}
+		Restart_PID();
 
-	New_Timer_Parameters = SSR_Set_Percent(100.0 * TotalOutput / New_Dump_Power);
+	Set_Percent(100.0 * TotalOutput / New_Dump_Power);
 }
 
 // ********************************************************************************
