@@ -19,6 +19,7 @@ volatile float Cirrus_power_signed = 0.0;
 // Up to date data for SSR
 #ifdef USE_SSR
 extern Gestion_SSR_TypeDef Gestion_SSR_CallBack;
+bool CIRRUS_get_rms_data(float *uRMS, float *pRMS);
 #endif
 
 // Extern definitions
@@ -170,6 +171,14 @@ void Simple_Get_Data(void)
 
 	Data_acquisition = false;
 }
+
+#ifdef USE_SSR
+bool CIRRUS_get_rms_data(float *uRMS, float *pRMS)
+{
+	Current_Cirrus.SelectChannel(CHANNEL);
+	return Current_Cirrus.get_rms_data(uRMS, pRMS);
+}
+#endif
 
 // ********************************************************************************
 // Affichage des données

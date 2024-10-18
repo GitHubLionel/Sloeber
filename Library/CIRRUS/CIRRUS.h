@@ -674,7 +674,7 @@ class Config1_Register
 		void SetDO(uint8_t id, CIRRUS_DO_OnOff state);
 		void SetDO_Mode(uint8_t id, CIRRUS_DO_Mode mode);
 
-		void Print_Config1(char *mess);
+		char *Print_Config1(char *mess);
 
 	private:
 		uint32_t config1;
@@ -947,6 +947,19 @@ class CIRRUS_Base
 // ********************************************************************************
 // RMSData class
 // ********************************************************************************
+
+/**
+ * The list of extra data
+ */
+typedef enum
+{
+	exd_Null = 0,
+	exd_PApparent = 1,
+	exd_PReactive = 2,
+	exd_PF = 4,
+	exd_Frequency = 8
+} ExtraData_typedef;
+
 /**
  * RMSData class
  * Get U, I and P RMS data
@@ -982,10 +995,15 @@ class CIRRUS_RMSData
 			_log_time_ms = second * 1000;
 		}
 
-		void SetWantData(bool power_factor, bool frequency)
+		/**
+		 * Extra data to calculate
+		 * Param extra is a combinaison of ExtraData_typedef
+		 * For example : extra = exd_PF | exd_Frequency to have power factor and frequency
+		 * By default, no extra data is calculated
+		 */
+		void SetWantData(uint16_t extra)
 		{
-			_WantPower_Factor = power_factor;
-			_WantFrequency = frequency;
+			_ExtraData = extra;
 		}
 
 		void RestartEnergy(void)
@@ -1025,14 +1043,21 @@ class CIRRUS_RMSData
 			return _inst_temp;
 		}
 
-		float GetPowerFactor() const
+		/**
+		 * Return extra data
+		 */
+		float GetExtraData(ExtraData_typedef extra) const
 		{
-			return Power_Factor;
-		}
-
-		float GetFrequency() const
-		{
-			return Frequency;
+			double result = 0;
+			switch (extra)
+			{
+				case exd_PApparent: result = PApparent; break;
+				case exd_PReactive: result = PReactive; break;
+				case exd_PF: result = Power_Factor; break;
+				case exd_Frequency: result = Frequency; break;
+				default: ;
+			}
+			return result;
 		}
 
 		float GetEnergyConso() const
@@ -1082,8 +1107,9 @@ class CIRRUS_RMSData
 		bool _temperature = true;
 
 		// Extra data
-		bool _WantPower_Factor = true;
-		bool _WantFrequency = true;
+		uint16_t _ExtraData = exd_Null;
+		float PApparent = 0;
+		float PReactive= 0;
 		float Power_Factor = 0;
 		float Frequency = 0;
 
@@ -1190,19 +1216,11 @@ class CIRRUS_CS5490: public CIRRUS_Base
 		}
 
 		/**
-		 * Return power factor (cosphi)
+		 * Return extra data
 		 */
-		float GetPowerFactor(void) const
+		float GetExtraData(ExtraData_typedef extra) const
 		{
-			return RMSData->GetPowerFactor();
-		}
-
-		/**
-		 * Return frequency
-		 */
-		float GetFrequency(void) const
-		{
-			return RMSData->GetFrequency();
+			return RMSData->GetExtraData(extra);
 		}
 
 		/**
@@ -1273,7 +1291,7 @@ class CIRRUS_CS548x: public CIRRUS_Base
 		float GetIRMS(CIRRUS_Channel channel) const;
 		float GetPRMSSigned(CIRRUS_Channel channel) const;
 		float GetTemperature(void) const;
-		float GetPowerFactor(CIRRUS_Channel channel) const;
+		float GetExtraData(CIRRUS_Channel channel, ExtraData_typedef extra) const;
 		float GetFrequency(void) const;
 		void GetEnergy(CIRRUS_Channel channel, float *conso, float *surplus);
 		RMS_Data GetLog(CIRRUS_Channel channel, double *temp);

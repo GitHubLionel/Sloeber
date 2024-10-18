@@ -73,10 +73,17 @@ bool CIRRUS_RMSData::GetData(unsigned long reftime, bool reset_ready)
 			}
 
 			// Extra, no mean
-			if (_WantPower_Factor)
-				Cirrus->get_data(CIRRUS_Power_Factor, &Power_Factor);
-			if (_WantFrequency)
-				Cirrus->get_data(CIRRUS_Frequency, &Frequency);
+			if (_ExtraData > 0)
+			{
+				if ((_ExtraData & exd_PApparent) == exd_PApparent)
+					Cirrus->get_data(CIRRUS_Apparent_Power, &PApparent);
+				if ((_ExtraData & exd_PReactive) == exd_PReactive)
+					Cirrus->get_data(CIRRUS_Reactive_Power, &PReactive);
+				if ((_ExtraData & exd_PF) == exd_PF)
+					Cirrus->get_data(CIRRUS_Power_Factor, &Power_Factor);
+				if ((_ExtraData & exd_Frequency) == exd_Frequency)
+					Cirrus->get_data(CIRRUS_Frequency, &Frequency);
+			}
 
 			_inst_count = 0;
 		}
@@ -160,8 +167,6 @@ void CIRRUS_CS548x::Initialize()
 		RMSData_ch1 = new CIRRUS_RMSData(this);
 		RMSData_ch2 = new CIRRUS_RMSData(this, false);
 	}
-	// By default, we don't want the frequency on second channel
-	RMSData_ch2->SetWantData(true, false);
 }
 
 void CIRRUS_CS548x::SetLogTime(uint32_t second)
@@ -262,25 +267,25 @@ float CIRRUS_CS548x::GetTemperature(void) const
 }
 
 /**
- * Return power factor (cosphi) of the selected channel
+ * Return extra data of the selected channel
  */
-float CIRRUS_CS548x::GetPowerFactor(CIRRUS_Channel channel) const
+float CIRRUS_CS548x::GetExtraData(CIRRUS_Channel channel, ExtraData_typedef extra) const
 {
 	if (channel == Channel_1)
-		return RMSData_ch1->GetPowerFactor();
+		return RMSData_ch1->GetExtraData(extra);
 	else
 		if (channel == Channel_2)
-			return RMSData_ch2->GetPowerFactor();
+			return RMSData_ch2->GetExtraData(extra);
 		else
 			return 0;
 }
 
 /**
- * Return frequency
+ * Return frequency of channel 1
  */
 float CIRRUS_CS548x::GetFrequency(void) const
 {
-	return RMSData_ch1->GetFrequency();
+	return RMSData_ch1->GetExtraData(exd_Frequency);
 }
 
 /**

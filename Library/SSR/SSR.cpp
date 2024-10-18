@@ -403,11 +403,11 @@ void SSR_Initialize(uint8_t ZC_Pin, uint8_t SSR_Pin, int8_t LED_Pin)
  * puis on démarre la charge à fond. Par différence, on déduit la puissance de la charge.
  * Doit être exécutée avant de lancer la régulation.
  * Si on connait la charge, on peut directement utiliser SSR_Set_Dump_Power
+ * Note : utilise le channel 1 du cirrus
  */
 float SSR_Compute_Dump_power(float default_Power)
 {
 #define count_max   20
-	uint8_t count = count_max;
 	float urms, prms;
 	float cumul_p = 0.0;
 	float cumul_u = 0.0;
@@ -420,7 +420,7 @@ float SSR_Compute_Dump_power(float default_Power)
 	CIRRUS_get_rms_data(&urms, &prms);
 	cumul_p = prms;
 	cumul_u = urms;
-	while ((count--) != 0)
+	for (int i = 1; i < count_max; i++)
 	{
 		delay(150);
 		CIRRUS_get_rms_data(&urms, &prms);
@@ -433,15 +433,13 @@ float SSR_Compute_Dump_power(float default_Power)
 	PrintVal("Puissance sans charge", initial_p, false);
 
 	// On allume le SSR et on refait une mesure
-	SSR_Action(SSR_Action_FULL);
-	SSR_Enable();
+	SSR_Action(SSR_Action_FULL, true);
 	delay(2000); // Pour stabiliser
 
 	CIRRUS_get_rms_data(&urms, &prms);
 	cumul_p = prms;
 	cumul_u = urms;
-	count = count_max;
-	while ((count--) != 0)
+	for (int i = 1; i < count_max; i++)
 	{
 		delay(150);
 		CIRRUS_get_rms_data(&urms, &prms);
@@ -449,28 +447,30 @@ float SSR_Compute_Dump_power(float default_Power)
 		cumul_u += urms;
 	}
 
+	// On éteint le SSR
+	SSR_Action(SSR_Action_OFF);
+
 	final_p = cumul_p / count_max;
 	final_u = cumul_u / count_max;
 
-	// On éteint le SSR
-	SSR_Action(SSR_Action_OFF);
-	delay(2000); // Pour stabiliser
-
 	Dump_Power_Relatif = (final_p - initial_p) / ((initial_u + final_u) / 2.0);
+
 	// La charge ne devait pas être branchée, on utilise la puissance par défaut
 	if (Dump_Power_Relatif < 0.5)
 	{
 		if (default_Power != 0.0)
-		  Dump_Power_Relatif = default_Power / 230.0;
+			Dump_Power_Relatif = default_Power / 230.0;
 		else
 			Dump_Power_Relatif = Dump_Power / 230.0;
 	}
+	PrintVal("Puissance de la charge", final_p - initial_p, false);
+	PrintVal("Résistance de la charge", (final_u * final_u) /(final_p - initial_p), false);
 	PrintVal("Puissance de la charge relative", Dump_Power_Relatif, false);
 
 	// Restaure current action
 	SSR_Action(action);
 
-	return Dump_Power_Relatif;
+	return final_p - initial_p;
 }
 
 /**

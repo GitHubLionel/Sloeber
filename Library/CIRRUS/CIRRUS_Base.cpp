@@ -172,18 +172,12 @@ void Config1_Register::DO_Config1(Config1_Struct_typedef DO_struct)
 	reg.HSB = hsb;
 	config1 = reg.Bit32;
 	config1_struct = DO_struct;
-
-//	create_blist(lsb, msb, hsb, &msg);
-//	write_register(P0_Config1, PAGE0, &msg);
 }
 
 void Config1_Register::Create_Config1_Struct(void)
 {
 	Bit_List reg;
 	uint8_t bit;
-//	CIRRUS_DO_Struct DO_Struct;
-
-//	read_register(P0_Config1, PAGE0, &reg);
 
 	reg.Bit32 = config1;
 	bit = reg.LSB;
@@ -203,16 +197,11 @@ void Config1_Register::Create_Config1_Struct(void)
 	config1_struct.DO3 = (CIRRUS_DO_OnOff)((bit & 0b00000100) >> 2);
 	config1_struct.DO2 = (CIRRUS_DO_OnOff)((bit & 0b00000010) >> 1);
 	config1_struct.DO1 = (CIRRUS_DO_OnOff)(bit & 0b00000001);
-
-//	return DO_Struct;
 }
 
-void Config1_Register::Print_Config1(char *mess)
+char *Config1_Register::Print_Config1(char *mess)
 {
-//	CIRRUS_DO_Struct DO_Struct = Get_DO_Config1();
-
 	const char *digit[] = {"1", "2", "3", "4"};
-//	char mess[255] = {0};
 	int i;
 
 	strcpy(mess, "");
@@ -250,7 +239,7 @@ void Config1_Register::Print_Config1(char *mess)
 		  strcat(mess, ", ");
 	}
 	strcat(mess, "\r\n");
-//	print_str(mess);
+	return mess;
 }
 
 // ********************************************************************************
