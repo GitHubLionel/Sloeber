@@ -105,10 +105,12 @@
     <div class="div_space">
       <fieldset>
       <div>
-        <input type="radio" id="percent" name="SSRType" value="percent"  onchange="doToggle('SSRType')" checked>
+        <input type="radio" id="percent" name="SSRType" value="percent"  onchange="doSSRAction('percent')" checked>
         <label for="percent">Pourcentage</label>
-        <input type="radio" id="zero" name="SSRType" value="zero" onchange="doToggle('SSRType')">
+        <input type="radio" id="zero" name="SSRType" value="zero" onchange="doSSRAction('zero')">
         <label for="zero">Zéro</label>
+        <input type="radio" id="fullpower" name="SSRType" value="fullpower" onchange="doSSRAction('fullpower')">
+        <label for="fullpower">Pleine charge</label>        
 <!--        <button class="myButton" id="select_SSRType" onclick="doToggle('SSRType')">Select</button> -->
       </div>
       <div id="powerCE" style="display: none">
@@ -116,9 +118,9 @@
         <input type="text" name="powerSSR" id="powerSSR" value="1000">
         <label for="targetSSR">Surplus cible : </label>
         <input type="text" name="targetSSR" id="targetSSR" value="0">
-        <button class="myButton" id="powerCE" onclick="sendCEPower()">Update</button>
+        <button class="myButton" id="powerCE" onclick="sendCEPower()">Actualiser</button>
         <br>
-        <button class="myButton" id="checkLoad" onclick="checkLoadPower()">Test puissance CE</button>
+        <button class="myButton" id="checkLoad" title="Résultat dans le log" onclick="checkLoadPower()">Test puissance CE</button>
       </div>
       <div id="rangePercent">
       <div class="range" style="--step:10; --min:00; --max:100">

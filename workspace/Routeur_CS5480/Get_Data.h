@@ -40,6 +40,7 @@ typedef struct
 		float Cirrus_power_ch2;
 
 		// Extra
+		float PApparent;
 		float Cirrus_PF;
 		float Cirrus_Freq;
 

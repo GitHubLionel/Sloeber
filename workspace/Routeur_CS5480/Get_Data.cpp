@@ -107,7 +107,8 @@ void Get_Data(void)
 	Current_Data.Cirrus_ch1.Current = CS5480.GetIRMS(Channel_1);
 #endif
 	Current_Data.Cirrus_ch1.Power = CS5480.GetPRMSSigned(Channel_1);
-	Current_Data.Cirrus_PF = CS5480.GetPowerFactor(Channel_1);
+	Current_Data.PApparent = CS5480.GetExtraData(Channel_1, exd_PApparent);
+	Current_Data.Cirrus_PF = CS5480.GetExtraData(Channel_1, exd_PF);
 	Current_Data.Cirrus_Temp = CS5480.GetTemperature();
 	CS5480.GetEnergy(Channel_1, &energy_day_conso, &energy_day_surplus);
 
@@ -155,10 +156,13 @@ void Get_Data(void)
 	Data_acquisition = false;
 }
 
+#ifdef USE_SSR
 bool CIRRUS_get_rms_data(float *uRMS, float *pRMS)
 {
+	CS5480.SelectChannel(Channel_1);
 	return CS5480.get_rms_data(uRMS, pRMS);
 }
+#endif
 
 // ********************************************************************************
 // Affichage des données
@@ -206,6 +210,9 @@ uint8_t Update_IHM(const char *first_text, const char *last_text, bool display)
 #endif
 
 	sprintf(buffer, "Prms:%.2f   ", Current_Data.Cirrus_ch1.Power);
+	IHM_Print(line++, (char*) buffer);
+
+	sprintf(buffer, "Papp:%.2f   ", Current_Data.PApparent);
 	IHM_Print(line++, (char*) buffer);
 
 	sprintf(buffer, "Prms2:%.2f   ", Current_Data.Cirrus_power_ch2);

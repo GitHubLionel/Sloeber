@@ -469,11 +469,10 @@ void setup()
 
 	if (Cirrus_OK)
 	{
-		// Pour le channel 1, on veut le PF et pas la fréquence
-		CS5480.GetRMSData(Channel_1)->SetWantData(true, false);
+		// Pour le channel 1, on veut le PF et la puissance apparente
+		CS5480.GetRMSData(Channel_1)->SetWantData(exd_PF | exd_PApparent);
 		// Pour le channel 2, on ne veut pas la temprérature, ni le PF ni la fréquence
 		CS5480.GetRMSData(Channel_2)->SetTemperature(false); // Normalement déjà false
-		CS5480.GetRMSData(Channel_2)->SetWantData(false, false);
 	}
 
 	// **** 7- Initialisation SSR avec Zero-Cross ****
@@ -486,10 +485,8 @@ void setup()
 
 //	SSR_Compute_Dump_power();
 
-	if (init_routeur.ReadBool("SSR", "Action", true)) // Par défaut Percent, voir page web
-		SSR_Action(SSR_Action_Percent);
-	else
-		SSR_Action(SSR_Action_Surplus);
+	SSR_Action_typedef action = (SSR_Action_typedef)init_routeur.ReadInteger("SSR", "Action", 1); // Par défaut Percent, voir page web
+	SSR_Action(action);
 
 	// NOTE : le SSR est éteint, on le démarre dans la page web
 #endif
@@ -638,9 +635,12 @@ void handleInitialization(CB_SERVER_PARAM)
 {
 	String message = "";
 	if (SSR_Get_Action() == SSR_Action_Percent)
-		message = "true#";
+		message = "1#";
 	else
-		message = "false#";
+		if (SSR_Get_Action() == SSR_Action_Surplus)
+			message = "2#";
+		else
+			message = "3#";
 	message += (String) SSR_Get_Dump_Power() + '#';
 	message += (String) SSR_Get_Target() + '#';
 	message += (String) SSR_Get_Percent() + '#';
@@ -736,14 +736,17 @@ void handleOperation(CB_SERVER_PARAM)
 #ifdef USE_ZC_SSR
 	// Change le mode d'action Pourcent/Zéro
 	// Ne pas oublier de redémarrer le SSR après
-	if (pserver->hasArg("SSRType"))
+	if (pserver->hasArg("SSRAction"))
 	{
-		if (pserver->arg("SSRType") == "true")
+		if (pserver->arg("SSRAction") == "percent")
 			SSR_Action(SSR_Action_Percent);
 		else
-			SSR_Action(SSR_Action_Surplus);
+			if (pserver->arg("SSRAction") == "zero")
+				SSR_Action(SSR_Action_Surplus);
+			else
+				SSR_Action(SSR_Action_FULL);
 
-		init_routeur.WriteBool("SSR", "Action", (SSR_Get_Action() == SSR_Action_Percent), "True for percent action");
+		init_routeur.WriteInteger("SSR", "Action", SSR_Get_Action(), "Full=1, Percent=2, Zero=3");
 	}
 
 	// La puissance du CE pour le mode zéro
