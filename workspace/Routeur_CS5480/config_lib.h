@@ -99,6 +99,7 @@
 #define KEYBOARD_ADC_GPIO	GPIO_NUM_36
 #define DEBOUNCING_MS	200
 #define DEBOUNCING_US	200000
+#define KEYBOARD_ESP32_ARDUINO
 
 /**********************************************************
  * Cirrus define

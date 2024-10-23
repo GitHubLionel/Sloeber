@@ -117,6 +117,11 @@
 			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp32/hardware/esp32/3.0.3/libraries/Wire</locationURI>
 		</link>
 		<link>
+			<name>user_lib/ADC_Tore</name>
+			<type>2</type>
+			<locationURI>USER_LIB/ADC_Tore</locationURI>
+		</link>
+		<link>
 			<name>user_lib/CIRRUS</name>
 			<type>2</type>
 			<locationURI>USER_LIB/CIRRUS</locationURI>

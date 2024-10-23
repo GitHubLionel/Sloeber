@@ -19,6 +19,7 @@
 #include "Keyboard.h"
 #include "Relay.h"
 #include "iniFiles.h"
+#include "ADC_Tore.h"
 
 /**
  * Define de debug
@@ -39,7 +40,7 @@
 #define USE_DS
 
 // Use Teleinfo
-//#define USE_TI
+#define USE_TI
 
 // Active le SSR
 #define USE_ZC_SSR
@@ -49,6 +50,9 @@
 
 // Active le clavier
 #define USE_KEYBOARD
+
+// Active ADC
+//#define USE_ADC
 
 // Liste des taches
 #include "Tasks_utils.h"       // Task list functions
@@ -160,6 +164,7 @@ DS18B20 DS(DS18B20_GPIO);
 // ********************************************************************************
 
 bool TI_OK = false;
+uint32_t TI_Counter = 0;
 TeleInfo TI(TI_RX_GPIO, 5000);
 
 // ********************************************************************************
@@ -245,6 +250,10 @@ void handleInitialization(CB_SERVER_PARAM);
 void handleLastData(CB_SERVER_PARAM);
 void handleOperation(CB_SERVER_PARAM);
 void handleCirrus(CB_SERVER_PARAM);
+
+// ADC
+//adc_channel_t ADC_Channel = ADC_CHANNEL_3;
+//extern adc_oneshot_unit_handle_t adc1_handle; // Initialisé dans KeyBoard
 
 // ********************************************************************************
 // Task functions
@@ -450,6 +459,7 @@ void setup()
 		print_debug(F("Configuration TeleInfo OK"));
 		TI.PrintAllToSerial();
 		TI_OK = true;
+		TI_Counter = TI.getIndexWh();
 	}
 	else
 		print_debug(F("Configuration TeleInfo ERROR"));
@@ -504,6 +514,10 @@ void setup()
 	Set_Relay_State(0, init_routeur.ReadBool("Relais", "Relais_On", false));
 #endif
 
+#ifdef USE_ADC
+	ADC_Initialize(GPIO_NUM_39);
+#endif
+
 	// **** FIN- Attente connexion réseau
 	IHM_Print0("Connexion .....");
 	print_debug(F("==> Wait for network <=="));
@@ -539,13 +553,31 @@ void setup()
 //	TaskList.AddTask({true, "Keyboard_Task", 2048, 10, 100, CoreAny, Keyboard_Task_code});
 	TaskList.AddTask(KEYBOARD_DATA_TASK(true));
 	TaskList.Create(USE_IDLE_TASK);
+
+#ifdef USE_ADC
+	ADC_Begin();
+#endif
 }
 
 // The loop function is called in an endless loop
 // If empty, about 50000 loops by second
 // Les mesures ne sont faites que si au moins une seconde est passée
+#ifdef USE_ADC
+extern volatile SemaphoreHandle_t ADC_Current_Semaphore;
+#endif
+
+
 void loop()
 {
+#ifdef USE_ADC
+  // If Timer has fired
+//  if (xSemaphoreTake(ADC_Current_Semaphore, 0) == pdTRUE)
+//  {
+//  	Serial.print("Current=");
+//    Serial.println(ADC_GetCurrent());
+//  }
+#endif
+
 	// Listen for HTTP requests from clients
 #ifndef USE_ASYNC_WEBSERVER
 	server.handleClient();
@@ -644,10 +676,10 @@ void handleInitialization(CB_SERVER_PARAM)
 	message += (String) SSR_Get_Dump_Power() + '#';
 	message += (String) SSR_Get_Target() + '#';
 	message += (String) SSR_Get_Percent() + '#';
-	if (SSR_Get_StateON())
-		message += "ON#";
-	else
+	if (SSR_Get_State() == SSR_OFF)
 		message += "OFF#";
+	else
+		message += "ON#";
 	if (Get_Relay_State(0))
 		message += "ON#";
 	else
@@ -673,22 +705,30 @@ void handleLastData(CB_SERVER_PARAM)
 	String message = String(RTC_Local.the_time);
 	message += '#';
 	graphe = Get_Last_Data(&Energy, &Surplus, &Prod);
-	message += (String) Current_Data.Cirrus_ch1.Power + '#';
+	message += (String) Current_Data.Cirrus_ch1.ActivePower + '#';
 	message += (String) Current_Data.Cirrus_ch1.Voltage + '#';
 	message += (String) Energy + '#';
 	message += (String) Surplus + '#';
 	message += (String) Current_Data.Cirrus_PF + '#';
 	message += (String) Current_Data.Cirrus_power_ch2 + '#';
 	message += (String) Prod + '#';
-	message += (String) Current_Data.Cirrus_Temp;
+#ifdef USE_TI
+	message += (String) (TI.getIndexWh() - TI_Counter) + '#';
+#else
+	message += "0#";
+#endif
+	message += (String) Current_Data.Cirrus_Temp + '#';
 
 	if (DS_Count > 0)
 	{
-		message += '#' + DS.get_Temperature_Str(0) + '#';
+		message += DS.get_Temperature_Str(0) + '#';
 		message += DS.get_Temperature_Str(1);
 	}
 	else
-		message += "#0.0#0.0";
+		message += "0.0#0.0";
+
+	// Etat du SSR
+	message += "#SSR=" + (String)((int)SSR_Get_State());
 
 	// On a de nouvelles données pour le graphe
 	if (graphe)
@@ -766,8 +806,9 @@ void handleOperation(CB_SERVER_PARAM)
 	{
 		TaskList.SuspendTask("CIRRUS_Task");
 		delay(200);
-		SSR_Compute_Dump_power();
+		double power = SSR_Compute_Dump_power();
 		TaskList.ResumeTask("CIRRUS_Task");
+		init_routeur.WriteFloat("SSR", "P_CE", power);
 	}
 
 	// Gestion dimmer en pourcentage
@@ -781,12 +822,10 @@ void handleOperation(CB_SERVER_PARAM)
 	// Allume ou éteint le SSR
 	if (pserver->hasArg("Toggle_SSR"))
 	{
-		if (SSR_Get_StateON())
-		{
-			SSR_Disable();
-		}
-		else
+		if (SSR_Get_State() == SSR_OFF)
 			SSR_Enable();
+		else
+			SSR_Disable();
 	}
 #endif
 

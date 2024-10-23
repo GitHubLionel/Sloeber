@@ -7,6 +7,7 @@
 #include "RTCLocal.h"					// A pseudo RTC software library
 #include "Partition_utils.h"	// Some utils functions for LittleFS/SPIFFS/FatFS
 #include "DS18B20.h"
+#include "TeleInfo.h"
 
 #ifdef CIRRUS_USE_TASK
 #include "Tasks_utils.h"
@@ -15,6 +16,11 @@
 // Use DS18B20
 extern uint8_t DS_Count;
 extern DS18B20 DS;
+
+// Use TI
+extern bool TI_OK;
+extern uint32_t TI_Counter;
+extern TeleInfo TI;
 
 // data au format CSV
 const String CSV_Filename = "/data.csv";
@@ -106,7 +112,7 @@ void Get_Data(void)
 #ifdef CIRRUS_RMS_FULL
 	Current_Data.Cirrus_ch1.Current = CS5480.GetIRMS(Channel_1);
 #endif
-	Current_Data.Cirrus_ch1.Power = CS5480.GetPRMSSigned(Channel_1);
+	Current_Data.Cirrus_ch1.ActivePower = CS5480.GetPRMSSigned(Channel_1);
 	Current_Data.PApparent = CS5480.GetExtraData(Channel_1, exd_PApparent);
 	Current_Data.Cirrus_PF = CS5480.GetExtraData(Channel_1, exd_PF);
 	Current_Data.Cirrus_Temp = CS5480.GetTemperature();
@@ -119,7 +125,7 @@ void Get_Data(void)
 #ifdef USE_SSR
 	// On choisi le premier channel qui mesure la consommation et le surplus
 	Cirrus_voltage = Current_Data.Cirrus_ch1.Voltage;
-	Cirrus_power_signed = Current_Data.Cirrus_ch1.Power;
+	Cirrus_power_signed = Current_Data.Cirrus_ch1.ActivePower;
 
 	if (Gestion_SSR_CallBack != NULL)
 		Gestion_SSR_CallBack();
@@ -135,11 +141,11 @@ void Get_Data(void)
 		double temp;
 		RMS_Data data = CS5480.GetLog(Channel_1, &temp);
 		log_cumul.Voltage = data.Voltage;
-		log_cumul.Power_ch1 = data.Power;
+		log_cumul.Power_ch1 = data.ActivePower;
 		log_cumul.Temp = temp;
 
 		data = CS5480.GetLog(Channel_2, NULL);
-		log_cumul.Power_ch2 = data.Power;
+		log_cumul.Power_ch2 = data.ActivePower;
 
 		// Pour le rafraichissement de la page Internet si connecté
 		log_new_data = true;
@@ -209,7 +215,7 @@ uint8_t Update_IHM(const char *first_text, const char *last_text, bool display)
 	IHM_Print(line++, (char*) buffer);
 #endif
 
-	sprintf(buffer, "Prms:%.2f   ", Current_Data.Cirrus_ch1.Power);
+	sprintf(buffer, "Prms:%.2f   ", Current_Data.Cirrus_ch1.ActivePower);
 	IHM_Print(line++, (char*) buffer);
 
 	sprintf(buffer, "Papp:%.2f   ", Current_Data.PApparent);
@@ -302,6 +308,8 @@ void onDaychange(uint8_t year, uint8_t month, uint8_t day)
 	energy_day_surplus = 0.0;
 	energy_day_prod = 0.0;
 	CS5480.RestartEnergy();
+	if (TI_OK)
+		TI_Counter = TI.getIndexWh();
 
 	// On archive le fichier data du jour en lui donnant le nom du jour
 	if (Data_Partition->exists(CSV_Filename))
