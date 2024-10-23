@@ -1,11 +1,5 @@
 #include "Keyboard.h"
 
-#ifdef ESP32
-#include "hal/adc_types.h"
-#include <esp_adc/adc_oneshot.h>
-#include <esp_adc/adc_continuous.h>
-#endif
-
 #ifdef KEYBOARD_USE_TASK
 #include "Tasks_utils.h"
 #endif
@@ -16,7 +10,7 @@ const char *Btn_Texte[BTN_MAX] = {"NO btn pressed", "K1 pressed", "K2 pressed", 
 // Variables clavier
 static uint16_t Low_sampling[BTN_MAX];  // tableau de stockage des valeurs basses
 
-#ifdef ESP8266
+#if defined(ESP8266) | defined(KEYBOARD_ESP32_ARDUINO)
 uint8_t Keyboard_Channel;
 #else
 adc_oneshot_unit_handle_t adc1_handle = nullptr; // @suppress("Type cannot be resolved")
@@ -153,7 +147,7 @@ bool GPIO_NUM_toADCChannel(uint8_t gpio, adc_channel_t *adc_channel)
 	return true;
 }
 
-void InitADC(adc_channel_t channel)
+void InitADC(adc_channel_t channel, adc_oneshot_unit_handle_t *adc_handle)
 {
 	//-------------ADC1 Init---------------//
 	adc_oneshot_unit_init_cfg_t init_config1 = { // @suppress("Type cannot be resolved")
@@ -161,25 +155,28 @@ void InitADC(adc_channel_t channel)
 			.clk_src = ADC_RTC_CLK_SRC_DEFAULT,
 			.ulp_mode = ADC_ULP_MODE_DISABLE,
 	};
-	ESP_ERROR_CHECK(adc_oneshot_new_unit(&init_config1, &adc1_handle)); // @suppress("Invalid arguments")
+	ESP_ERROR_CHECK(adc_oneshot_new_unit(&init_config1, adc_handle)); // @suppress("Invalid arguments")
 
 	//-------------ADC1 Config---------------//
 	adc_oneshot_chan_cfg_t config = { // @suppress("Type cannot be resolved")
 			.atten = ADC_ATTEN_DB_12,
 			.bitwidth = ADC_BITWIDTH_DEFAULT, // default width is max supported width
 	};
-	ESP_ERROR_CHECK(adc_oneshot_config_channel(adc1_handle, channel, &config)); // @suppress("Invalid arguments")
+	ESP_ERROR_CHECK(adc_oneshot_config_channel(*adc_handle, channel, &config)); // @suppress("Invalid arguments")
+//	ESP_ERROR_CHECK(adc_oneshot_config_channel(*adc_handle, ADC_CHANNEL_3, &config)); // @suppress("Invalid arguments")
 }
-
 #endif
 
 void Keyboard_Init_Base(uint8_t pin, uint8_t nbButton)
 {
-#ifdef ESP8266
+#if defined(ESP8266) | defined(KEYBOARD_ESP32_ARDUINO)
 	Keyboard_Channel = pin;
+	pinMode(Keyboard_Channel, INPUT);
 #else
-	GPIO_NUM_toADCChannel(pin, &Keyboard_Channel);
-	InitADC(Keyboard_Channel);
+//	GPIO_NUM_toADCChannel(pin, &Keyboard_Channel);
+	adc_unit_t adc_unit;
+	adc_oneshot_io_to_channel(pin, &adc_unit, &Keyboard_Channel);
+	InitADC(Keyboard_Channel, &adc1_handle);
 #endif
 	Keyboard_Initialized = false;
 	Btn_Count = nbButton;
@@ -444,7 +441,7 @@ const char* Btn_Click_Name()
  */
 inline uint16_t Btn_Click_Val()
 {
-#ifdef ESP8266
+#if defined(ESP8266) | defined(KEYBOARD_ESP32_ARDUINO)
 	return analogRead(Keyboard_Channel);
 #else
 	int raw = 0;
@@ -467,7 +464,7 @@ inline uint16_t Btn_Click_Val()
  */
 inline bool Btn_Click_Val(uint16_t *value)
 {
-#ifdef ESP8266
+#if defined(ESP8266) | defined(KEYBOARD_ESP32_ARDUINO)
 	*value = analogRead(Keyboard_Channel);
 	return (*value > Low_sampling[Btn_Count - 1]);
 #else
