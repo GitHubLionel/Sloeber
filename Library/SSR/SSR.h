@@ -9,7 +9,8 @@
 typedef enum
 {
 	SSR_OFF = 0,
-	SSR_ON = 1
+	SSR_ON = 1,
+	SSR_ON_ACTIF = 2
 } SSR_State_typedef;
 
 typedef enum
@@ -36,7 +37,7 @@ float SSR_Compute_Dump_power(float default_Power = 0.0);
 void SSR_Action(SSR_Action_typedef do_action, bool restart = false);
 SSR_Action_typedef SSR_Get_Action(void);
 
-bool SSR_Get_StateON(void);
+SSR_State_typedef SSR_Get_State(void);
 void SSR_Enable(void);
 void SSR_Disable(void);
 

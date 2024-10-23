@@ -26,6 +26,7 @@ hw_timer_t *Timer_SSR = NULL;
 portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 #define TIMERMUX_ENTER()	portENTER_CRITICAL_ISR(&timerMux)
 #define TIMERMUX_EXIT()	portEXIT_CRITICAL_ISR(&timerMux);
+volatile SemaphoreHandle_t topZC_Semaphore;
 #if defined(ESP_IDF_VERSION) && (ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)) // ESP32 2.0.x
 // Le channel pour la led SSR en PWM
 #define LED_CHANNEL	0
@@ -274,6 +275,11 @@ void IRAM_ATTR onCirrusZC(void)
  */
 void IRAM_ATTR onCirrusZC(void)
 {
+#ifdef ESP32
+  // Give a semaphore that we can used to synchronise with ZC cirrus
+  xSemaphoreGiveFromISR(topZC_Semaphore, NULL);
+#endif
+
 	TIMERMUX_ENTER();
 
 #if defined(ZERO_CROSS_TOP_Xms)
@@ -363,6 +369,9 @@ void SSR_Initialize(uint8_t ZC_Pin, uint8_t SSR_Pin, int8_t LED_Pin)
 	timerAttachInterrupt(Timer_SSR, &onTimerSSR);
 #endif
 	timer_OK = (Timer_SSR != NULL);
+
+  // Create semaphore to inform us when the zero cross has fired
+	topZC_Semaphore = xSemaphoreCreateBinary();
 #endif // ESP32
 
 	if (timer_OK)
@@ -523,11 +532,22 @@ SSR_Action_typedef SSR_Get_Action(void)
 }
 
 /**
- * Renvoie TRUE si le SSR est actif
+ * Renvoie l'état du SSR
+ * SSR_OFF: éteint
+ * SSR_ON: allumé mais pas actif
+ * SSR_ON_ACTIF; allumé actif
  */
-bool SSR_Get_StateON(void)
+SSR_State_typedef SSR_Get_State(void)
 {
-	return Is_SSR_enabled;
+	if (!Is_SSR_enabled)
+		return SSR_OFF;
+	else
+	{
+		if (Tim_Interrupt_Enabled)
+			return SSR_ON_ACTIF;
+		else
+			return SSR_ON;
+	}
 }
 
 void SSR_Enable(void)
@@ -601,7 +621,7 @@ void SSR_Disable(void)
  */
 void SSR_Set_Dump_Power(float dump)
 {
-	bool isrunning = SSR_Get_StateON();
+	bool isrunning = !(SSR_Get_State() == SSR_OFF);
 	SSR_Disable();
 	Dump_Power = fabs(dump);
 	Dump_Power_Relatif = Dump_Power / 230.0;
@@ -620,7 +640,7 @@ float SSR_Get_Dump_Power(void)
  */
 void SSR_Set_Target(float target)
 {
-	bool isrunning = SSR_Get_StateON();
+	bool isrunning = !(SSR_Get_State() == SSR_OFF);
 	SSR_Disable();
 	SSR_Target = target;
 
@@ -635,7 +655,7 @@ float SSR_Get_Target(void)
 
 void SSR_Set_Percent(float percent)
 {
-	bool isrunning = SSR_Get_StateON();
+	bool isrunning = !(SSR_Get_State() == SSR_OFF);
 	SSR_Disable();
 	SSR_Percent = percent;
 
@@ -659,7 +679,7 @@ float SSR_Get_Current_Percent(void)
 // Fonction pour dimmer une puissance cible
 void SSR_Set_Dimme_Target(float target)
 {
-	bool isrunning = SSR_Get_StateON();
+	bool isrunning = !(SSR_Get_State() == SSR_OFF);
 	SSR_Disable();
 	Dimme_Power = target;
 
