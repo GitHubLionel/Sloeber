@@ -393,51 +393,79 @@ typedef enum
  * Contain Voltage, Current, Power and Energy by day
  */
 #ifdef CIRRUS_RMS_FULL
+
+typedef enum
+{
+	dat_Voltage,
+	dat_Current,
+	dat_ActivePower,
+	dat_ApparentPower,
+	dat_ReactivePower,
+	dat_PowerFactor,
+	dat_Frequency,
+	dat_Temperature,
+	dat_Energy
+} Data_List;
+
 typedef struct RMS_Data
 {
-		float Voltage;
-		float Current;
-		float Power;
-		float Energy;
+		union
+		{
+				float tab[dat_Energy] = {0};
+				struct
+				{
+						float Voltage;
+						float Current;
+						float ActivePower;
+						float ApparentPower;
+						float ReactivePower;
+						float PowerFactor;
+						float Frequency;
+						float Temperature;
+						float Energy;
+				};
+		};
 
 	public:
-		RMS_Data(float u = 0.0, float i = 0.0, float e = 0.0) :
-				Voltage(u), Current(i), Power(e)
+		RMS_Data()
 		{
-			Energy = 0.0;
 		}
+		/// assignment operator. Return this if we chain affectation
+//		RMS_Data& operator =(const RMS_Data &data)
+//		{
+//			for (int i = 0; i <= dat_Energy; i++)
+//				tab[i] = data.tab[i];
+//			return *this;
+//		}
 
 		inline RMS_Data& operator +=(const RMS_Data &data)
 		{
-			Voltage += data.Voltage;
-			Current += data.Current;
-			Power += data.Power;
+			for (int i = 0; i < dat_Energy; i++)
+				tab[i] += data.tab[i];
 			return *this;
 		}
 
 		inline RMS_Data& operator /=(const float val)
 		{
 			float inv = 1.0 / val;
-			Voltage *= inv;
-			Current *= inv;
-			Power *= inv;
+			for (int i = 0; i < dat_Energy; i++)
+				tab[i] *= inv;
 			return *this;
-		}
-
-		inline RMS_Data operator +(RMS_Data const &data) const
-		{
-			return RMS_Data(Voltage + data.Voltage, Current + data.Current, Power + data.Power);
 		}
 
 		inline RMS_Data operator /(float const val) const
 		{
-			float inv = 1.0 / val;
-			return RMS_Data(Voltage * inv, Current * inv, Power * inv);
+//			float inv = 1.0 / val;
+			RMS_Data dat = *this;
+			dat /= val;
+			return dat;
+//			return RMS_Data(Voltage * inv, Current * inv, Power * inv);
 		}
 
 		inline RMS_Data& Zero(void)
 		{
-			Voltage = Current = Power = Energy = 0.0;
+			for (int i = 0; i <= dat_Energy; i++)
+				tab[i] = 0;
 			return *this;
 		}
 } RMS_Data_type;
@@ -970,6 +998,7 @@ class CIRRUS_RMSData
 		CIRRUS_RMSData(bool temperature = true)
 		{
 			_temperature = temperature;
+			_log_time = _last_time = _ref_time = millis();
 		}
 		CIRRUS_RMSData(CIRRUS_Base *parent, bool temperature = true) :
 				CIRRUS_RMSData(temperature)
@@ -1017,7 +1046,7 @@ class CIRRUS_RMSData
 		 * Compute the energy and the mean for the log.
 		 * Return true and set flag log available if mean is complete.
 		 */
-		bool GetData(unsigned long reftime, bool reset_ready = true);
+		bool GetData(bool reset_ready = true);
 
 		float GetURMS() const
 		{
@@ -1035,12 +1064,12 @@ class CIRRUS_RMSData
 
 		float GetPRMSSigned() const
 		{
-			return _inst_data.Power;
+			return _inst_data.ActivePower;
 		}
 
 		float GetTemperature() const
 		{
-			return _inst_temp;
+			return _inst_data.Temperature;
 		}
 
 		/**
@@ -1051,10 +1080,10 @@ class CIRRUS_RMSData
 			double result = 0;
 			switch (extra)
 			{
-				case exd_PApparent: result = PApparent; break;
-				case exd_PReactive: result = PReactive; break;
-				case exd_PF: result = Power_Factor; break;
-				case exd_Frequency: result = Frequency; break;
+				case exd_PApparent: result = _inst_data.ApparentPower; break;
+				case exd_PReactive: result = _inst_data.ReactivePower; break;
+				case exd_PF: result = _inst_data.PowerFactor; break;
+				case exd_Frequency: result = _inst_data.Frequency; break;
 				default: ;
 			}
 			return result;
@@ -1077,7 +1106,7 @@ class CIRRUS_RMSData
 		{
 			_logAvailable = false;
 			if (temp != NULL)
-				*temp = _log_temp;
+				*temp = _log_data.Temperature;
 			return _log_data;
 		}
 
@@ -1096,22 +1125,16 @@ class CIRRUS_RMSData
 
 		// instantaneous values
 		RMS_Data _inst_data;
-		double _inst_temp = 0;
 
 		// log values (mean over _log_time_ms milliseconds)
 		RMS_Data _log_data;
 		uint32_t _log_time_ms = 120000; // 2 minutes
-		double _log_temp = 0;
 		bool _logAvailable = false;
 
 		bool _temperature = true;
 
 		// Extra data
 		uint16_t _ExtraData = exd_Null;
-		float PApparent = 0;
-		float PReactive= 0;
-		float Power_Factor = 0;
-		float Frequency = 0;
 
 		float energy_day_conso = 0.0;
 		float energy_day_surplus = 0.0;
@@ -1120,15 +1143,16 @@ class CIRRUS_RMSData
 
 		// Variables for GetData (Do not make them static in GetData() function !!)
 		RMS_Data _inst_data_cumul;
-		double _inst_temp_Cumul = 0;
 		RMS_Data _log_cumul_data;
-		double _log_cumul_temp = 0;
 
 		uint32_t _inst_count = 0;
 		uint32_t _log_count = 0;
 
-		unsigned long _start = 0;
-		unsigned long _startLog = 0;
+//		unsigned long _start = 0;
+//		unsigned long _startLog = 0;
+		unsigned long _ref_time = 0;
+		unsigned long _last_time = 0;
+		unsigned long _log_time = 0;
 };
 
 // ********************************************************************************

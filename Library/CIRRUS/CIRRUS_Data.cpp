@@ -28,14 +28,14 @@ void __attribute__((weak)) print_debug(String mess, bool ln = true)
 // ********************************************************************************
 // CIRRUS_RMSData class : GetData
 // ********************************************************************************
-bool CIRRUS_RMSData::GetData(unsigned long reftime, bool reset_ready)
+bool CIRRUS_RMSData::GetData(bool reset_ready)
 {
-#define _cumul_MAX 5
+#define _cumul_MAX 15
 
-	if (_inst_count == 0)
-		_start = reftime;
-	if (_log_count == 0)
-		_startLog = reftime;
+//	if (_inst_count == 0)
+//		_start = reftime;
+//	if (_log_count == 0)
+//		_startLog = reftime;
 
 	if (Cirrus->wait_for_data_ready(reset_ready))
 	{
@@ -43,20 +43,33 @@ bool CIRRUS_RMSData::GetData(unsigned long reftime, bool reset_ready)
 #ifdef CIRRUS_RMS_FULL
 		Cirrus->get_data(CIRRUS_RMS_Current, &_inst_data.Current);
 #endif
-		Cirrus->get_data(CIRRUS_Active_Power, &_inst_data.Power);
-		_inst_data_cumul += _inst_data;
+		Cirrus->get_data(CIRRUS_Active_Power, &_inst_data.ActivePower);
 		if (_temperature)
+			_inst_data.Temperature = Cirrus->get_temperature();
+
+		// Extra
+		if (_ExtraData > 0)
 		{
-			_inst_temp = Cirrus->get_temperature();
-			_inst_temp_Cumul += _inst_temp;
+			if ((_ExtraData & exd_PApparent) == exd_PApparent)
+				Cirrus->get_data(CIRRUS_Apparent_Power, &_inst_data.ApparentPower);
+			if ((_ExtraData & exd_PReactive) == exd_PReactive)
+				Cirrus->get_data(CIRRUS_Reactive_Power, &_inst_data.ReactivePower);
+			if ((_ExtraData & exd_PF) == exd_PF)
+				Cirrus->get_data(CIRRUS_Power_Factor, &_inst_data.PowerFactor);
+			if ((_ExtraData & exd_Frequency) == exd_Frequency)
+				Cirrus->get_data(CIRRUS_Frequency, &_inst_data.Frequency);
 		}
+
+		_inst_data_cumul += _inst_data;
 
 		// Gestion énergie, calcul sur la durée de la moyenne
 		_inst_count++;
 		if (_inst_count == _cumul_MAX)
 		{
 			_inst_data_cumul /= _cumul_MAX;
-			_inst_data.Energy = _inst_data_cumul.Power * ((reftime - _start) / 1000.0) / 3600.0;
+			_ref_time = millis();
+			_inst_data.Energy = _inst_data_cumul.ActivePower * ((_ref_time - _last_time) / 1000.0) / 3600.0;
+
 			if (_inst_data.Energy > 0.0)
 				energy_day_conso += _inst_data.Energy;
 			else
@@ -66,40 +79,18 @@ bool CIRRUS_RMSData::GetData(unsigned long reftime, bool reset_ready)
 			_log_count++;
 			_inst_data_cumul.Zero();
 
-			if (_temperature)
-			{
-				_log_cumul_temp += (_inst_temp_Cumul / _cumul_MAX);
-				_inst_temp_Cumul = 0;
-			}
-
-			// Extra, no mean
-			if (_ExtraData > 0)
-			{
-				if ((_ExtraData & exd_PApparent) == exd_PApparent)
-					Cirrus->get_data(CIRRUS_Apparent_Power, &PApparent);
-				if ((_ExtraData & exd_PReactive) == exd_PReactive)
-					Cirrus->get_data(CIRRUS_Reactive_Power, &PReactive);
-				if ((_ExtraData & exd_PF) == exd_PF)
-					Cirrus->get_data(CIRRUS_Power_Factor, &Power_Factor);
-				if ((_ExtraData & exd_Frequency) == exd_Frequency)
-					Cirrus->get_data(CIRRUS_Frequency, &Frequency);
-			}
-
+			_last_time = _ref_time;
 			_inst_count = 0;
-		}
 
-		// Gestion log graphe
-		if (reftime - _startLog >= _log_time_ms) // 2 minutes
-		{
-			_log_data = _log_cumul_data / _log_count;
-			_log_cumul_data.Zero();
-			if (_temperature)
+			// Gestion log graphe
+			if (_ref_time - _log_time >= _log_time_ms) // 2 minutes
 			{
-				_log_temp = _log_cumul_temp / _log_count;
-				_log_cumul_temp = 0;
+				_log_data = _log_cumul_data / _log_count;
+				_log_cumul_data.Zero();
+				_log_time = _ref_time;
+				_log_count = 0;
+				_logAvailable = true;
 			}
-			_log_count = 0;
-			_logAvailable = true;
 		}
 	}
 	else
@@ -188,26 +179,25 @@ void CIRRUS_CS548x::RestartEnergy(void)
 bool CIRRUS_CS548x::GetData(CIRRUS_Channel channel)
 {
 	bool log = false;
-	unsigned long reftime = millis();
 
 	if (channel == Channel_all)
 	{
 		SelectChannel(Channel_1);
-		log = RMSData_ch1->GetData(reftime, false);
+		log = RMSData_ch1->GetData(false);
 		SelectChannel(Channel_2);
-		log &= RMSData_ch2->GetData(reftime);
+		log &= RMSData_ch2->GetData();
 	}
 	else
 		if (channel == Channel_1)
 		{
 			SelectChannel(Channel_1);
-			log = RMSData_ch1->GetData(reftime);
+			log = RMSData_ch1->GetData();
 		}
 		else
 			if (channel == Channel_2)
 			{
 				SelectChannel(Channel_2);
-				log = RMSData_ch2->GetData(reftime);
+				log = RMSData_ch2->GetData();
 			}
 	return log;
 }
