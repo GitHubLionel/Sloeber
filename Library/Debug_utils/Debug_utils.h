@@ -48,6 +48,10 @@ void UART_Task_code(void *parameter);
 // Affiche le nom du sketch et des infos sur le démarrage
 String getSketchName(const String the_path, bool extra = false);
 
+#ifdef ESP32
+void WatchDog_Init(uint32_t WDT_TIMEOUT_ms);
+#endif
+
 void SERIAL_Initialization(int baud = UART_BAUD);
 
 // Pour le debug dans le log
