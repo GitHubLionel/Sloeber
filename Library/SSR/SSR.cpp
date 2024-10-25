@@ -346,6 +346,12 @@ void SSR_Initialize(uint8_t ZC_Pin, uint8_t SSR_Pin, int8_t LED_Pin)
 {
 	bool timer_OK = false;
 
+#ifdef ESP32
+	// Create semaphore to inform us when the zero cross has fired
+	// MUST BE created before interrupt callback onCirrusZC were attached !
+	topZC_Semaphore = xSemaphoreCreateBinary();
+#endif
+
 	// Interruption zero-cross Cirrus, callback onCirrusZC
 	// Zero cross pin INPUT_PULLUP
 	pinMode(ZC_Pin, INPUT_PULLUP);
@@ -369,9 +375,6 @@ void SSR_Initialize(uint8_t ZC_Pin, uint8_t SSR_Pin, int8_t LED_Pin)
 	timerAttachInterrupt(Timer_SSR, &onTimerSSR);
 #endif
 	timer_OK = (Timer_SSR != NULL);
-
-  // Create semaphore to inform us when the zero cross has fired
-	topZC_Semaphore = xSemaphoreCreateBinary();
 #endif // ESP32
 
 	if (timer_OK)
