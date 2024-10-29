@@ -24,7 +24,7 @@ extern TeleInfo TI;
 
 // data au format CSV
 const String CSV_Filename = "/data.csv";
-const String Energy_Filename = "/energy.csv";
+const String Energy_Filename = "/energy_2024.csv";
 
 // Data 200 ms
 volatile Data_Struct Current_Data; //{0,{0}};
@@ -266,13 +266,18 @@ void append_data(void)
 	File temp = Data_Partition->open(CSV_Filename, "a");
 	if (temp)
 	{
-		// Time, Pconso_rms, Pprod_rms, U_rms, Tcs, TDS1, TDS2
+		// Time, Pconso_rms, Pprod_rms, U_rms, Tcs
 		String data = String(RTC_Local.getUNIXDateTime()) + '\t' + (String) log_cumul.Power_ch1 + '\t'
 				+ (String) log_cumul.Power_ch2 + '\t' + (String) log_cumul.Voltage + '\t' + (String) log_cumul.Temp;
+		// DS Temp
 		if (DS_Count > 0)
-			data += '\t' + DS.get_Temperature_Str(0) + '\t' + DS.get_Temperature_Str(1) + "\r\n";
+			data += '\t' + DS.get_Temperature_Str(0) + '\t' + DS.get_Temperature_Str(1);
 		else
-			data += "\t0.0\t0.0\r\n";
+			data += "\t0.0\t0.0";
+		// Energy
+		data += '\t' + (String) energy_day_conso + '\t' + (String) energy_day_surplus + '\t' + (String) energy_day_prod;
+		// End line
+		data += "\r\n";
 		temp.print(data);
 		temp.close();
 	}

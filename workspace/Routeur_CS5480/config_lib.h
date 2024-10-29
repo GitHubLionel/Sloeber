@@ -57,7 +57,7 @@
  * RTC define : RTCLocal library
  * By default, global instance RTC_Local is created
  **********************************************************/
-#define USE_NTP_SERVER	2 // 1 or 2 for summer time
+#define USE_NTP_SERVER	1 // 1 or 2 for summer time
 //#define RTC_USE_CORRECTION
 
 /**********************************************************
