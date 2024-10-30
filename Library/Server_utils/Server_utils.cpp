@@ -1123,24 +1123,28 @@ void handleUploadFile(AsyncWebServerRequest *request, String thefile, size_t ind
 	String logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url();
 	print_debug(logmessage);
 	String filename = thefile;
+	PART_TYPE *Part = FS_Partition;
 
 	if (!index)
 	{
 		CheckBeginSlash(filename);
 
+		if (request->hasArg("partition"))
+			Part = Data_Partition;
+
 		if (request->hasArg("dir") && (request->arg("dir") != ""))
 		{
 			String dir = request->arg("dir");
 			CheckBeginSlash(dir);
-			if (!FS_Partition->exists(dir))
-				FS_Partition->mkdir(dir);
+			if (!Part->exists(dir))
+				Part->mkdir(dir);
 			filename = dir + filename;
 		}
 
 		logmessage = "Upload Start: " + String(filename);
 		print_debug(logmessage);
 		// open the file on first call and store the file handle in the request object
-		request->_tempFile = FS_Partition->open(filename, "w");
+		request->_tempFile = Part->open(filename, "w");
 	}
 
 	if (len)
@@ -1165,34 +1169,33 @@ void handleUploadFile(AsyncWebServerRequest *request, String thefile, size_t ind
 void handleUploadFile(CB_SERVER_PARAM)
 {
 	HTTPUpload &upload = server.upload();
+	PART_TYPE *Part = FS_Partition;
 
 	switch (upload.status)
 	{
 		case UPLOAD_FILE_START:
 		{
-			if (server.hasArg("reload"))
-			{
-				ReloadPage = (server.arg("reload") == "on");
-			}
-			else
-				ReloadPage = false;
+			ReloadPage = (server.hasArg("reload") && server.arg("reload").equals("on"));
+
+			if (server.hasArg("partition"))
+				Part = Data_Partition;
 
 			String filename = upload.filename;
 			CheckBeginSlash(filename);
 
-			if (server.hasArg("dir") && (server.arg("dir") != ""))
+			if (server.hasArg("dir") && (!server.arg("dir").isEmpty()))
 			{
 				String dir = server.arg("dir");
 				CheckBeginSlash(dir);
-				if (!FS_Partition->exists(dir))
-					FS_Partition->mkdir(dir);
+				if (!Part->exists(dir))
+					Part->mkdir(dir);
 				filename = dir + filename;
 			}
 
 			print_debug("handleUploadFile Name: " + filename);
 
 			// Open the file for writing in LittleFS (create if it doesn't exist)
-			fsUploadFile = FS_Partition->open(filename, "w");
+			fsUploadFile = Part->open(filename, "w");
 			if (fsUploadFile)
 				print_debug("FS open : " + filename);
 			else
