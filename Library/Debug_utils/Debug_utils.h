@@ -36,8 +36,6 @@
 #define BUFFER_SIZE	1024
 // The buffer that contain the message received
 extern volatile char UART_Message_Buffer[];
-// End Text string
-#define LOG_ETX_STR  	"\03"
 
 // To create a basic task to analyse UART message
 #ifdef UART_USE_TASK

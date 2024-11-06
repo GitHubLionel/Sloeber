@@ -1,6 +1,5 @@
 #include "CIRRUS.h"
 #include "CIRRUS_RES_EN.h"
-#include "Debug_utils.h"
 
 // Calibration
 #ifdef CIRRUS_CALIBRATION
@@ -8,6 +7,10 @@
 extern CIRRUS_Calibration CS_Calibration;
 bool Calibration = false;
 #endif
+
+// End Text string
+#define LOG_ETX_STR  	"\03"
+
 
 #ifdef CIRRUS_FLASH
 #include <Preferences.h>
@@ -570,6 +573,8 @@ void CIRRUS_Communication::Do_Lock_IHM(bool op)
  * La gestion principale se trouve dans l'unité Log_UART
  * Le caractère de fin \03 est écrit en dur
  */
+extern char* Search_Balise(uint8_t *data, const char *B_Begin, const char *B_end, char *value,
+		uint16_t *len);
 uint8_t CIRRUS_Communication::UART_Message_Cirrus(uint8_t *RxBuffer)
 {
 	static uint8_t Cirrus_message[100];
@@ -731,9 +736,9 @@ String CIRRUS_Communication::Handle_Common_Request(CS_Common_Request Common_Requ
 			// Toggle lock IHM
 			Do_Lock_IHM(status);
 			if (Is_IHM_Locked())
-				print_debug("IHM Locked\r\n");
+				CurrentCirrus->print_str("IHM Locked\r\n");
 			else
-				print_debug("IHM unLocked\r\n");
+				CurrentCirrus->print_str("IHM unLocked OK\r\n");
 			break;
 		}
 

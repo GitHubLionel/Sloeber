@@ -51,8 +51,19 @@ Bit_List CALIB_I_GAIN = {65, 16, 15};
 #define Bit_List_Zero  ((Bit_List){0x00, 0x00, 0x00, 0x00})
 Bit_List Zero(0);
 
+// Function for debug message, may be redefined elsewhere
+void __attribute__((weak)) print_debug(String mess, bool ln = true)
+{
+	// Just to avoid compile warning
+	(void) mess;
+	(void) ln;
+}
+
 // Fonction externe qui imprimera les textes là où on veut
-extern void PrintTerminal(const char *text);
+void __attribute__((weak)) PrintTerminal(const char *text)
+{
+	print_debug(String(text));
+}
 static char buffer[1500]; // Buffer pour les textes, ATTENTION aux chaines ressources
 
 //#define USE_CHECKSUN
@@ -593,8 +604,6 @@ void CIRRUS_Base::Get_Parameters(CIRRUS_Calib_typedef *calib, CIRRUS_Config_type
 	config->P_control = reg.Bit32;
 }
 
-
-
 /**
  * Simple test the connexion
  * Verify that register Config0 in Page0 == 0xC02000 (default for CS5490, CS5480)
@@ -611,6 +620,17 @@ bool CIRRUS_Base::TryConnexion()
 		return (reg.Bit32 == config0_default.Bit32);
 	}
 	return false;
+}
+
+/**
+ * Initialise the interruption attached to the ZC pin
+ */
+void CIRRUS_Base::ZC_Initialize(uint8_t ZC_Pin, onZCcallback onZC)
+{
+	// Interruption zero-cross Cirrus, callback onCirrusZC
+	// Zero cross pin INPUT_PULLUP
+	pinMode(ZC_Pin, INPUT_PULLUP);
+	attachInterrupt(digitalPinToInterrupt(ZC_Pin), onZC, RISING);
 }
 
 // ********************************************************************************
@@ -2664,6 +2684,46 @@ void CIRRUS_Base::Print_Config(CIRRUS_Config_typedef *config)
 	print_str(uart_Text);
 
 	print_str("****************************\r\n");
+}
+
+// ********************************************************************************
+// Basic initialization
+// Just the minimum operation, no IHM
+// ********************************************************************************
+bool CIRRUS_Basic_Initialization(CIRRUS_Base &Cirrus, CIRRUS_Calib_typedef *CS_Calib,
+		CIRRUS_Config_typedef *CS_Config, bool print_data)
+{
+	if (Cirrus.TryConnexion())
+	{
+		print_debug((Cirrus.GetName() + " OK").c_str());
+
+		Cirrus.Calibration(CS_Calib);
+		Cirrus.Configuration(100, CS_Config, true);
+		if (print_data)
+			Cirrus.Print_FullData();
+
+		// Check puissance positive
+		if (!Cirrus.Check_Positive_Power(Channel_1))
+		{
+			print_debug(F("P est negatif"));
+			delay(5000);
+		}
+		if (Cirrus.IsTwoChannel())
+		{
+			if (!Cirrus.Check_Positive_Power(Channel_2))
+			{
+				print_debug(F("P ch2 est negatif"));
+				delay(5000);
+			}
+		}
+		return true;
+	}
+	else
+	{
+		print_debug((Cirrus.GetName() + " connexion fail").c_str());
+		delay(2000);
+		return false;
+	}
 }
 
 // ********************************************************************************

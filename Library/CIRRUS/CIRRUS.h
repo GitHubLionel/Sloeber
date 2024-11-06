@@ -473,20 +473,22 @@ typedef struct RMS_Data
 typedef struct RMS_Data
 {
 		float Voltage;
-		float Power;
+		float ActivePower;
 		float Energy;
+		float Temperature;
 
 	public:
 		RMS_Data(float u = 0.0, float e = 0.0) :
-				Voltage(u), Power(e)
+				Voltage(u), ActivePower(e)
 		{
 			Energy = 0.0;
+			Temperature = 0.0;
 		}
 
 		inline RMS_Data& operator +=(const RMS_Data &data)
 		{
 			Voltage += data.Voltage;
-			Power += data.Power;
+			ActivePower += data.ActivePower;
 			return *this;
 		}
 
@@ -494,24 +496,24 @@ typedef struct RMS_Data
 		{
 			float inv = 1.0 / val;
 			Voltage *= inv;
-			Power *= inv;
+			ActivePower *= inv;
 			return *this;
 		}
 
 		inline RMS_Data operator +(RMS_Data const &data) const
 		{
-			return RMS_Data(Voltage + data.Voltage, Power + data.Power);
+			return RMS_Data(Voltage + data.Voltage, ActivePower + data.ActivePower);
 		}
 
 		inline RMS_Data operator /(float const val) const
 		{
 			float inv = 1.0 / val;
-			return RMS_Data(Voltage * inv, Power * inv);
+			return RMS_Data(Voltage * inv, ActivePower * inv);
 		}
 
 		inline RMS_Data& Zero(void)
 		{
-			Voltage = Power = Energy = 0.0;
+			Voltage = ActivePower = Energy = Temperature = 0.0;
 			return *this;
 		}
 } RMS_Data_type;
@@ -545,6 +547,9 @@ typedef std::deque<CIRRUS_Base*> CirrusList;
 
 // Callback pour le changement de jour : pour minuit et la mise à jour date
 typedef void (*CIRRUS_selectchange_cb)(CIRRUS_Base &cirrus);
+
+// Callback for Zero cross
+typedef void (*onZCcallback)(void);
 
 /**
  * Cirrus Communication class
@@ -838,6 +843,10 @@ class CIRRUS_Base
 		// The pin to select the Cirrus in case we have several Cirrus
 		uint8_t Cirrus_Pin = 0;
 
+		// Zero cross initialization
+		// ZC callback must be declared with IRAM_ATTR directive
+		void ZC_Initialize(uint8_t ZC_Pin, onZCcallback onZC);
+
 	protected:
 
 // ********************************************************************************
@@ -973,6 +982,13 @@ class CIRRUS_Base
 };
 
 // ********************************************************************************
+// Basic initialization
+// Just the minimum operation, no IHM
+// ********************************************************************************
+bool CIRRUS_Basic_Initialization(CIRRUS_Base &Cirrus, CIRRUS_Calib_typedef *CS_Calib,
+		CIRRUS_Config_typedef *CS_Config, bool print_data);
+
+// ********************************************************************************
 // RMSData class
 // ********************************************************************************
 
@@ -1075,6 +1091,7 @@ class CIRRUS_RMSData
 		/**
 		 * Return extra data
 		 */
+#ifdef CIRRUS_RMS_FULL
 		float GetExtraData(ExtraData_typedef extra) const
 		{
 			double result = 0;
@@ -1088,6 +1105,7 @@ class CIRRUS_RMSData
 			}
 			return result;
 		}
+#endif
 
 		float GetEnergyConso() const
 		{
@@ -1242,10 +1260,12 @@ class CIRRUS_CS5490: public CIRRUS_Base
 		/**
 		 * Return extra data
 		 */
+#ifdef CIRRUS_RMS_FULL
 		float GetExtraData(ExtraData_typedef extra) const
 		{
 			return RMSData->GetExtraData(extra);
 		}
+#endif
 
 		/**
 		 * Return energies of the day
@@ -1315,8 +1335,10 @@ class CIRRUS_CS548x: public CIRRUS_Base
 		float GetIRMS(CIRRUS_Channel channel) const;
 		float GetPRMSSigned(CIRRUS_Channel channel) const;
 		float GetTemperature(void) const;
+#ifdef CIRRUS_RMS_FULL
 		float GetExtraData(CIRRUS_Channel channel, ExtraData_typedef extra) const;
 		float GetFrequency(void) const;
+#endif
 		void GetEnergy(CIRRUS_Channel channel, float *conso, float *surplus);
 		RMS_Data GetLog(CIRRUS_Channel channel, double *temp);
 		uint32_t GetErrorCount(void) const;

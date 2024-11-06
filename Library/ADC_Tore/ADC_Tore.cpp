@@ -1,38 +1,60 @@
 #include "ADC_Tore.h"
 
+#ifdef ADC_USE_TASK
+#include "Tasks_utils.h"
+#endif
+
 #if defined(ESP8266) | defined(KEYBOARD_ESP32_ARDUINO)
 uint8_t ADC_gpio;
 #else
-//#include "driver/adc.h"
 #include "esp_adc_cal.h"
-//#include "esp_adc/adc_cali.h"
-//#include "esp_adc/adc_cali_scheme.h"
+
+// Defined in Keyboard unit
 extern adc_oneshot_unit_handle_t adc1_handle;
 adc_channel_t ADC_Channel;
-static esp_adc_cal_characteristics_t *adc_chars;
-
-#define NO_OF_SAMPLES   64
-#define DEFAULT_VREF    1100
-static const adc_atten_t atten = ADC_ATTEN_DB_0;
-static const adc_unit_t unit = ADC_UNIT_1;
-//static const adc_channel_t channel = ADC_CHANNEL_3;     //GPIO34 if ADC1, GPIO14 if ADC2
-static const adc_bits_width_t width = ADC_WIDTH_BIT_12;
 #endif
 
+// We do a mean over PERIOD_COUNT period (100 ms)
+#define PERIOD_COUNT	5
 
+typedef enum
+{
+	adcUndef,
+	adcOnseShot,
+	adcContinuous
+} ADC_Status_typedef;
+
+ADC_Status_typedef ADC_Status = adcUndef;
+
+// Timer to get data in OneShot mode
 hw_timer_t *Timer_Tore = NULL;
-uint32_t Read_Delay = 1000;	// 1 ms
+uint32_t Timer_Read_Delay = 100;	// 0.1 ms
 
-int cumul2 = 0;
-uint32_t count_ADC = 0;
-uint32_t count_top = 0;
-const uint8_t count_period = 20; // 10 periodes
-
+// ZC semaphore from Cirrus
 extern volatile SemaphoreHandle_t topZC_Semaphore;
-double current2 = 0.0;
-double talema = 0.0;
 
-volatile SemaphoreHandle_t ADC_Current_Semaphore;
+// Critical section for ADC
+static portMUX_TYPE ADC_Mux = portMUX_INITIALIZER_UNLOCKED;
+
+// To avoid division
+#define MEAN_WAVE_CUMUL	true
+
+// ADC cumul
+volatile int ADC_cumul = 0;
+volatile int ADC_cumul_count = 0;
+volatile int ADC_cumul_count_int = 0;
+
+// ZC operation
+#if MEAN_WAVE_CUMUL == true
+volatile int current_cumul_int = 0;
+volatile int raw_current_int = 0;
+volatile int raw_current_count = 1; // To avoid division by zero at beginning
+#else
+volatile int current_cumul = 0;
+volatile int raw_current = 0;
+#endif
+
+volatile int current_cumul_count = 0;
 
 // Function for debug message, may be redefined elsewhere
 void __attribute__((weak)) print_debug(const char *mess, bool ln = true)
@@ -42,8 +64,11 @@ void __attribute__((weak)) print_debug(const char *mess, bool ln = true)
 	(void) ln;
 }
 
+// Mean computation
+void Compute_Mean_Wave(void);
+
 // ********************************************************************************
-// Local initialization functions
+// Initialization functions in Oneshot mode
 // ********************************************************************************
 
 /**
@@ -52,46 +77,29 @@ void __attribute__((weak)) print_debug(const char *mess, bool ln = true)
  */
 void IRAM_ATTR onTimerTore(void)
 {
-  int raw = 0;
+	int v_shifted = 0;
 #if defined(ESP8266) | defined(KEYBOARD_ESP32_ARDUINO)
-  raw = analogRead(ADC_gpio) - 1887;
+  v_shifted = analogRead(ADC_gpio) - ADC_ZERO;
+	ADC_cumul = ADC_cumul + (v_shifted * v_shifted);
+	ADC_cumul_count = ADC_cumul_count + 1;
 #else
 	int adc_reading = 0;
-//	//Multisampling
-//	for (int i = 0; i < NO_OF_SAMPLES; i++)
-//	{
-////			adc_reading += adc1_get_raw((adc1_channel_t)ADC_Channel);
-//		int adc_raw;
-//			adc_oneshot_read(adc1_handle, ADC_Channel, &adc_raw);
-//			adc_reading += adc_raw;
-//	}
-//	adc_reading /= NO_OF_SAMPLES;
-	adc_oneshot_read(adc1_handle, ADC_Channel, &adc_reading);
-	raw = adc_reading; // esp_adc_cal_raw_to_voltage(adc_reading, adc_chars);
+	if (adc_oneshot_read(adc1_handle, ADC_Channel, &adc_reading) == ESP_OK)
+	{
+		v_shifted = adc_reading - ADC_ZERO;
+		ADC_cumul = ADC_cumul + (v_shifted * v_shifted);
+		ADC_cumul_count = ADC_cumul_count + 1;
+	}
 #endif
 
-	count_ADC++;
-  cumul2 += raw * raw;
-
-  if (xSemaphoreTake(topZC_Semaphore, 0) == pdTRUE)
-  {
-  	count_top++;
-  	if (count_top == count_period)
-  	{
-  		current2 = (double) cumul2 / count_ADC;
-  		count_top = 0;
-  		cumul2 = 0;
-  		talema =  (0.0126 * sqrt(current2) - 0.0586 + 0.03);
-  		xSemaphoreGiveFromISR(ADC_Current_Semaphore, NULL);
-  	}
-  }
+	Compute_Mean_Wave();
 }
 
 /**
  * Initialisation du relais.
  * gpio : values of gpio
  */
-bool ADC_Initialize(uint8_t gpio)
+bool ADC_Initialize_OneShot(uint8_t gpio)
 {
 #if defined(ESP8266) | defined(KEYBOARD_ESP32_ARDUINO)
 	ADC_gpio = gpio;
@@ -107,39 +115,176 @@ bool ADC_Initialize(uint8_t gpio)
 		printf("ADC_CHANNEL_3 OK \n");
 
 	adc_oneshot_chan_cfg_t config = { // @suppress("Type cannot be resolved")
-				.atten = ADC_ATTEN_DB_12,
-				.bitwidth = ADC_BITWIDTH_DEFAULT, // default width is max supported width
-		};
-		adc_oneshot_config_channel(adc1_handle, ADC_Channel, &config);
+			.atten = ADC_ATTEN_DB_12,
+			.bitwidth = ADC_BITWIDTH_DEFAULT, // default width is max supported width
+	};
+	adc_oneshot_config_channel(adc1_handle, ADC_Channel, &config);
 
-		//Characterize ADC
-		adc_chars = (esp_adc_cal_characteristics_t*) calloc(1, sizeof(esp_adc_cal_characteristics_t));
-		esp_adc_cal_characterize(unit, atten, width, DEFAULT_VREF, adc_chars);
-
-//	adc1_config_channel_atten(Keyboard_Channel, atten);
+	//Characterize ADC
+#define DEFAULT_VREF    1100
+	const adc_atten_t atten = ADC_ATTEN_DB_0;
+	const adc_unit_t unit = ADC_UNIT_1;
+	const adc_bits_width_t width = ADC_WIDTH_BIT_12;
+	esp_adc_cal_characteristics_t *adc_chars;
+	adc_chars = (esp_adc_cal_characteristics_t*) calloc(1, sizeof(esp_adc_cal_characteristics_t));
+	esp_adc_cal_characterize(unit, atten, width, DEFAULT_VREF, adc_chars);
 #endif
 
-	Timer_Tore= timerBegin(1000000); // Fixe la fréquence à 1 MHz => tick de 1 us
+	Timer_Tore = timerBegin(1000000); // Fixe la fréquence à 1 MHz => tick de 1 us
 	timerAttachInterrupt(Timer_Tore, &onTimerTore);
 
-	ADC_Current_Semaphore = xSemaphoreCreateBinary();
-
+	ADC_Status = adcOnseShot;
 	return true;
 }
 
+// ********************************************************************************
+// Initialization functions in Continuous mode
+// ********************************************************************************
+
+void IRAM_ATTR ADC_Complete()
+{
+	static adc_continuous_data_t *ADC_result = NULL;
+	if (analogContinuousRead(&ADC_result, 0))
+	{
+		int v_shifted = ADC_result[0].avg_read_raw - ADC_ZERO;
+		ADC_cumul = ADC_cumul + (v_shifted * v_shifted);
+		ADC_cumul_count = ADC_cumul_count + 1;
+	}
+	Compute_Mean_Wave();
+}
+
+bool ADC_Initialize_Continuous(uint8_t gpio)
+{
+#define CONVERSIONS_PER_PIN 5
+	uint8_t adc_pins[] = {gpio};
+	ADC_Status = adcContinuous;
+
+	// Optional for ESP32: Set the resolution to 9-12 bits (default is 12 bits)
+	analogContinuousSetWidth(12);
+
+	// Optional: Set different attenaution (default is ADC_11db)
+	analogContinuousSetAtten(ADC_11db);
+
+	// Setup ADC Continuous with following input:
+	// array of pins, count of the pins, how many conversions per pin in one cycle will happen, sampling frequency, callback function
+	return analogContinuous(adc_pins, 1, CONVERSIONS_PER_PIN, 20000, &ADC_Complete);
+}
+
+// ********************************************************************************
+// Mean wave computation with Zero cross
+// ********************************************************************************
+
+#if MEAN_WAVE_CUMUL == true
+void IRAM_ATTR Compute_Mean_Wave(void)
+{
+	static bool ZC_First_Top = false;
+
+	if (xSemaphoreTake(topZC_Semaphore, 0) == pdTRUE)
+	{
+		if (!ZC_First_Top)
+			// First 1/2 alternance
+			ZC_First_Top = true;
+		else
+		{
+			// Cumul over one period
+			current_cumul_int = current_cumul_int + ADC_cumul;
+			ADC_cumul_count_int = ADC_cumul_count_int + ADC_cumul_count;
+			ADC_cumul = 0;
+			ADC_cumul_count = 0;
+
+			// We cumul 5 periods
+			current_cumul_count = current_cumul_count + 1;
+			if (current_cumul_count == PERIOD_COUNT)
+			{
+				portENTER_CRITICAL(&ADC_Mux);
+				raw_current_int = current_cumul_int;
+				raw_current_count = ADC_cumul_count_int;
+				portEXIT_CRITICAL(&ADC_Mux);
+				current_cumul_int = 0;
+				ADC_cumul_count_int = 0;
+				current_cumul_count = 0;
+			}
+			ZC_First_Top = false;
+		}
+	}
+}
+#else
+void IRAM_ATTR Compute_Mean_Wave(void)
+{
+	static bool ZC_First_Top = false;
+
+	if (xSemaphoreTake(topZC_Semaphore, 0) == pdTRUE)
+	{
+		if (!ZC_First_Top)
+			// First 1/2 alternance
+			ZC_First_Top = true;
+		else
+		{
+			// Cumul over one period
+			current_cumul = current_cumul + ADC_cumul / ADC_cumul_count;
+			ADC_cumul = 0;
+			ADC_cumul_count = 0;
+
+			// We cumul 5 periods
+			current_cumul_count = current_cumul_count + 1;
+			if (current_cumul_count == PERIOD_COUNT)
+			{
+				portENTER_CRITICAL(&ADC_Mux);
+				raw_current = current_cumul / PERIOD_COUNT;
+				portEXIT_CRITICAL(&ADC_Mux);
+				current_cumul = 0;
+				current_cumul_count = 0;
+			}
+			ZC_First_Top = false;
+		}
+	}
+}
+#endif
+
 void ADC_Begin(void)
 {
-	timerRestart(Timer_Tore);
-	timerAlarm(Timer_Tore, Read_Delay, true, 0);
+	if (ADC_Status == adcOnseShot)
+	{
+		timerRestart(Timer_Tore);
+		timerAlarm(Timer_Tore, Timer_Read_Delay, true, 0);
+	}
+	else
+		if (ADC_Status == adcContinuous)
+			// Start ADC Continuous conversions
+			analogContinuousStart();
 }
 
-double ADC_GetCurrent(void)
+double ADC_GetTalemaCurrent(void)
 {
-
-	return talema;
-//	  return sqrt(current2);
+	double Talema_current;
+	portENTER_CRITICAL(&ADC_Mux);
+#if MEAN_WAVE_CUMUL == true
+	Talema_current = 0.0125 * sqrt((double)raw_current_int / raw_current_count) - 0.018157097;
+#else
+	Talema_current = 0.0125 * sqrt(raw_current) - 0.018157097;
+#endif
+	portEXIT_CRITICAL(&ADC_Mux);
+	return Talema_current;
 }
 
+// ********************************************************************************
+// Basic Task function to get data in continuous mode
+// ********************************************************************************
+/**
+ * A basic Task to get data in continuous mode
+ */
+#ifdef ADC_USE_TASK
+
+void ADC_Task_code(void *parameter)
+{
+	BEGIN_TASK_CODE("ADC_Task");
+	for (EVER)
+	{
+		Compute_Mean_Wave();
+		END_TASK_CODE();
+	}
+}
+#endif
 
 // ********************************************************************************
 // End of file

@@ -96,7 +96,7 @@ void IHM_Print0(const char *text)
 	SSD1306_UpdateScreen();
 #endif
 #ifdef OLED_SSD1327
-	SSD1327_String({0, 12}, text, &Font12, FONT_BACKGROUND, SSD1327_WHITE);
+	SSD1327_String({0, 0}, text, &Font12, FONT_BACKGROUND, SSD1327_WHITE);
 	SSD1327_DisplayUpdated();
 #endif
 #ifdef OLED_SH1107

@@ -48,6 +48,7 @@ bool CIRRUS_RMSData::GetData(bool reset_ready)
 			_inst_data.Temperature = Cirrus->get_temperature();
 
 		// Extra
+#ifdef CIRRUS_RMS_FULL
 		if (_ExtraData > 0)
 		{
 			if ((_ExtraData & exd_PApparent) == exd_PApparent)
@@ -59,6 +60,7 @@ bool CIRRUS_RMSData::GetData(bool reset_ready)
 			if ((_ExtraData & exd_Frequency) == exd_Frequency)
 				Cirrus->get_data(CIRRUS_Frequency, &_inst_data.Frequency);
 		}
+#endif
 
 		_inst_data_cumul += _inst_data;
 
@@ -259,6 +261,7 @@ float CIRRUS_CS548x::GetTemperature(void) const
 /**
  * Return extra data of the selected channel
  */
+#ifdef CIRRUS_RMS_FULL
 float CIRRUS_CS548x::GetExtraData(CIRRUS_Channel channel, ExtraData_typedef extra) const
 {
 	if (channel == Channel_1)
@@ -277,6 +280,7 @@ float CIRRUS_CS548x::GetFrequency(void) const
 {
 	return RMSData_ch1->GetExtraData(exd_Frequency);
 }
+#endif
 
 /**
  * Return energies of the day. Select one channel.

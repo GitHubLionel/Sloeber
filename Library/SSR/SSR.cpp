@@ -23,7 +23,7 @@ TimerInterrupt Timer_SSR;
 #define TIMER_NUM	0
 #endif
 hw_timer_t *Timer_SSR = NULL;
-portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
+static portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 #define TIMERMUX_ENTER()	portENTER_CRITICAL_ISR(&timerMux)
 #define TIMERMUX_EXIT()	portEXIT_CRITICAL_ISR(&timerMux);
 volatile SemaphoreHandle_t topZC_Semaphore;
