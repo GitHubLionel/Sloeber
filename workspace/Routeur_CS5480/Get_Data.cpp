@@ -109,18 +109,19 @@ void Get_Data(void)
 
 	// Fill current data channel 1
 	Current_Data.Cirrus_ch1.Voltage = CS5480.GetURMS(Channel_1);
+	Current_Data.Cirrus_ch1.ActivePower = CS5480.GetPRMSSigned(Channel_1);
 #ifdef CIRRUS_RMS_FULL
 	Current_Data.Cirrus_ch1.Current = CS5480.GetIRMS(Channel_1);
+	Current_Data.Cirrus_ch1.ApparentPower = CS5480.GetExtraData(Channel_1, exd_PApparent);
+	Current_Data.Cirrus_ch1.PowerFactor = CS5480.GetExtraData(Channel_1, exd_PF);
+	Current_Data.Cirrus_ch2.Current = CS5480.GetIRMS(Channel_2);
 #endif
-	Current_Data.Cirrus_ch1.ActivePower = CS5480.GetPRMSSigned(Channel_1);
-	Current_Data.PApparent = CS5480.GetExtraData(Channel_1, exd_PApparent);
-	Current_Data.Cirrus_PF = CS5480.GetExtraData(Channel_1, exd_PF);
-	Current_Data.Cirrus_Temp = CS5480.GetTemperature();
+	Current_Data.Cirrus_ch1.Temperature = CS5480.GetTemperature();
 	CS5480.GetEnergy(Channel_1, &energy_day_conso, &energy_day_surplus);
 
 	// A voir le signe
 	CS5480.GetEnergy(Channel_2, &energy_day_prod, NULL);
-	Current_Data.Cirrus_power_ch2 = CS5480.GetPRMSSigned(Channel_2);
+	Current_Data.Cirrus_ch2.ActivePower = CS5480.GetPRMSSigned(Channel_2);
 
 #ifdef USE_SSR
 	// On choisi le premier channel qui mesure la consommation et le surplus
@@ -218,16 +219,19 @@ uint8_t Update_IHM(const char *first_text, const char *last_text, bool display)
 	sprintf(buffer, "Prms:%.2f   ", Current_Data.Cirrus_ch1.ActivePower);
 	IHM_Print(line++, (char*) buffer);
 
-	sprintf(buffer, "Papp:%.2f   ", Current_Data.PApparent);
+#ifdef CIRRUS_RMS_FULL
+	sprintf(buffer, "Papp:%.2f   ", Current_Data.Cirrus_ch1.ApparentPower);
 	IHM_Print(line++, (char*) buffer);
+#endif
 
-	sprintf(buffer, "Prms2:%.2f   ", Current_Data.Cirrus_power_ch2);
+	sprintf(buffer, "Prms2:%.2f   ", Current_Data.Cirrus_ch2.ActivePower);
 	IHM_Print(line++, (char*) buffer);
 
 	sprintf(buffer, "Energie:%.2f   ", energy_day_conso);
 	IHM_Print(line++, (char*) buffer);
 
-	sprintf(buffer, "T:%.2f", Current_Data.Cirrus_Temp);
+//	sprintf(buffer, "T:%.2f", Current_Data.Cirrus_ch1.Temperature);
+	sprintf(buffer, "Irms2:%.2f  ", Current_Data.Cirrus_ch2.Current);
 	IHM_Print(line++, (char*) buffer);
 
 	if (strlen(last_text) > 0)

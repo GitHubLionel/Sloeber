@@ -35,18 +35,8 @@ typedef struct
 typedef struct
 {
 		uint32_t time_s;
-
 		RMS_Data Cirrus_ch1;
-		float Cirrus_power_ch2;
-
-		// Extra
-		float PApparent;
-		float Cirrus_PF;
-		float Cirrus_Freq;
-
-		// Températures
-		float Cirrus_Temp;
-
+		RMS_Data Cirrus_ch2;
 } Data_Struct;
 
 void Get_Data(void);

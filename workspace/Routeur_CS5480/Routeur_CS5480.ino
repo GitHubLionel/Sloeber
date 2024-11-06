@@ -52,12 +52,12 @@
 #define USE_KEYBOARD
 
 // Active ADC
-//#define USE_ADC
+#define USE_ADC
 
 // Liste des taches
 #include "Tasks_utils.h"       // Task list functions
 
-#define USE_IDLE_TASK	false
+#define USE_IDLE_TASK	true
 
 /**
  * Ce programme executé par l'ESPxx fait le lien entre l'interface web et le hardware
@@ -219,19 +219,19 @@ extern volatile Data_Struct Current_Data;
 extern volatile Graphe_Data log_cumul;
 
 // ********************************************************************************
-// Définition SSR - Relais
+// Définition Relais, Clavier, ADC
 // ********************************************************************************
 
 // Pin commande du relais
-uint8_t GPIO_Relay[] = {GPIO_NUM_23, GPIO_NUM_26, GPIO_NUM_25, GPIO_NUM_33};    // GPIO_NUM_32
-
-// ********************************************************************************
-// Définition Clavier
-// ********************************************************************************
+uint8_t GPIO_Relay[] = {GPIO_NUM_23, GPIO_NUM_26, GPIO_NUM_25, GPIO_NUM_33};
 
 #ifdef USE_KEYBOARD
 bool Toggle_Keyboard = true;
 uint16_t interval[] = {1250, 950, 650, 250};
+#endif
+
+#ifdef USE_ADC
+bool ADC_OK = false;
 #endif
 
 // ********************************************************************************
@@ -251,10 +251,6 @@ void handleLastData(CB_SERVER_PARAM);
 void handleOperation(CB_SERVER_PARAM);
 void handleCirrus(CB_SERVER_PARAM);
 
-// ADC
-//adc_channel_t ADC_Channel = ADC_CHANNEL_3;
-//extern adc_oneshot_unit_handle_t adc1_handle; // Initialisé dans KeyBoard
-
 // ********************************************************************************
 // Task functions
 // ********************************************************************************
@@ -273,9 +269,16 @@ void Display_Task_code(void *parameter)
 		}
 #endif
 
+		Temp_str = "";
 		// Cirrus message
 		if (Cirrus_OK)
-			line = Update_IHM(RTC_Local.the_time, "", false);
+		{
+#ifdef USE_ADC
+			if (ADC_OK)
+				Temp_str = "Talema: " + String(ADC_GetTalemaCurrent());
+#endif
+			line = Update_IHM(RTC_Local.the_time, Temp_str.c_str(), false);
+		}
 		else
 		{
 			line = 0;
@@ -284,19 +287,19 @@ void Display_Task_code(void *parameter)
 			UART_Message = "Cirrus failled";
 		}
 
-		// DS18B20 message
-		if (DS_Count > 0)
-		{
-			Temp_str = "DS: " + DS.get_Temperature_Str(0) + "` " + DS.get_Temperature_Str(1) + "` ";
-			IHM_Print(line++, (const char*) Temp_str.c_str());
-		}
-
-		// TI message
-		if (TI_OK)
-		{
-			Temp_str = "TI: " + String(TI.getIndexWh());
-			IHM_Print(line++, (const char*) Temp_str.c_str());
-		}
+//		// DS18B20 message
+//		if (DS_Count > 0)
+//		{
+//			Temp_str = "DS: " + DS.get_Temperature_Str(0) + "` " + DS.get_Temperature_Str(1) + "` ";
+//			IHM_Print(line++, (const char*) Temp_str.c_str());
+//		}
+//
+//		// TI message
+//		if (TI_OK)
+//		{
+//			Temp_str = "TI: " + String(TI.getIndexWh());
+//			IHM_Print(line++, (const char*) Temp_str.c_str());
+//		}
 
 		// Keyboard info message
 		if (count_Extra_Display != 0)
@@ -423,11 +426,11 @@ void setup()
 	// Des infos sur la flash
 //  ESPinformations();
 	Partition_Info();
-	Partition_ListDir();
+//	Partition_ListDir();
 #endif
 
 	// Création de la partition data
-	CreateOpenDataPartition(false, true);
+	CreateOpenDataPartition(false, false);
 
 	// Initialisation fichier ini
 	init_routeur.Begin(true);
@@ -501,7 +504,7 @@ void setup()
 	// NOTE : le SSR est éteint, on le démarre dans la page web
 #endif
 
-	// **** 8- Initialisation Clavier, relais
+	// **** 8- Initialisation Clavier, relais, ADC
 #ifdef USE_KEYBOARD
 //	Keyboard_Initialize(KEYBOARD_ADC_GPIO, 3, ADC_12bits);
 	Keyboard_Initialize(KEYBOARD_ADC_GPIO, 3, interval);
@@ -515,7 +518,13 @@ void setup()
 #endif
 
 #ifdef USE_ADC
-	ADC_Initialize(GPIO_NUM_39);
+	if ((ADC_OK = ADC_Initialize_OneShot(GPIO_NUM_39)) == true)
+	{
+		print_debug(F("ADC Talema OK"));
+//		ADC_Begin();
+	}
+	else
+		print_debug(F("ADC Talema Failed"));
 #endif
 
 	// **** FIN- Attente connexion réseau
@@ -550,34 +559,23 @@ void setup()
 	TaskList.AddTask(CIRRUS_DATA_TASK(Cirrus_OK)); // Cirrus get data Task
 #endif
 	TaskList.AddTask(DISPLAY_DATA_TASK);
-//	TaskList.AddTask({true, "Keyboard_Task", 2048, 10, 100, CoreAny, Keyboard_Task_code});
+#ifdef USE_KEYBOARD
 	TaskList.AddTask(KEYBOARD_DATA_TASK(true));
+#endif
 	TaskList.Create(USE_IDLE_TASK);
-
 #ifdef USE_ADC
-	ADC_Begin();
+	if (ADC_OK)
+	{
+		ADC_Begin();
+	}
 #endif
 }
 
 // The loop function is called in an endless loop
 // If empty, about 50000 loops by second
 // Les mesures ne sont faites que si au moins une seconde est passée
-#ifdef USE_ADC
-extern volatile SemaphoreHandle_t ADC_Current_Semaphore;
-#endif
-
-
 void loop()
 {
-#ifdef USE_ADC
-  // If Timer has fired
-//  if (xSemaphoreTake(ADC_Current_Semaphore, 0) == pdTRUE)
-//  {
-//  	Serial.print("Current=");
-//    Serial.println(ADC_GetCurrent());
-//  }
-#endif
-
 	// Listen for HTTP requests from clients
 #ifndef USE_ASYNC_WEBSERVER
 	server.handleClient();
@@ -709,15 +707,15 @@ void handleLastData(CB_SERVER_PARAM)
 	message += (String) Current_Data.Cirrus_ch1.Voltage + '#';
 	message += (String) Energy + '#';
 	message += (String) Surplus + '#';
-	message += (String) Current_Data.Cirrus_PF + '#';
-	message += (String) Current_Data.Cirrus_power_ch2 + '#';
+	message += (String) Current_Data.Cirrus_ch1.PowerFactor + '#';
+	message += (String) Current_Data.Cirrus_ch2.ActivePower + '#';
 	message += (String) Prod + '#';
 #ifdef USE_TI
 	message += (String) (TI.getIndexWh() - TI_Counter) + '#';
 #else
 	message += "0#";
 #endif
-	message += (String) Current_Data.Cirrus_Temp + '#';
+	message += (String) Current_Data.Cirrus_ch1.Temperature + '#';
 
 	if (DS_Count > 0)
 	{
