@@ -20,6 +20,7 @@
 #include "Relay.h"
 #include "iniFiles.h"
 #include "ADC_Tore.h"
+#include "Fast_Printf.h"
 
 /**
  * Define de debug
@@ -57,7 +58,7 @@
 // Liste des taches
 #include "Tasks_utils.h"       // Task list functions
 
-#define USE_IDLE_TASK	true
+#define USE_IDLE_TASK	false
 
 /**
  * Ce programme executé par l'ESPxx fait le lien entre l'interface web et le hardware
@@ -230,9 +231,7 @@ bool Toggle_Keyboard = true;
 uint16_t interval[] = {1250, 950, 650, 250};
 #endif
 
-#ifdef USE_ADC
 bool ADC_OK = false;
-#endif
 
 // ********************************************************************************
 // Définition Fichier ini
@@ -273,11 +272,7 @@ void Display_Task_code(void *parameter)
 		// Cirrus message
 		if (Cirrus_OK)
 		{
-#ifdef USE_ADC
-			if (ADC_OK)
-				Temp_str = "Talema: " + String(ADC_GetTalemaCurrent());
-#endif
-			line = Update_IHM(RTC_Local.the_time, Temp_str.c_str(), false);
+			line = Update_IHM(RTC_Local.the_time, "", false);
 		}
 		else
 		{
@@ -287,13 +282,13 @@ void Display_Task_code(void *parameter)
 			UART_Message = "Cirrus failled";
 		}
 
-//		// DS18B20 message
-//		if (DS_Count > 0)
-//		{
-//			Temp_str = "DS: " + DS.get_Temperature_Str(0) + "` " + DS.get_Temperature_Str(1) + "` ";
-//			IHM_Print(line++, (const char*) Temp_str.c_str());
-//		}
-//
+		// DS18B20 message
+		if (DS_Count > 0)
+		{
+			Temp_str = "DS: " + DS.get_Temperature_Str(0) + "` " + DS.get_Temperature_Str(1) + "` ";
+			IHM_Print(line++, (const char*) Temp_str.c_str());
+		}
+
 //		// TI message
 //		if (TI_OK)
 //		{
@@ -698,46 +693,59 @@ void handleInitialization(CB_SERVER_PARAM)
  */
 void handleLastData(CB_SERVER_PARAM)
 {
+	char buffer[255] = {0};
+	char *pbuffer = &buffer[0];
+	uint16_t len;
 	float Energy, Surplus, Prod;
+	uint32_t TI_Energy = 0;
 	bool graphe;
-	String message = String(RTC_Local.the_time);
-	message += '#';
-	graphe = Get_Last_Data(&Energy, &Surplus, &Prod);
-	message += (String) Current_Data.Cirrus_ch1.ActivePower + '#';
-	message += (String) Current_Data.Cirrus_ch1.Voltage + '#';
-	message += (String) Energy + '#';
-	message += (String) Surplus + '#';
-	message += (String) Current_Data.Cirrus_ch1.PowerFactor + '#';
-	message += (String) Current_Data.Cirrus_ch2.ActivePower + '#';
-	message += (String) Prod + '#';
-#ifdef USE_TI
-	message += (String) (TI.getIndexWh() - TI_Counter) + '#';
-#else
-	message += "0#";
-#endif
-	message += (String) Current_Data.Cirrus_ch1.Temperature + '#';
 
+	strcpy(buffer, RTC_Local.the_time); // Copie la date
+	pbuffer = Fast_Pos_Buffer(buffer, Buffer_End, &len); // On se positionne en fin de chaine
+	graphe = Get_Last_Data(&Energy, &Surplus, &Prod);
+	pbuffer = Fast_Printf(pbuffer, Current_Data.Cirrus_ch1.ActivePower, 2, "#", "#", Buffer_End, &len);
+	pbuffer = Fast_Printf(pbuffer, Current_Data.Cirrus_ch1.Voltage, 2, "", "#", Buffer_End, &len);
+	pbuffer = Fast_Printf(pbuffer, Energy, 2, "", "#", Buffer_End, &len);
+	pbuffer = Fast_Printf(pbuffer, Surplus, 2, "", "#", Buffer_End, &len);
+	pbuffer = Fast_Printf(pbuffer, Current_Data.Cirrus_ch1.PowerFactor, 2, "", "#", Buffer_End, &len);
+	pbuffer = Fast_Printf(pbuffer, Current_Data.Cirrus_ch2.ActivePower, 2, "", "#", Buffer_End, &len);
+	pbuffer = Fast_Printf(pbuffer, Prod, 2, "", "#", Buffer_End, &len);
+	if (TI_OK)
+		TI_Energy = (TI.getIndexWh() - TI_Counter);
+	pbuffer = Fast_Printf(pbuffer, TI_Energy, 0, "", "#", Buffer_End, &len);
+
+	// Températures
+	pbuffer = Fast_Printf(pbuffer, Current_Data.Cirrus_ch1.Temperature, 2, "", "#", Buffer_End, &len);
 	if (DS_Count > 0)
 	{
-		message += DS.get_Temperature_Str(0) + '#';
-		message += DS.get_Temperature_Str(1);
+		pbuffer = Fast_Printf(pbuffer, DS.get_Temperature(0), 2, "", "#", Buffer_End, &len);
+		pbuffer = Fast_Printf(pbuffer, DS.get_Temperature(1), 2, "", "#", Buffer_End, &len);
 	}
 	else
-		message += "0.0#0.0";
+		{
+			pbuffer = Fast_Printf(pbuffer, 0.0, 2, "", "#", Buffer_End, &len);
+			pbuffer = Fast_Printf(pbuffer, 0.0, 2, "", "#", Buffer_End, &len);
+		}
+
+	// Talema
+	pbuffer = Fast_Printf(pbuffer, Current_Data.Talema_Power, 2, "", "#", Buffer_End, &len);
+	pbuffer = Fast_Printf(pbuffer, Current_Data.Talema_Energy, 2, "", "#", Buffer_End, &len);
 
 	// Etat du SSR
-	message += "#SSR=" + (String)((int)SSR_Get_State());
+	pbuffer = Fast_Printf(pbuffer, (int)SSR_Get_State(), 0, "SSR=", "", Buffer_End, &len);
 
 	// On a de nouvelles données pour le graphe
 	if (graphe)
 	{
-		message += '#' + (String) log_cumul.Power_ch1;
-		message += '#' + (String) log_cumul.Power_ch2;
-		message += '#' + (String) log_cumul.Voltage;
-		message += '#' + (String) log_cumul.Temp;
+		Fast_Set_Decimal_Separator('.');
+		pbuffer = Fast_Printf(pbuffer, log_cumul.Power_ch1, 2, "#", "", Buffer_End, &len);
+		pbuffer = Fast_Printf(pbuffer, log_cumul.Power_ch2, 2, "#", "", Buffer_End, &len);
+		pbuffer = Fast_Printf(pbuffer, log_cumul.Voltage, 2, "#", "", Buffer_End, &len);
+		pbuffer = Fast_Printf(pbuffer, log_cumul.Temp, 2, "#", "", Buffer_End, &len);
+		Fast_Set_Decimal_Separator(',');
 	}
 
-	pserver->send(200, "text/plain", message);
+	pserver->send(200, "text/plain", buffer);
 }
 
 void handleOperation(CB_SERVER_PARAM)

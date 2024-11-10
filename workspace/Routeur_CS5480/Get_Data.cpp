@@ -8,6 +8,7 @@
 #include "Partition_utils.h"	// Some utils functions for LittleFS/SPIFFS/FatFS
 #include "DS18B20.h"
 #include "TeleInfo.h"
+#include "ADC_Tore.h"
 
 #ifdef CIRRUS_USE_TASK
 #include "Tasks_utils.h"
@@ -21,6 +22,7 @@ extern DS18B20 DS;
 extern bool TI_OK;
 extern uint32_t TI_Counter;
 extern TeleInfo TI;
+extern bool ADC_OK;
 
 // data au format CSV
 const String CSV_Filename = "/data.csv";
@@ -50,6 +52,7 @@ bool Data_acquisition = false;
 float energy_day_conso = 0.0;
 float energy_day_surplus = 0.0;
 float energy_day_prod = 0.0;
+uint32_t last_time = millis();
 
 // Gestion log pour le graphique
 volatile Graphe_Data log_cumul;
@@ -94,7 +97,7 @@ void Get_Data(void)
 	Data_acquisition = true;
 
 	// To know the time required for data acquisition
-//	uint32_t start_time = millis();
+	uint32_t start_time = millis();
 
 	log = CS5480.GetData(Channel_all); // durée : 256 ms
 	taskYIELD();
@@ -132,6 +135,16 @@ void Get_Data(void)
 		Gestion_SSR_CallBack();
 #endif
 
+	// Talema
+	if (ADC_OK)
+	{
+		Current_Data.Talema_Current = ADC_GetTalemaCurrent();
+		Current_Data.Talema_Power = Current_Data.Talema_Current * Current_Data.Cirrus_ch1.Voltage *
+				Current_Data.Cirrus_ch1.PowerFactor;
+		Current_Data.Talema_Energy = Current_Data.Talema_Energy + Current_Data.Talema_Power * ((start_time - last_time) / 1000.0) / 3600.0;
+		last_time = start_time;
+	}
+
 //	uint32_t err = CS5480.GetErrorCount();
 //	if (err > 0)
 //		print_debug("erreur = " + (String)err);
@@ -156,7 +169,7 @@ void Get_Data(void)
 	}
 
 //	if (countmessage < 20)
-//		print_debug("*** Data time : " + String(millis() - start_time) + " ms ***"); // 130 - 260 ms
+//		print_debug("*** Data time : " + String(millis() - start_time) + " ms ***"); // 67 - 133 ms
 
 	countmessage++;
 
@@ -233,6 +246,12 @@ uint8_t Update_IHM(const char *first_text, const char *last_text, bool display)
 //	sprintf(buffer, "T:%.2f", Current_Data.Cirrus_ch1.Temperature);
 	sprintf(buffer, "Irms2:%.2f  ", Current_Data.Cirrus_ch2.Current);
 	IHM_Print(line++, (char*) buffer);
+
+	if (ADC_OK)
+	{
+		sprintf(buffer, "Talema:%.2f   ", Current_Data.Talema_Current);
+		IHM_Print(line++, (char*) buffer);
+	}
 
 	if (strlen(last_text) > 0)
 	{
@@ -316,6 +335,7 @@ void onDaychange(uint8_t year, uint8_t month, uint8_t day)
 	energy_day_conso = 0.0;
 	energy_day_surplus = 0.0;
 	energy_day_prod = 0.0;
+	Current_Data.Talema_Energy = 0.0;
 	CS5480.RestartEnergy();
 	if (TI_OK)
 		TI_Counter = TI.getIndexWh();
