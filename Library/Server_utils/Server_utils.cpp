@@ -414,15 +414,19 @@ bool ServerConnexion::WaitForConnexion(Conn_typedef connexion, bool toUART)
 	switch (connexion)
 	{
 		case Conn_Inline:
+			print_debug(F("Inline connexion mode."));
 			tryMax = 3;
 			break;  // 30 secondes
 		case Conn_UART:
+			print_debug(F("UART connexion mode."));
 			tryMax = 100;
 			break;  // 25 secondes max
 		case Conn_File:
+			print_debug(F("File connexion mode."));
 			tryMax = 1;
 			break;
 		case Conn_EEPROM:
+			print_debug(F("EEPROM connexion mode."));
 			tryMax = 1;
 			if (!credential)
 				credential = new Preferences();

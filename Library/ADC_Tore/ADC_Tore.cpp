@@ -7,7 +7,11 @@
 #if defined(ESP8266) | defined(KEYBOARD_ESP32_ARDUINO)
 uint8_t ADC_gpio;
 #else
-#include "esp_adc_cal.h"
+
+//#include "hal/adc_types.h"
+#include "soc/soc_caps.h"
+#include <esp_adc/adc_oneshot.h>
+#include <esp_adc/adc_continuous.h>
 
 // Defined in Keyboard unit
 extern adc_oneshot_unit_handle_t adc1_handle;
@@ -114,20 +118,16 @@ bool ADC_Initialize_OneShot(uint8_t gpio)
 	if (ADC_Channel == ADC_CHANNEL_3)
 		printf("ADC_CHANNEL_3 OK \n");
 
+	//-------------ADC1 Config---------------
 	adc_oneshot_chan_cfg_t config = { // @suppress("Type cannot be resolved")
 			.atten = ADC_ATTEN_DB_12,
 			.bitwidth = ADC_BITWIDTH_DEFAULT, // default width is max supported width
 	};
 	adc_oneshot_config_channel(adc1_handle, ADC_Channel, &config);
 
-	//Characterize ADC
-#define DEFAULT_VREF    1100
-	const adc_atten_t atten = ADC_ATTEN_DB_0;
-	const adc_unit_t unit = ADC_UNIT_1;
-	const adc_bits_width_t width = ADC_WIDTH_BIT_12;
-	esp_adc_cal_characteristics_t *adc_chars;
-	adc_chars = (esp_adc_cal_characteristics_t*) calloc(1, sizeof(esp_adc_cal_characteristics_t));
-	esp_adc_cal_characterize(unit, atten, width, DEFAULT_VREF, adc_chars);
+	//-------------ADC1 Calibration Init-----
+  // Only to have voltage
+
 #endif
 
 	Timer_Tore = timerBegin(1000000); // Fixe la fréquence à 1 MHz => tick de 1 us

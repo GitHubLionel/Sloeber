@@ -1560,11 +1560,11 @@ void CIRRUS_Base::SelectChannel(CIRRUS_Channel channel)
 float CIRRUS_Base::get_instantaneous_voltage(void)
 {
 	Bit_List v;
-	float old_val = 0.0;
 
 	if (read_register(P16_V, PAGE16, &v))
-		old_val = (twoscompl_to_real(&v) * Scale->V_SCALE);
-	return old_val;
+		return (twoscompl_to_real(&v) * Scale->V_SCALE);
+	else
+	  return 0.0;
 }
 
 /*
@@ -1573,11 +1573,11 @@ float CIRRUS_Base::get_instantaneous_voltage(void)
 float CIRRUS_Base::get_instantaneous_current(void)
 {
 	Bit_List i;
-	float old_val = 0.0;
 
 	if (read_register(P16_I, PAGE16, &i))
-		old_val = (twoscompl_to_real(&i) * Scale->I_SCALE);
-	return old_val;
+		return (twoscompl_to_real(&i) * Scale->I_SCALE);
+	else
+	  return 0.0;
 }
 
 /*
@@ -1586,11 +1586,11 @@ float CIRRUS_Base::get_instantaneous_current(void)
 float CIRRUS_Base::get_instantaneous_power(void)
 {
 	Bit_List p;
-	float old_val = 0.0;
 
 	if (read_register(P16_P, PAGE16, &p))
-		old_val = (twoscompl_to_real(&p) * Scale->P_SCALE);
-	return old_val;
+		return (twoscompl_to_real(&p) * Scale->P_SCALE);
+	else
+	  return 0.0;;
 }
 
 /*
@@ -1599,11 +1599,11 @@ float CIRRUS_Base::get_instantaneous_power(void)
 float CIRRUS_Base::get_instantaneous_quadrature_power(void)
 {
 	Bit_List q;
-	float old_pquad = 0.0;
 
 	if (read_register(P16_Q, PAGE16, &q))
-		old_pquad = (twoscompl_to_real(&q) * Scale->P_SCALE);
-	return old_pquad;
+		return (twoscompl_to_real(&q) * Scale->P_SCALE);
+	else
+	  return 0.0;
 }
 
 //Average and RMS quantities
@@ -1614,11 +1614,11 @@ float CIRRUS_Base::get_instantaneous_quadrature_power(void)
 float CIRRUS_Base::get_rms_voltage(void)
 {
 	Bit_List reg;
-	float old_val = 0.0;
 
 	if (read_register(P16_V_RMS, PAGE16, &reg))
-		old_val = (float) (blist_to_int(&reg) * over_pow2_24 * Scale->V_SCALE);
-	return old_val;
+		return (float) (blist_to_int(&reg) * over_pow2_24 * Scale->V_SCALE);
+	else
+	  return 0.0;
 }
 
 /*
@@ -1627,11 +1627,11 @@ float CIRRUS_Base::get_rms_voltage(void)
 float CIRRUS_Base::get_rms_current(void)
 {
 	Bit_List reg;
-	float old_val = 0.0;
 
 	if (read_register(P16_I_RMS, PAGE16, &reg))
-		old_val = (float) (blist_to_int(&reg) * over_pow2_24 * Scale->I_SCALE);
-	return old_val;
+		return (float) (blist_to_int(&reg) * over_pow2_24 * Scale->I_SCALE);
+	else
+	  return 0.0;
 }
 
 /*
@@ -1640,11 +1640,11 @@ float CIRRUS_Base::get_rms_current(void)
 float CIRRUS_Base::get_average_power(void)
 {
 	Bit_List pavg;
-	float old_paverage = 0.0;
 
 	if (read_register(P16_P_AVG, PAGE16, &pavg))
-		old_paverage = (twoscompl_to_real(&pavg) * Scale->P_SCALE);
-	return old_paverage;
+		return (twoscompl_to_real(&pavg) * Scale->P_SCALE);
+	else
+	  return 0.0;
 }
 
 /*
@@ -1653,11 +1653,11 @@ float CIRRUS_Base::get_average_power(void)
 float CIRRUS_Base::get_average_reactive_power(void)
 {
 	Bit_List qavg;
-	float old_preact = 0.0;
 
 	if (read_register(P16_Q_AVG, PAGE16, &qavg))
-		old_preact = (twoscompl_to_real(&qavg) * Scale->P_SCALE);
-	return old_preact;
+		return (twoscompl_to_real(&qavg) * Scale->P_SCALE);
+	else
+	  return 0.0;
 }
 
 //Peak quantities
@@ -1668,11 +1668,11 @@ float CIRRUS_Base::get_average_reactive_power(void)
 float CIRRUS_Base::get_peak_voltage(void)
 {
 	Bit_List v;
-	float old_val = 0.0;
 
 	if (read_register(P0_V_PEAK, PAGE0, &v))
-		old_val = (twoscompl_to_real(&v) * Scale->V_SCALE);
-	return old_val;
+		return (twoscompl_to_real(&v) * Scale->V_SCALE);
+	else
+	  return 0.0;
 }
 
 /*
@@ -1681,11 +1681,11 @@ float CIRRUS_Base::get_peak_voltage(void)
 float CIRRUS_Base::get_peak_current(void)
 {
 	Bit_List i;
-	float old_val = 0.0;
 
 	if (read_register(P0_I_PEAK, PAGE0, &i))
-		old_val = (twoscompl_to_real(&i) * Scale->I_SCALE);
-	return old_val;
+		return (twoscompl_to_real(&i) * Scale->I_SCALE);
+	else
+	  return 0.0;
 }
 
 /*
@@ -1694,11 +1694,11 @@ float CIRRUS_Base::get_peak_current(void)
 float CIRRUS_Base::get_apparent_power(void)
 {
 	Bit_List s;
-	float old_papp = 0.0;
 
 	if (read_register(P16_S, PAGE16, &s))
-		old_papp = (fabs(twoscompl_to_real(&s)) * Scale->P_SCALE);
-	return old_papp;
+		return (fabs(twoscompl_to_real(&s)) * Scale->P_SCALE);
+	else
+	  return 0.0;
 }
 
 /*
@@ -1707,11 +1707,11 @@ float CIRRUS_Base::get_apparent_power(void)
 float CIRRUS_Base::get_power_factor(void)
 {
 	Bit_List pf;
-	float old_pf = 0.0;
 
 	if (read_register(P16_PF, PAGE16, &pf))
-		old_pf = (twoscompl_to_real(&pf));
-	return old_pf;
+		return (twoscompl_to_real(&pf));
+	else
+	  return 0.0;
 }
 
 //Total sum quantities

@@ -4,12 +4,6 @@
 #include "config_lib.h"
 #endif
 
-#ifdef ESP32
-#include "hal/adc_types.h"
-#include <esp_adc/adc_oneshot.h>
-#include <esp_adc/adc_continuous.h>
-#endif
-
 #include "Arduino.h"
 #include <stdint.h>
 

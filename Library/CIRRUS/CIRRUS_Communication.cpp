@@ -421,10 +421,9 @@ CIRRUS_State_typedef CIRRUS_Communication::Transmit(uint8_t *pData, uint16_t Siz
 		Cirrus_UART->write(*pData);
 	else
 	{
-		for (int i = 0; i < Size; i++)
-		{
-			Cirrus_UART->write(*pData++);
-		}
+//		for (int i = 0; i < Size; i++)
+//			Cirrus_UART->write(*pData++);
+		Cirrus_UART->write(pData, Size);
 	}
 #else
 	SPI_BEGIN_TRANSACTION();
@@ -472,15 +471,16 @@ CIRRUS_State_typedef CIRRUS_Communication::Receive(Bit_List *pResult, uint8_t Si
 #endif
 	if (Cirrus_UART->available() < Size)
 	{
-//		CIRRUS_print_str("TIMEOUT");
+//		CurrentCirrus->print_str("TIMEOUT");
 		return CIRRUS_TIMEOUT;
 	}
 	else
 	{
-		pResult->LSB = (uint8_t) Cirrus_UART->read();
-		pResult->MSB = (uint8_t) Cirrus_UART->read();
-		pResult->HSB = (uint8_t) Cirrus_UART->read();
+//		pResult->LSB = (uint8_t) Cirrus_UART->read();
+//		pResult->MSB = (uint8_t) Cirrus_UART->read();
+//		pResult->HSB = (uint8_t) Cirrus_UART->read();
 //		pResult->CHECK = (uint8_t) Cirrus_UART->read();
+		Cirrus_UART->readBytes(pResult->tab, Size);
 		return CIRRUS_OK;
 	}
 #else
