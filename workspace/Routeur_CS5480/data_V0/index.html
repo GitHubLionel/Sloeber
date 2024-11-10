@@ -5,16 +5,15 @@
   <meta http-equiv="content-type" content="text/html; charset=UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta charset="utf-8">
+  <link rel="stylesheet" href="uPlot.min.css">
   <link rel="stylesheet" href="Routeur.css">
   <link rel="shortcut icon" href="favicon.ico">
   <script type='text/javascript' src="FileSaver.min.js"></script>
-
-  <script type='text/javascript' src="chart.js"></script>
-  <script type='text/javascript' src="luxon.js"></script>
-  <script type='text/javascript' src="luxon_adapter.js"></script>
-  <script type='text/javascript' src="chartjs-zoom.min.js"></script>
-  <script type='text/javascript' src='resizilla.umd.js'></script>
-  
+  <script type='text/javascript' src="CS5480/Page0.js"></script>
+  <script type='text/javascript' src="CS5480/Page16.js"></script>
+  <script type='text/javascript' src="CS5480/Page17.js"></script>
+  <script type='text/javascript' src="CS5480/Page18.js"></script>
+  <script type='text/javascript' src="uPlot.iife.min.js"></script>
   <script type='text/javascript' src="graphe.js"></script>
   <script type='text/javascript' src="Routeur.js"></script>
 </head>
@@ -24,9 +23,9 @@
     <span>Routeur</span>
     <span id="time" class="right">12:00:00</span>
   </div>
-  <div style="margin-bottom: 44px;">
+  <div style="margin-bottom: 54px;">
     <button class="tablink" onclick="openPage('m_Data', this, 'green')" id="defaultOpen">Données</button>
-    <button class="tablink" onclick="openPage('m_Graphe', this, '#FFCB00')">Graphiques</button>
+    <button class="tablink" onclick="openPage('m_Graphe', this, '#FFCB00')">Graphique</button>
     <button class="tablink" onclick="openPage('m_Energy', this, '#C6410D')">Energie</button>
     <button class="tablink" onclick="openPage('m_SSR', this, '#0ee6f0')">SSR</button>
     <button class="tablink" onclick="openPage('m_Config', this, '#cd11e8')">Config</button>
@@ -52,16 +51,16 @@
         </ul>
       </div>
 
-      <div class="col-4 col-s-3 menu">
+      <div class="col-3 col-s-3 menu">
       <p> Conso (tore 1) <span id="_SSR" class="right" style="color: red; display: none;">SSR</span></p>
         <ul>
           <li><span>Puissance :</span><span id="_Conso_P" class="right">0.0 W</span></li>
           <li><span>Energie :</span><span id="_Conso_E" class="right">0.0 Wh</span></li>
-         
+          <li><span>TeleInfo</span><span id="_TI_E" class="right">0.0 Wh</span></li>
         </ul>
       </div>
-
-      <div class="col-4 col-s-3 menu">
+      
+      <div class="col-3 col-s-3 menu">
       <p> Prod (tore 2) </p>
         <ul>
           <li><span>Puissance :</span><span id="_Prod_P" class="right">0.0 W</span></li>
@@ -69,17 +68,8 @@
           <li><span>Energie surplus :</span><span id="_Conso_S" class="right">0.0 Wh</span></li>
         </ul>
       </div>
-
-      <div class="col-4 col-s-3 menu">
-      <p> Divers </p>
-        <ul>
-          <li><span>Puissance Talema :</span><span id="_Talema_P" class="right">0.0 W</span></li>
-          <li><span>Energie Talema :</span><span id="_Talema_E" class="right">0.0 Wh</span></li>
-          <li><span>TeleInfo</span><span id="_TI_E" class="right">0.0 Wh</span></li>
-        </ul>
-      </div>
-
-      <div class="col-4 col-s-3 menu">
+    
+      <div class="col-3 col-s-3 menu">
       <p> Température </p>
         <ul>
           <li><span>Cirrus :</span><span id="_T_CS" class="right">25°C</span></li>
@@ -96,67 +86,23 @@
   </div>
 
   <div id="m_Graphe" class="tabcontent">
-    <div style="padding-top: 10px;">
+    <div>
       <input type="checkbox" name="cbdateGraph" >
       <label for="cbdateGraph">Graphique du </label>
       <input type="date" id="dtPicker" name="dtPicker" value="">
-
-      <button class="myButton" onclick="refreshGraph()">Actualiser le graphique</button>
-    </div>
-    
-    <div class="divSplitter">
-      <div class="divDown">
-
-        <div class="padCanvas">
-          <canvas id="can_mean_power"></canvas>
-          <div class="btnZoom">
-            <button class="myButton" onclick="undoZoom('can_mean_power')">Dézoomer</button>
-            <button class="myButton" onclick="downloadCSV('can_mean_power')">Exporter</button>
-          </div>         
-        </div>          
-      </div>
+      
+      <button class="myButton" onclick="refreshGraph('data')">Actualiser le graphique</button>
     </div>
 
+    <div id="chart"></div>
   </div>
 
   <div id="m_Energy" class="tabcontent">
-    <div class="divSplitter">
-      <div class="divUp">
-        <div class="padCanvas">
-          <canvas id="can_mean_energy"></canvas>
-          <div class="btnZoom">
-            <button class="myButton" onclick="undoZoom('can_mean_energy')">Dézoomer</button>
-          </div>          
-        </div>          
-      </div>
-      <div class="splitter" id='splitterEnergy'></div>
-      <div class="divDown">
-        <div class="padCanvas">
-          <canvas id="can_histo_energy"></canvas>
-          <div class="btnZoom">
-            <select name="mois" id="mois" size="1" style="width:120px;" onchange="getEnergy()">
-              <option value="01">Janvier</option>
-              <option value="02">Février</option>
-              <option value="03">Mars</option>
-              <option value="04">Avril</option>
-              <option value="05">Mai</option>
-              <option value="06">Juin</option>
-              <option value="07">Juillet</option>
-              <option value="08">Août</option>
-              <option value="09" selected>Septembre</option>
-              <option value="10">Octobre</option>
-              <option value="11">Novembre</option>
-              <option value="12">Décembre</option>
-              <option value="all">Tous les mois</option>      
-            </select>    
-            <select name="annee" id="annee" size="1" style="width:80px;" onchange="">
-            </select>     
+    <div>
+      <button class="myButton" onclick="refreshGraph('energy')">Actualiser le graphique</button>
+    </div>
 
-            <button class="myButton" onclick="getEnergy()">Afficher</button>
-          </div>
-        </div>     
-      </div>
-    </div>  
+    <div id="chart_energy"></div>
   </div>
 
   <div id="m_SSR" class="tabcontent">
@@ -216,7 +162,7 @@
   </div>
 
   <div id="m_Config" class="tabcontent">
-    <div class="div_space"  style="padding-top: 10px;">
+    <div class="div_space">
       <button class="myButton" onclick="sendDateTime()">Mettre l'heure à jour</button>
     </div>
 
@@ -242,13 +188,10 @@
       <form method="POST" enctype="multipart/form-data" action="/upload">
         <span>ATTENTION : pas d'espace, pas d'accent !</span>
         <br>
-        <label for="dir">Dir : </label>
-        <input type="text" name="dir" size="30" placeholder="Répertoire destination, vide = /" title="Si le répertoire n'existe pas, il est créé.">
-        <input type="checkbox" name="partition" title="Utilise la partition data.">
-        <label for="partition">Data Partition</label>
-        <br>
-        <input type="checkbox" name="reload" title="Recharge automatiquement la page d'accueil." checked>
-        <label for="reload">Recharge page</label>
+          <label for="dir">Dir : </label>
+          <input type="text" name="dir" size="30" placeholder="Répertoire destination, vide = /"><br>
+        <input type="checkbox" name="reload" checked>
+        <label for="reload">Reload page</label>
         <input type="file" name="the_filename">
           <input type="submit" value="Téléverser">
       </form>
