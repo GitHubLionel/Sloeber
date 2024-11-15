@@ -15,6 +15,8 @@
 #ifdef TELEINFO_USE_TASK
 #define TELEINFO_DATA_TASK(start)	{(start), "TELEINFO_Task", 1024, 5, 1000, CoreAny, TELEINFO_Task_code}
 void TELEINFO_Task_code(void *parameter);
+#else
+#define TELEINFO_DATA_TASK(start)	{}
 #endif
 
 #define LABEL_MAX_SIZE     9  // Maximum 8 caractères pour MOTDETAT

@@ -1,6 +1,7 @@
 #include "Fast_Printf.h"
 #include <string.h>
 #include <math.h>
+#include <cstdarg>
 
 // Permet d'afficher un entier de 19 chiffres (uint64_t = 18 446 744 073 509 551 615)
 // Avec un uint32_t, on peut faire 9 chiffres (uint32_t = 4 294 967 295)
@@ -33,6 +34,36 @@ char* Fast_Pos_Buffer(char *buffer, Buffer_Pos_Def pos_def, uint16_t *buffer_len
 		}
 		buffer--;
 	}
+	return buffer;
+}
+
+/**
+ * Idem fonction précédente mais permet de concaténer une chaine
+ */
+char* Fast_Pos_Buffer(char *buffer, const char *string, Buffer_Pos_Def pos_def, uint16_t *buffer_len)
+{
+	char ch;
+	*buffer_len = 0;
+
+	if (pos_def == Buffer_End)
+	{
+		while (*buffer++ != 0)
+		{
+			(*buffer_len)++;
+		}
+		buffer--;
+	}
+
+	if (strlen(string) != 0)
+	{
+		while ((ch = *string++) != 0)
+		{
+			*buffer++ = ch;
+			(*buffer_len)++;
+		}
+		*buffer = 0; // fini la chaine
+	}
+
 	return buffer;
 }
 
@@ -152,6 +183,73 @@ char* Fast_Printf(char *buffer, float value, uint8_t prec, const char *firststri
 
 	// Longueur de la chaine final
 	*end_len += (pbuffer - pbuffer_origine);
+
+	if (pos_def == Buffer_End)
+		return pbuffer;
+	else
+		return pbuffer_origine;
+}
+
+/**
+ * Concaténe une série de float (version varadique)
+ * buffer : buffer pour le résultat.
+ * prec : la précision souhaitée.
+ * separator : le séparateur entre chaque float
+ * pos_def : position du pointeur dans la chaine finale
+ * count : nombre de float
+ */
+char* Fast_Printf(char *buffer, uint8_t prec, const char *separator, Buffer_Pos_Def pos_def,
+		uint8_t count, ...)
+{
+	char *pbuffer_origine = buffer;  // Le début du buffer initial
+	char *pbuffer = buffer;
+	va_list args;
+	va_start(args, count);
+	uint16_t len;
+
+	for (uint8_t i = 0; i < count; i++)
+	{
+		double val = va_arg(args, double);
+		pbuffer = Fast_Printf(pbuffer, val, prec, "", separator, Buffer_End, &len);
+	}
+
+	// Supprimer le dernier séparateur
+	for (uint8_t i = 0; i < strlen(separator); i++)
+		pbuffer--;
+	*pbuffer = 0;
+
+	va_end(args);
+
+	if (pos_def == Buffer_End)
+		return pbuffer;
+	else
+		return pbuffer_origine;
+}
+
+/**
+ * Concaténe une série de float (version list)
+ * buffer : buffer pour le résultat.
+ * prec : la précision souhaitée.
+ * separator : le séparateur entre chaque float
+ * pos_def : position du pointeur dans la chaine finale
+ * values : list de float, format {v1, v2, ... }
+ */
+char* Fast_Printf(char *buffer, uint8_t prec, const char *separator, Buffer_Pos_Def pos_def,
+		std::initializer_list<double> values)
+{
+	char *pbuffer_origine = buffer;  // Le début du buffer initial
+	char *pbuffer = buffer;
+	uint16_t len;
+
+	for (auto val : values)
+	{
+		pbuffer = Fast_Printf(pbuffer, val, prec, "", separator, Buffer_End, &len);
+	}
+
+	// Supprimer le dernier séparateur
+	for (uint8_t i = 0; i < strlen(separator); i++)
+		pbuffer--;
+	*pbuffer = 0;
 
 	if (pos_def == Buffer_End)
 		return pbuffer;

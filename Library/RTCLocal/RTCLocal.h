@@ -32,6 +32,8 @@ typedef void (*RTC_daychange_cb)(uint8_t year, uint8_t month, uint8_t day);
 #ifdef RTC_USE_TASK
 #define RTC_DATA_TASK	{true, "RTC_Task", 4096, 10, 100, CoreAny, RTC_Task_code}
 void RTC_Task_code(void *parameter);
+#else
+#define RTC_DATA_TASK	{}
 #endif
 
 class RTCLocal

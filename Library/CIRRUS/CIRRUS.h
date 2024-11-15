@@ -1389,5 +1389,7 @@ String Handle_Wifi_Request(CS_Common_Request Wifi_Request, char *Request);
 #ifdef CIRRUS_USE_TASK
 #define CIRRUS_DATA_TASK(start)	{(start), "CIRRUS_Task", 6144, 8, CIRRUS_TASK_DELAY, CoreAny, CIRRUS_Task_code}
 void CIRRUS_Task_code(void *parameter);
+#else
+#define CIRRUS_DATA_TASK(start)	{}
 #endif
 

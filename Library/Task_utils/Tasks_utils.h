@@ -123,7 +123,7 @@ typedef enum
 typedef struct
 {
 	public:
-		bool Condition;						               // Boolean to determine if we create the task or no in Create function
+		bool Condition = false;						       // Boolean to determine if we create the task or no in Create function
 		char Name[configMAX_TASK_NAME_LEN + 1];  // Task name
 		configSTACK_DEPTH_TYPE StackSize;        // Task stack size
 		UBaseType_t Priority;                    // Task priority : 0 lower to higher configMAX_PRIORITIES - 1

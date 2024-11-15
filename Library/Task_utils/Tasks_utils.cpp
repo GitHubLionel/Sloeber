@@ -72,7 +72,7 @@ bool TaskList_c::Create(bool with_idle_task)
 		return false;
 
 	bool success = true;
-	BaseType_t xReturned;
+	BaseType_t xReturned = pdPASS;
 
 	for (int i = 0; i < Tasks.size(); i++)
 	{

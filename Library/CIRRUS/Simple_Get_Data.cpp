@@ -12,10 +12,6 @@ const String CSV_Filename = "/data.csv";
 // Data 200 ms
 volatile Simple_Data_Struct Simple_Current_Data; //{0,{0}};
 
-// Voltage and signed power of first Cirrus, first channel
-volatile float Cirrus_voltage = 230.0;
-volatile float Cirrus_power_signed = 0.0;
-
 // Up to date data for SSR
 #ifdef USE_SSR
 extern Gestion_SSR_TypeDef Gestion_SSR_CallBack;
@@ -130,18 +126,15 @@ void Simple_Get_Data(void)
 #ifdef CIRRUS_RMS_FULL
 	Simple_Current_Data.Cirrus_ch1.Current = Current_Cirrus.GetIRMS(CHANNEL);
 #endif
-	Simple_Current_Data.Cirrus_ch1.Power = Current_Cirrus.GetPRMSSigned(CHANNEL);
+	Simple_Current_Data.Cirrus_ch1.ActivePower = Current_Cirrus.GetPRMSSigned(CHANNEL);
 	Simple_Current_Data.Cirrus_PF = Current_Cirrus.GetPowerFactor(CHANNEL);
 	Simple_Current_Data.Cirrus_Temp = Current_Cirrus.GetTemperature();
 	Current_Cirrus.GetEnergy(CHANNEL2 &energy_day_conso, &energy_day_surplus);
 
 #ifdef USE_SSR
 	// On choisi le premier channel qui mesure la consommation et le surplus
-	Cirrus_voltage = Simple_Current_Data.Cirrus_ch1.Voltage;
-	Cirrus_power_signed = Simple_Current_Data.Cirrus_ch1.Power;
-
 	if (Gestion_SSR_CallBack != NULL)
-		Gestion_SSR_CallBack();
+		Gestion_SSR_CallBack(Simple_Current_Data.Cirrus_ch1.Voltage, Simple_Current_Data.Cirrus_ch1.ActivePower);
 #endif
 
 //	uint32_t err = Current_Cirrus.GetErrorCount();
@@ -154,7 +147,7 @@ void Simple_Get_Data(void)
 		double temp;
 		RMS_Data data = Current_Cirrus.GetLog(CHANNEL2 &temp);
 		log_cumul.Voltage = data.Voltage;
-		log_cumul.Power_ch1 = data.Power;
+		log_cumul.Power_ch1 = data.ActivePower;
 		log_cumul.Temp = temp;
 
 		// Pour le rafraichissement de la page Internet si connecté

@@ -26,6 +26,9 @@ hw_timer_t *Timer_SSR = NULL;
 static portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 #define TIMERMUX_ENTER()	portENTER_CRITICAL_ISR(&timerMux)
 #define TIMERMUX_EXIT()	portEXIT_CRITICAL_ISR(&timerMux);
+#define TIMERMUX_SECURE(op) portENTER_CRITICAL_ISR(&timerMux); \
+		(op); \
+		portEXIT_CRITICAL_ISR(&timerMux);
 volatile SemaphoreHandle_t topZC_Semaphore;
 #if defined(ESP_IDF_VERSION) && (ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)) // ESP32 2.0.x
 // Le channel pour la led SSR en PWM
@@ -102,9 +105,8 @@ static float TotalOutput = 0.0;
 static uint8_t Over_Count = 0;
 
 // La tension et la puissance en cours fournies par le Cirrus ou autre
-extern float Cirrus_voltage;
-extern float Cirrus_power_signed;
 extern bool CIRRUS_get_rms_data(float *uRMS, float *pRMS);
+
 // Fonction de gestion du SSR en mode dimme ou surplus
 volatile Gestion_SSR_TypeDef Gestion_SSR_CallBack = NULL;
 
@@ -115,8 +117,8 @@ volatile Gestion_SSR_TypeDef Gestion_SSR_CallBack = NULL;
 bool Set_Percent(float percent, bool start_timer = true);
 
 // Actualisation des paramètres du Timer
-void SSR_Update_Dimme_Timer();
-void SSR_Update_Surplus_Timer();
+void SSR_Update_Dimme_Timer(const float Cirrus_voltage, const float Cirrus_power_signed);
+void SSR_Update_Surplus_Timer(const float Cirrus_voltage, const float Cirrus_power_signed);
 
 // Gestion du Timer
 void SSR_Enable_Timer_Interrupt(bool enable);
@@ -289,18 +291,17 @@ void IRAM_ATTR onCirrusZC(void)
 		Top_Xms = (Count_CS_ZC % ZERO_CROSS_TOP_Xms == 0);
 #endif
 
-	if (Is_SSR_enabled_Mux)
-	{
-		if (Tim_Interrupt_Enabled)
-		{
-			Top_CS_ZC_Mux = true;
-			startTimerAndTrigger(SSR_COUNT);
-
-			// Plus le délai est long, plus la led sera éteinte longtemps
-			SetLedPinLow(1023 - SSR_COUNT / 9);
-		}
-	}
+	bool SSR_TIM_Enabled = Is_SSR_enabled_Mux && Tim_Interrupt_Enabled;
 	TIMERMUX_EXIT();
+
+	if (SSR_TIM_Enabled)
+	{
+		Top_CS_ZC_Mux = SSR_TIM_Enabled;
+		startTimerAndTrigger(SSR_COUNT);
+
+		// Plus le délai est long, plus la led sera éteinte longtemps
+		SetLedPinLow(1023 - SSR_COUNT / 9);
+	}
 }
 #endif // SIMPLE_ZC_TEST
 
@@ -556,7 +557,6 @@ SSR_State_typedef SSR_Get_State(void)
 void SSR_Enable(void)
 {
 	Restart_PID();
-	Is_SSR_enabled_Mux = true;
 
 	// Restaure initial percent
 	P_100 = 0;
@@ -598,6 +598,7 @@ void SSR_Enable(void)
 	}
 
 	Is_SSR_enabled = true;
+	TIMERMUX_SECURE(Is_SSR_enabled_Mux = Is_SSR_enabled);
 }
 
 void SSR_Disable(void)
@@ -701,15 +702,9 @@ float SSR_Get_Dimme_Target(void)
 
 void SSR_Enable_Timer_Interrupt(bool enable)
 {
-	if (enable)
-	{
-		Tim_Interrupt_Enabled = true;
-	}
-	else
-	{
-		Tim_Interrupt_Enabled = false;
+	TIMERMUX_SECURE(Tim_Interrupt_Enabled = enable);
+	if (!enable)
 		SetLedPinLow();
-	}
 }
 
 void SSR_Start_Timer(void)
@@ -749,7 +744,7 @@ bool Set_Percent(float percent, bool start_timer)
 
 		if (delay < DELAY_MIN)
 			delay = DELAY_MIN;
-		SSR_COUNT = delay;
+		TIMERMUX_SECURE(SSR_COUNT = delay);
 
 		P_100 = percent;
 
@@ -763,7 +758,7 @@ bool Set_Percent(float percent, bool start_timer)
 	return false;
 }
 
-void SSR_Update_Dimme_Timer()
+void SSR_Update_Dimme_Timer(const float Cirrus_voltage, const float Cirrus_power_signed)
 {
 #define DELTA_TARGET   2
 #define EPSILON        0.2
@@ -789,7 +784,7 @@ void SSR_Update_Dimme_Timer()
  * PID controler to control the surplus allowed
  * Don't use derivative part (Kd = 0)
  */
-void SSR_Update_Surplus_Timer()
+void SSR_Update_Surplus_Timer(const float Cirrus_voltage, const float Cirrus_power_signed)
 {
 	// Aucun calcul si le SSR n'est pas actif
 	if (!Is_SSR_enabled)

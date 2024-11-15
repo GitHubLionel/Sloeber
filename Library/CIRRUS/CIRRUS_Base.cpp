@@ -624,6 +624,16 @@ bool CIRRUS_Base::TryConnexion()
 
 /**
  * Initialise the interruption attached to the ZC pin
+ * We can use a Semaphore in the callback. For example:
+ * volatile SemaphoreHandle_t topZC_Semaphore;
+ * ...
+ * void IRAM_ATTR onCirrusZC(void)
+		{
+			xSemaphoreGiveFromISR(topZC_Semaphore, NULL);
+		}
+ *	and in the setup
+ *	topZC_Semaphore = xSemaphoreCreateBinary();
+ *	CIRRUS_Base.ZC_Initialize(ZERO_CROSS_GPIO, onCirrusZC);
  */
 void CIRRUS_Base::ZC_Initialize(uint8_t ZC_Pin, onZCcallback onZC)
 {
