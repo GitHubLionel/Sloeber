@@ -2,17 +2,12 @@
  * This library help the gestion of a keyboard who is several buttons
  * connected on one ADC.
  * When clicked, each button produce a different voltage who is analyzed to determine the button.
+ * This library need ADC_Utils library
  */
 #pragma once
 
 #ifdef USE_CONFIG_LIB_FILE
 #include "config_lib.h"
-#endif
-
-#ifdef ESP32
-#include "hal/adc_types.h"
-#include <esp_adc/adc_oneshot.h>
-#include <esp_adc/adc_continuous.h>
 #endif
 
 #include "Arduino.h"
@@ -50,15 +45,17 @@ extern const char *Btn_Texte[BTN_MAX];
 #define KEYBOARD_DATA_TASK(start)	{(start), "KEYBOARD_Task", 4096, 10, 10, Core1, KEYBOARD_Task_code}
 void KEYBOARD_Task_code(void *parameter);
 void UserKeyboardAction(Btn_Action Btn_Clicked);
+#else
+#define KEYBOARD_DATA_TASK(start)	{}
 #endif
 
 // Callback to be executed if button is clicked
 typedef void (*KeyBoard_Click_cb)(Btn_Action Btn);
 
 // Initialisation du clavier
-void Keyboard_Initialize(uint8_t pin, uint8_t nbButton, ADC_Sampling sampling = ADC_10bits,
+void Keyboard_Initialize(uint8_t nbButton, ADC_Sampling sampling = ADC_10bits,
 		const KeyBoard_Click_cb &kbClick = NULL);
-void Keyboard_Initialize(uint8_t pin, uint8_t nbButton, const uint16_t interval[],
+void Keyboard_Initialize(uint8_t nbButton, const uint16_t interval[],
 		const KeyBoard_Click_cb &kbClick = NULL);
 // La mise à jour en fond de tache à mettre dans la boucle loop
 void Keyboard_UpdateTime(void);

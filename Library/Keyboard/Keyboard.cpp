@@ -1,4 +1,5 @@
 #include "Keyboard.h"
+#include "ADC_Utils.h"
 
 #ifdef KEYBOARD_USE_TASK
 #include "Tasks_utils.h"
@@ -10,12 +11,6 @@ const char *Btn_Texte[BTN_MAX] = {"NO btn pressed", "K1 pressed", "K2 pressed", 
 // Variables clavier
 static uint16_t Low_sampling[BTN_MAX];  // tableau de stockage des valeurs basses
 
-#if defined(ESP8266) | defined(KEYBOARD_ESP32_ARDUINO)
-uint8_t Keyboard_Channel;
-#else
-adc_oneshot_unit_handle_t adc1_handle = nullptr; // @suppress("Type cannot be resolved")
-adc_channel_t Keyboard_Channel;
-#endif
 static uint8_t Btn_Count = 0;
 static bool Keyboard_Initialized = false;
 volatile Btn_Action Btn_Clicked = Btn_NOP;
@@ -24,6 +19,8 @@ volatile uint16_t last_ADC = 0;
 static uint32_t ADC_res = 1023;  // Echantillonnage 10 bits
 
 KeyBoard_Click_cb KBClick_cb = NULL;
+
+extern volatile bool ADC_Initialized;
 
 void Btn_Definition_1B();
 void Btn_Definition_2B();
@@ -42,157 +39,19 @@ void __attribute__((weak)) print_debug(const char *mess, bool ln = true)
 // ********************************************************************************
 // Local initialization functions
 // ********************************************************************************
-#ifdef ESP32
-adc_channel_t GPIO_NUM_toADCChannel(uint8_t gpio)
-{
-#if CONFIG_IDF_TARGET_ESP32
-	switch (gpio)
-	{
-		case GPIO_NUM_36:
-			return ADC_CHANNEL_0;
-		case GPIO_NUM_37:
-			return ADC_CHANNEL_1;
-		case GPIO_NUM_38:
-			return ADC_CHANNEL_2;
-		case GPIO_NUM_39:
-			return ADC_CHANNEL_3;
-		case GPIO_NUM_32:
-			return ADC_CHANNEL_4;
-		case GPIO_NUM_33:
-			return ADC_CHANNEL_5;
-		case GPIO_NUM_34:
-			return ADC_CHANNEL_6;
-		case GPIO_NUM_35:
-			return ADC_CHANNEL_7;
-	}
-#elif CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32S3
-	switch (gpio)
-	{
-		case GPIO_NUM_1:
-			return ADC_CHANNEL_0;
-		case GPIO_NUM_2:
-			return ADC_CHANNEL_1;
-		case GPIO_NUM_3:
-			return ADC_CHANNEL_2;
-		case GPIO_NUM_4:
-			return ADC_CHANNEL_3;
-		case GPIO_NUM_5:
-			return ADC_CHANNEL_4;
-		case GPIO_NUM_6:
-			return ADC_CHANNEL_5;
-		case GPIO_NUM_7:
-			return ADC_CHANNEL_6;
-		case GPIO_NUM_8:
-			return ADC_CHANNEL_7;
-		case GPIO_NUM_9:
-			return ADC_CHANNEL_8;
-		case GPIO_NUM_10:
-			return ADC_CHANNEL_9;
-	}
-#elif CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C2
-	switch (gpio)
-	{
-		case GPIO_NUM_0:
-			return ADC_CHANNEL_0;
-		case GPIO_NUM_1:
-			return ADC_CHANNEL_1;
-		case GPIO_NUM_2:
-			return ADC_CHANNEL_2;
-		case GPIO_NUM_3:
-			return ADC_CHANNEL_3;
-		case GPIO_NUM_4:
-			return ADC_CHANNEL_4;
-	}
-#elif CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32H2
-	switch (gpio)
-	{
-		case GPIO_NUM_0:
-			return ADC_CHANNEL_0;
-		case GPIO_NUM_1:
-			return ADC_CHANNEL_1;
-		case GPIO_NUM_2:
-			return ADC_CHANNEL_2;
-		case GPIO_NUM_3:
-			return ADC_CHANNEL_3;
-		case GPIO_NUM_4:
-			return ADC_CHANNEL_4;
-		case GPIO_NUM_5:
-			return ADC_CHANNEL_5;
-		case GPIO_NUM_6:
-			return ADC_CHANNEL_6;
-	}
-#endif // CONFIG_IDF_TARGET_*
-	return ADC_CHANNEL_0;
-}
-
-bool GPIO_NUM_toADCChannel(uint8_t gpio, adc_channel_t *adc_channel)
-{
-	adc_channel_t channel[1];
-	adc_unit_t adc_unit = ADC_UNIT_1;
-	esp_err_t err = ESP_OK;
-	uint8_t pins[] = {gpio};
-
-	err = adc_continuous_io_to_channel(pins[0], &adc_unit, &channel[0]);
-	if (err != ESP_OK)
-	{
-		log_e("Pin %u is not ADC pin!", pins[0]);
-		return false;
-	}
-	if (adc_unit != 0)
-	{
-		log_e("Only ADC1 pins are supported in continuous mode!");
-		return false;
-	}
-	*adc_channel = channel[0];
-	return true;
-}
-
-void InitADC(adc_channel_t channel, adc_oneshot_unit_handle_t *adc_handle)
-{
-	//-------------ADC1 Init---------------//
-	adc_oneshot_unit_init_cfg_t init_config1 = { // @suppress("Type cannot be resolved")
-			.unit_id = ADC_UNIT_1,
-			.clk_src = ADC_RTC_CLK_SRC_DEFAULT,
-			.ulp_mode = ADC_ULP_MODE_DISABLE,
-	};
-	ESP_ERROR_CHECK(adc_oneshot_new_unit(&init_config1, adc_handle)); // @suppress("Invalid arguments")
-
-	//-------------ADC1 Config---------------//
-	adc_oneshot_chan_cfg_t config = { // @suppress("Type cannot be resolved")
-			.atten = ADC_ATTEN_DB_12,
-			.bitwidth = ADC_BITWIDTH_DEFAULT, // default width is max supported width
-	};
-	ESP_ERROR_CHECK(adc_oneshot_config_channel(*adc_handle, channel, &config)); // @suppress("Invalid arguments")
-//	ESP_ERROR_CHECK(adc_oneshot_config_channel(*adc_handle, ADC_CHANNEL_3, &config)); // @suppress("Invalid arguments")
-}
-#endif
-
-void Keyboard_Init_Base(uint8_t pin, uint8_t nbButton)
-{
-#if defined(ESP8266) | defined(KEYBOARD_ESP32_ARDUINO)
-	Keyboard_Channel = pin;
-	pinMode(Keyboard_Channel, INPUT);
-#else
-//	GPIO_NUM_toADCChannel(pin, &Keyboard_Channel);
-	adc_unit_t adc_unit;
-	adc_oneshot_io_to_channel(pin, &adc_unit, &Keyboard_Channel);
-	InitADC(Keyboard_Channel, &adc1_handle);
-#endif
-	Keyboard_Initialized = false;
-	Btn_Count = nbButton;
-}
 
 /**
  * Initialisation du clavier.
- * channel : ADC pin
  * nbButton : number of button, between 1 to 4
  * sampling : 10, 12 or 16 bits
  * Ne pas oublier de mettre la fonction Keyboard_UpdateTime() dans le loop principal
+ * IMPORTANT: ADC must be initialized before
  */
-void Keyboard_Initialize(uint8_t pin, uint8_t nbButton, ADC_Sampling sampling,
+void Keyboard_Initialize(uint8_t nbButton, ADC_Sampling sampling,
 		const KeyBoard_Click_cb &kbClick)
 {
-	Keyboard_Init_Base(pin, nbButton);
+	Keyboard_Initialized = false;
+	Btn_Count = nbButton;
 	KBClick_cb = kbClick;
 
 	switch (sampling)
@@ -226,19 +85,28 @@ void Keyboard_Initialize(uint8_t pin, uint8_t nbButton, ADC_Sampling sampling,
 		default:
 			print_debug("Erreur définition clavier.");
 	}
+
+	if (!ADC_Initialized)
+	{
+		print_debug("ADC not initialized.");
+		Keyboard_Initialized = false;
+	}
+	else
+	  Keyboard_Initialized = true;
 }
 
 /**
  * Initialisation du clavier.
- * channel : ADC pin
  * nbButton : number of button, max 4
  * interval : intervals to be considered, max to min : nbButton + 1 values
  * Ne pas oublier de mettre la fonction Keyboard_UpdateTime() dans le loop principal
+ * IMPORTANT: ADC must be initialized before
  */
-void Keyboard_Initialize(uint8_t pin, uint8_t nbButton, const uint16_t interval[],
+void Keyboard_Initialize(uint8_t nbButton, const uint16_t interval[],
 		const KeyBoard_Click_cb &kbClick)
 {
-	Keyboard_Init_Base(pin, nbButton);
+	Keyboard_Initialized = false;
+	Btn_Count = nbButton;
 	KBClick_cb = kbClick;
 
 	ADC_res = interval[0];
@@ -246,7 +114,13 @@ void Keyboard_Initialize(uint8_t pin, uint8_t nbButton, const uint16_t interval[
 	{
 		Low_sampling[i] = interval[i + 1];
 	}
-	Keyboard_Initialized = true;
+	if (!ADC_Initialized)
+	{
+		print_debug("ADC not initialized.");
+		Keyboard_Initialized = false;
+	}
+	else
+	  Keyboard_Initialized = true;
 }
 
 /**
@@ -436,52 +310,22 @@ const char* Btn_Click_Name()
 }
 
 #define RAW_CUMUL	10
+
 /**
  * Return the raw value of the ADC
  */
-inline uint16_t Btn_Click_Val()
+uint16_t Btn_Click_Val()
 {
-#if defined(ESP8266) | defined(KEYBOARD_ESP32_ARDUINO)
-	return analogRead(Keyboard_Channel);
-#else
-	int raw = 0;
-	int cumul = 0;
-	// First value is discarded
-	for (int i = 0; i < RAW_CUMUL; i++)
-		adc_oneshot_read(adc1_handle, Keyboard_Channel, &raw); // @suppress("Invalid arguments")
-	for (int i = 0; i < RAW_CUMUL; i++)
-	{
-		//	delayMicroseconds(150); // ADC take about 130 us
-		adc_oneshot_read(adc1_handle, Keyboard_Channel, &raw); // @suppress("Invalid arguments")
-		cumul += raw;
-	}
-	return cumul / RAW_CUMUL;
-#endif
+	return ADC_Read0();
 }
 
 /**
  * Return true if the raw value of the ADC is superior of the minimun value of the interval
  */
-inline bool Btn_Click_Val(uint16_t *value)
+bool Btn_Click_Val(uint16_t *value)
 {
-#if defined(ESP8266) | defined(KEYBOARD_ESP32_ARDUINO)
-	*value = analogRead(Keyboard_Channel);
+	*value = ADC_Read0();
 	return (*value > Low_sampling[Btn_Count - 1]);
-#else
-	int raw = 0;
-	int cumul = 0;
-	// First value is discarded
-	for (int i = 0; i < RAW_CUMUL; i++)
-		adc_oneshot_read(adc1_handle, Keyboard_Channel, &raw); // @suppress("Invalid arguments")
-	for (int i = 0; i < RAW_CUMUL; i++)
-	{
-		//	delayMicroseconds(150); // ADC take about 130 us
-		adc_oneshot_read(adc1_handle, Keyboard_Channel, &raw); // @suppress("Invalid arguments")
-		cumul += raw;
-	}
-	*value = cumul / RAW_CUMUL;
-	return (*value > Low_sampling[Btn_Count - 1]);
-#endif
 }
 
 /**
