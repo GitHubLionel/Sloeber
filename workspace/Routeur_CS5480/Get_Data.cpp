@@ -8,7 +8,7 @@
 #include "Partition_utils.h"	// Some utils functions for LittleFS/SPIFFS/FatFS
 #include "DS18B20.h"
 #include "TeleInfo.h"
-#include "ADC_Tore.h"
+#include "ADC_Utils.h"
 
 #ifdef CIRRUS_USE_TASK
 #include "Tasks_utils.h"
@@ -30,10 +30,6 @@ const String Energy_Filename = "/energy_2024.csv";
 
 // Data 200 ms
 volatile Data_Struct Current_Data; //{0,{0}};
-
-// Tension et puissance du premier Cirrus, premier channel
-volatile float Cirrus_voltage = 230.0;
-volatile float Cirrus_power_signed = 0.0;
 
 // Les données actualisées pour le SSR
 #ifdef USE_SSR
@@ -128,11 +124,8 @@ void Get_Data(void)
 
 #ifdef USE_SSR
 	// On choisi le premier channel qui mesure la consommation et le surplus
-	Cirrus_voltage = Current_Data.Cirrus_ch1.Voltage;
-	Cirrus_power_signed = Current_Data.Cirrus_ch1.ActivePower;
-
 	if (Gestion_SSR_CallBack != NULL)
-		Gestion_SSR_CallBack();
+		Gestion_SSR_CallBack(Current_Data.Cirrus_ch1.Voltage, Current_Data.Cirrus_ch1.ActivePower);
 #endif
 
 	// Talema

@@ -94,12 +94,13 @@
 #define TI_RX_GPIO	GPIO_NUM_14
 
 /**********************************************************
- * Keyboard define
+ * Tore and Keyboard define
  **********************************************************/
 #define KEYBOARD_ADC_GPIO	GPIO_NUM_36
 #define DEBOUNCING_MS	200
 #define DEBOUNCING_US	200000
-//#define KEYBOARD_ESP32_ARDUINO
+//#define ADC_USE_ARDUINO  // To use Arduino function
+//#define ADC_USE_TASK     // To use task in place of timer in oneshot mode or callback in continuous mode
 
 /**********************************************************
  * Cirrus define
@@ -148,5 +149,3 @@
 #define KEYBOARD_USE_TASK    // A basic task to check keyboard every 10 ms
 #define CIRRUS_TASK_DELAY	100    // The delay for the Cirrus task. Must be adapted according the time required of the GetData()
 #define CIRRUS_USE_TASK      // A basic task to check Cirrus data every CIRRUS_TASK_DELAY ms
-//#define ADC_USE_TASK         // A basic task to compute ADC mean every 10 ms
-

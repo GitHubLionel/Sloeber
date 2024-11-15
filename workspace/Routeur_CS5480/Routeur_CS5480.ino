@@ -19,7 +19,7 @@
 #include "Keyboard.h"
 #include "Relay.h"
 #include "iniFiles.h"
-#include "ADC_Tore.h"
+#include "ADC_Utils.h"
 #include "Fast_Printf.h"
 
 /**
@@ -218,6 +218,11 @@ bool Mess_For_Cirrus_Connect = false;
 // To access cirrus data
 extern volatile Data_Struct Current_Data;
 extern volatile Graphe_Data log_cumul;
+
+#ifndef USE_ZC_SSR
+extern volatile SemaphoreHandle_t topZC_Semaphore;
+extern void onCirrusZC(void);
+#endif
 
 // ********************************************************************************
 // Définition Relais, Clavier, ADC
@@ -497,12 +502,25 @@ void setup()
 	SSR_Action(action);
 
 	// NOTE : le SSR est éteint, on le démarre dans la page web
+#else
+	topZC_Semaphore = xSemaphoreCreateBinary();
+	CS5480.ZC_Initialize(ZERO_CROSS_GPIO, onCirrusZC);
 #endif
 
 	// **** 8- Initialisation Clavier, relais, ADC
+#ifdef USE_ADC
+	if ((ADC_OK = ADC_Initialize_OneShot({KEYBOARD_ADC_GPIO, GPIO_NUM_39})) == true) // @suppress("Invalid arguments")
+	{
+		print_debug(F("ADC OK"));
+//		ADC_Begin();
+	}
+	else
+		print_debug(F("ADC Failed"));
+#endif
+
 #ifdef USE_KEYBOARD
-//	Keyboard_Initialize(KEYBOARD_ADC_GPIO, 3, ADC_12bits);
-	Keyboard_Initialize(KEYBOARD_ADC_GPIO, 3, interval);
+//	Keyboard_Initialize(3, ADC_12bits);
+	Keyboard_Initialize(3, interval);
 //	IHM_Print0("Test Btn 10s");
 //	Btn_Check_Config();
 #endif
@@ -510,16 +528,6 @@ void setup()
 #ifdef USE_RELAY
 	Relay_Initialize(4, GPIO_Relay);
 	Set_Relay_State(0, init_routeur.ReadBool("Relais", "Relais_On", false));
-#endif
-
-#ifdef USE_ADC
-	if ((ADC_OK = ADC_Initialize_OneShot(GPIO_NUM_39)) == true)
-	{
-		print_debug(F("ADC Talema OK"));
-//		ADC_Begin();
-	}
-	else
-		print_debug(F("ADC Talema Failed"));
 #endif
 
 	// **** FIN- Attente connexion réseau
@@ -550,9 +558,7 @@ void setup()
 #ifdef USE_TI
 	TaskList.AddTask(TELEINFO_DATA_TASK(TI_OK)); // TeleInfo Task
 #endif
-#ifdef USE_ZC_SSR
 	TaskList.AddTask(CIRRUS_DATA_TASK(Cirrus_OK)); // Cirrus get data Task
-#endif
 	TaskList.AddTask(DISPLAY_DATA_TASK);
 #ifdef USE_KEYBOARD
 	TaskList.AddTask(KEYBOARD_DATA_TASK(true));
@@ -698,21 +704,17 @@ void handleLastData(CB_SERVER_PARAM)
 	uint16_t len;
 	float Energy, Surplus, Prod;
 	uint32_t TI_Energy = 0;
-	bool graphe;
+	bool graphe = Get_Last_Data(&Energy, &Surplus, &Prod);
 
-	strcpy(buffer, RTC_Local.the_time); // Copie la date
-	pbuffer = Fast_Pos_Buffer(buffer, Buffer_End, &len); // On se positionne en fin de chaine
-	graphe = Get_Last_Data(&Energy, &Surplus, &Prod);
-	pbuffer = Fast_Printf(pbuffer, Current_Data.Cirrus_ch1.ActivePower, 2, "#", "#", Buffer_End, &len);
-	pbuffer = Fast_Printf(pbuffer, Current_Data.Cirrus_ch1.Voltage, 2, "", "#", Buffer_End, &len);
-	pbuffer = Fast_Printf(pbuffer, Energy, 2, "", "#", Buffer_End, &len);
-	pbuffer = Fast_Printf(pbuffer, Surplus, 2, "", "#", Buffer_End, &len);
-	pbuffer = Fast_Printf(pbuffer, Current_Data.Cirrus_ch1.PowerFactor, 2, "", "#", Buffer_End, &len);
-	pbuffer = Fast_Printf(pbuffer, Current_Data.Cirrus_ch2.ActivePower, 2, "", "#", Buffer_End, &len);
-	pbuffer = Fast_Printf(pbuffer, Prod, 2, "", "#", Buffer_End, &len);
 	if (TI_OK)
 		TI_Energy = (TI.getIndexWh() - TI_Counter);
-	pbuffer = Fast_Printf(pbuffer, TI_Energy, 0, "", "#", Buffer_End, &len);
+
+	strcpy(buffer, RTC_Local.the_time); // Copie la date
+	pbuffer = Fast_Pos_Buffer(buffer, "#", Buffer_End, &len); // On se positionne en fin de chaine
+	pbuffer = Fast_Printf(pbuffer, 2, "#", Buffer_End, {Current_Data.Cirrus_ch1.ActivePower, Current_Data.Cirrus_ch1.Voltage,
+			Energy, Surplus, Current_Data.Cirrus_ch1.PowerFactor, Current_Data.Cirrus_ch2.ActivePower, Prod});
+
+	pbuffer = Fast_Printf(pbuffer, TI_Energy, 0, "#", "#", Buffer_End, &len);
 
 	// Températures
 	pbuffer = Fast_Printf(pbuffer, Current_Data.Cirrus_ch1.Temperature, 2, "", "#", Buffer_End, &len);
@@ -738,10 +740,8 @@ void handleLastData(CB_SERVER_PARAM)
 	if (graphe)
 	{
 		Fast_Set_Decimal_Separator('.');
-		pbuffer = Fast_Printf(pbuffer, log_cumul.Power_ch1, 2, "#", "", Buffer_End, &len);
-		pbuffer = Fast_Printf(pbuffer, log_cumul.Power_ch2, 2, "#", "", Buffer_End, &len);
-		pbuffer = Fast_Printf(pbuffer, log_cumul.Voltage, 2, "#", "", Buffer_End, &len);
-		pbuffer = Fast_Printf(pbuffer, log_cumul.Temp, 2, "#", "", Buffer_End, &len);
+		pbuffer = Fast_Pos_Buffer(pbuffer, "#", Buffer_End, &len); // On se positionne en fin de chaine
+		pbuffer = Fast_Printf(pbuffer, 2, "#", Buffer_End, {log_cumul.Power_ch1, log_cumul.Power_ch2, log_cumul.Voltage, log_cumul.Temp});
 		Fast_Set_Decimal_Separator(',');
 	}
 
