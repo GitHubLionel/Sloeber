@@ -311,8 +311,9 @@ void append_energy(void)
 	File temp = Data_Partition->open(Energy_Filename, "a");
 	if (temp)
 	{
+		char date[7] = {0};
 		// Time, Econso, Esurplus, Eprod
-		String data = String(RTC_Local.getUNIXDateTime()) + '\t' + (String) energy_day_conso + '\t'
+		String data = String(RTC_Local.getShortDate(date)) + '\t' + (String) energy_day_conso + '\t'
 				+ (String) energy_day_surplus + '\t' + (String) energy_day_prod + "\r\n";
 		temp.print(data);
 		temp.close();

@@ -374,7 +374,7 @@ void RTCLocal::clearTop(uint8_t id)
  * Note : this version is about 7 times faster than use of sprintf
  * Use of an array of digits is a little smaller than conversion
  */
-char* RTCLocal::getTime(char *time, char sep) const
+char* RTCLocal::getTime(char *time, const char sep) const
 {
 	//  static const char *digits = "0123456789";  // Les chiffres
 	char tmp[10] = {0};
@@ -394,6 +394,24 @@ char* RTCLocal::getTime(char *time, char sep) const
 
 	// 7 times faster than :
 	//  sprintf(time, "%02d:%02d:%02d", this->hours, this->minutes, this->seconds);
+}
+
+/**
+ * Return the date in string format dd/mm
+ */
+char* RTCLocal::getShortDate(char *date, const char sep) const
+{
+	char tmp[7] = {0};
+	char *pdate = tmp;
+
+	*pdate++ = (char) (48 + (this->day / 10));
+	*pdate++ = (char) (48 + (this->day % 10));
+	*pdate++ = sep;
+	*pdate++ = (char) (48 + (this->month / 10));
+	*pdate = (char) (48 + (this->month % 10));
+
+	strcpy(date, tmp);
+	return date;
 }
 
 /**
@@ -430,7 +448,7 @@ char* RTCLocal::getDate(char *date, bool millenium) const
  * Return date time in format dd-mm-yy(yy if millenium)(sep)hh:nn:ss
  * by default sep = " "
  */
-char* RTCLocal::getDateTime(char *datetime, bool millenium, char sep) const
+char* RTCLocal::getDateTime(char *datetime, bool millenium, const char sep) const
 {
 	char tmp[12] = {0};
 

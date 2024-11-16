@@ -150,9 +150,10 @@ class RTCLocal
 		bool getTop(uint8_t id, bool reset = true);
 		void clearTop(uint8_t id);
 
-		char* getTime(char *time, char sep = ':') const;
+		char* getTime(char *time, const char sep = ':') const;
+		char* getShortDate(char *date, const char sep = '/') const;
 		char* getDate(char *date, bool millenium) const;
-		char* getDateTime(char *datetime, bool millenium, char sep = ' ') const;
+		char* getDateTime(char *datetime, bool millenium, const char sep = ' ') const;
 		char* getFormatedDateTime(char *datetime) const;
 
 		uint32_t getUNIXDateTime(void) const
