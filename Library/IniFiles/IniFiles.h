@@ -69,6 +69,11 @@ class IniFiles
 		void WriteBool(const char *Section, const char *Name, bool Value, const char *Comment = "");
 		double ReadFloat(const char *Section, const char *Name, double Default);
 		void WriteFloat(const char *Section, const char *Name, double Value, const char *Comment = "");
+
+		// Indexed versions
+		bool ReadBoolIndex(uint16_t id, const char *Section, const char *Name, bool Default);
+		void WriteBoolIndex(uint16_t id, const char *Section, const char *Name, bool Value,
+				const char *Comment = "");
 		int ReadIntegerIndex(uint16_t id, const char *Section, const char *Name, int Default);
 		void WriteIntegerIndex(uint16_t id, const char *Section, const char *Name, int Value,
 				const char *Comment = "");

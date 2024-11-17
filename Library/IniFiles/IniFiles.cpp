@@ -606,6 +606,31 @@ void IniFiles::WriteFloat(const char *Section, const char *Name, double Value, c
 
 //---------------------------------------------------------------------------
 /**
+ * Lecture d'un booléen indexé Nameid dans la Section
+ * Si le booléen n'existe pas, il est crée avec la valeur par défaut
+ */
+bool IniFiles::ReadBoolIndex(uint16_t id, const char *Section, const char *Name, bool Default)
+{
+	char *IdentId = ALLOC_CHAR_SIZE(strlen(Name) + 3);
+	sprintf(IdentId, "%s%d", Name, id);
+
+	bool result = ReadBool(Section, IdentId, Default);
+	FREE_AND_NULL(IdentId);
+	return result;
+}
+
+//---------------------------------------------------------------------------
+void IniFiles::WriteBoolIndex(uint16_t id, const char *Section, const char *Name, bool Value,
+		const char *Comment)
+{
+	char *IdentId = ALLOC_CHAR_SIZE(strlen(Name) + 3);
+	sprintf(IdentId, "%s%d", Name, id);
+	WriteBool(Section, IdentId, Value, Comment);
+	FREE_AND_NULL(IdentId);
+}
+
+//---------------------------------------------------------------------------
+/**
  * Lecture d'un entier indexé Nameid dans la Section
  * Si l'entier n'existe pas, il est crée avec la valeur par défaut
  */

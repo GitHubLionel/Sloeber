@@ -156,6 +156,10 @@ class RTCLocal
 		char* getDateTime(char *datetime, bool millenium, const char sep = ' ') const;
 		char* getFormatedDateTime(char *datetime) const;
 
+		int getMinuteOfTheDay(void) const
+		{
+			return hours * 60 + minutes;
+		}
 		uint32_t getUNIXDateTime(void) const
 		{
 			return UNIX_time;

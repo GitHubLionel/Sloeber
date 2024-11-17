@@ -1,7 +1,7 @@
 #include "server_utils.h"
 #include <FS.h>               // For File
 #include "Partition_utils.h"	// Some utils functions for LittleFS/SPIFFS/FatFS
-#ifdef USE_RTCLocal
+#if defined(USE_RTCLocal)
 #include "RTCLocal.h"		      // A pseudo RTC software library
 #endif
 #include "Debug_utils.h"		  // Some utils functions for debug
@@ -1376,7 +1376,7 @@ void handleCreateFile(CB_SERVER_PARAM)
  */
 void handleGetTime(CB_SERVER_PARAM)
 {
-#ifdef USE_RTCLocal
+#if defined(USE_RTCLocal)
 	pserver->send(200, "text/plain", (RTC_Local.the_time));
 #endif
 }
@@ -1401,7 +1401,7 @@ void handleSetTime(CB_SERVER_PARAM)
 		// Mise à l'heure
 		String time = pserver->arg("TIME");
 		print_debug("handleSetTime: " + time);
-#ifdef USE_RTCLocal
+#if defined(USE_RTCLocal)
 		RTC_Local.setDateTime(time.c_str());
 		// Sauvegarde de l'heure
 		RTC_Local.saveDateTime(time.c_str());
