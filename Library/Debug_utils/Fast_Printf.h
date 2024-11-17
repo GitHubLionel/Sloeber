@@ -1,9 +1,10 @@
 #pragma once
+
 #ifndef __FAST_PRINTF_H
 #define __FAST_PRINTF_H
 
 /**
- * Une librairie minimaliste pour formater des réels
+ * Une librairie minimaliste pour formater des rÃ©els
  */
 
 #include <stdint.h>
