@@ -132,8 +132,13 @@ bool RTCLocal::update()
 #endif
 		}
 		else
+		{
+			MinuteOfTheDay = this->hours * 60 + this->minutes;
+			if (_cb_minutechange != NULL)
+				_cb_minutechange(MinuteOfTheDay);
 			if (this->minutes == 59)
 				this->_cb_minute = true;
+		}
 	}
 
 	// Activation de la callback à partir de minuit moins _cb_delay seconde

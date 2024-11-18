@@ -28,6 +28,9 @@
 // Callback pour le changement de jour : pour minuit et la mise à jour date
 typedef void (*RTC_daychange_cb)(uint8_t year, uint8_t month, uint8_t day);
 
+// Callback pour le changement de minute : utile pour les alarmes
+typedef void (*RTC_minutechange_cb)(uint16_t minuteOfTheDay);
+
 // To use RTCLocal in a task
 #ifdef RTC_USE_TASK
 #define RTC_DATA_TASK	{true, "RTC_Task", 4096, 10, 100, CoreAny, RTC_Task_code}
@@ -55,6 +58,8 @@ class RTCLocal
 		uint32_t seconds_count = 0UL;	// Compteur de seconde depuis le démarrage
 		// Temps Unix initialisé au 1er janvier 2020 (nombre de seconde depuis 1/1/1970 00:00:00 UTC
 		uint32_t UNIX_time = DT01_01_2020;
+
+		uint32_t MinuteOfTheDay = 0;
 
 		bool lockUpdate = false;
 
@@ -92,6 +97,9 @@ class RTCLocal
 
 		// Définition d'une action si on change de jour (pour les mises à jour de la date)
 		RTC_daychange_cb _cb_daychange = NULL;		// pointer to the callback function
+
+		// Définition d'une action si nouvelle minute
+		RTC_minutechange_cb _cb_minutechange = NULL;
 
 		bool IsLeapYear(int year);
 		void StartTime();
@@ -158,7 +166,7 @@ class RTCLocal
 
 		int getMinuteOfTheDay(void) const
 		{
-			return hours * 60 + minutes;
+			return MinuteOfTheDay;
 		}
 		uint32_t getUNIXDateTime(void) const
 		{
@@ -178,6 +186,10 @@ class RTCLocal
 			_cb_daychange = callback;
 		}
 
+		void setMinuteChangeCallback(const RTC_minutechange_cb &callback)
+		{
+			_cb_minutechange = callback;
+		}
 };
 
 #if !defined(NO_GLOBAL_INSTANCES) && !defined(NO_GLOBAL_RTCLocal)
