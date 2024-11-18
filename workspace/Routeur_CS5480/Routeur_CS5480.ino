@@ -228,11 +228,18 @@ extern void onCirrusZC(void);
 // Définition Relais, Clavier, ADC
 // ********************************************************************************
 
+#ifdef USE_RELAY
 // Pin commande du relais
-uint8_t GPIO_Relay[] = {GPIO_NUM_23, GPIO_NUM_26, GPIO_NUM_25, GPIO_NUM_33};
+Relay_Class Relay({GPIO_NUM_23, GPIO_NUM_26, GPIO_NUM_25, GPIO_NUM_33}); // @suppress("Invalid arguments")
+
+// callback to update relay every minutes
+void onRelayMinuteChange_cb(uint16_t minuteOfTheDay)
+{
+	Relay.updateTime(minuteOfTheDay);
+}
+#endif
 
 #ifdef USE_KEYBOARD
-bool Toggle_Keyboard = true;
 uint16_t interval[] = {1250, 950, 650, 250};
 #endif
 
@@ -288,7 +295,7 @@ void Display_Task_code(void *parameter)
 		}
 
 		// DS18B20 message
-		if (DS_Count > 0)
+		if ((DS_Count > 0) && (Extra_str == ""))
 		{
 			Temp_str = "DS: " + DS.get_Temperature_Str(0) + "` " + DS.get_Temperature_Str(1) + "` ";
 			IHM_Print(line++, (const char*) Temp_str.c_str());
@@ -354,8 +361,8 @@ void UserKeyboardAction(Btn_Action Btn_Clicked)
 		case Btn_K2: // Bouton du milieu : toggle relais
 		{
 			IHM_DisplayOn();
-			Set_Relay_State(0, !Get_Relay_State(0));
-			if (Get_Relay_State(0))
+			Relay.setState(0, Relay.getState(0));
+			if (Relay.getState(0))
 				Extra_str = "Relais ON";
 			else
 				Extra_str = "Relais OFF";
@@ -526,8 +533,15 @@ void setup()
 #endif
 
 #ifdef USE_RELAY
-	Relay_Initialize(4, GPIO_Relay);
-	Set_Relay_State(0, init_routeur.ReadBool("Relais", "Relais_On", false));
+	for (int i=0; i<Relay.size(); i++)
+	{
+		Relay.addAlarm(i, Alarm1, init_routeur.ReadIntegerIndex(i, "Relais", "Alarm1_start", -1),
+				init_routeur.ReadIntegerIndex(i, "Relais", "Alarm1_end", -1));
+		Relay.addAlarm(i, Alarm2, init_routeur.ReadIntegerIndex(i, "Relais", "Alarm2_start", -1),
+				init_routeur.ReadIntegerIndex(i, "Relais", "Alarm2_end", -1));
+	  Relay.setState(i, init_routeur.ReadBoolIndex(i, "Relais", "State", false));
+	}
+	RTC_Local.setMinuteChangeCallback(onRelayMinuteChange_cb);
 #endif
 
 	// **** FIN- Attente connexion réseau
@@ -665,6 +679,7 @@ bool UserAnalyseMessage(void)
 void handleInitialization(CB_SERVER_PARAM)
 {
 	String message = "";
+	// SSR Part
 	if (SSR_Get_Action() == SSR_Action_Percent)
 		message = "1#";
 	else
@@ -679,16 +694,19 @@ void handleInitialization(CB_SERVER_PARAM)
 		message += "OFF#";
 	else
 		message += "ON#";
-	if (Get_Relay_State(0))
-		message += "ON#";
-	else
-		message += "OFF#";
-#ifdef USE_KEYBOARD
-	if (Toggle_Keyboard)
-		message += "ON";
-	else
-#endif
-		message += "OFF";
+
+	// Relay part
+	String alarm = "";
+	String start = "", end = "";
+	for (int i=0; i<Relay.size(); i++)
+	{
+		(Relay.getState(i)) ? alarm += "ON," : alarm += "OFF,";
+		Relay.getAlarm(i, Alarm1, start, end);
+		alarm += start + "," + end + ",";
+		Relay.getAlarm(i, Alarm2, start, end);
+		alarm += start + "," + end + ",";
+	}
+	message += alarm;
 
 	pserver->send(200, "text/plain", message);
 }
@@ -766,16 +784,25 @@ void handleOperation(CB_SERVER_PARAM)
 #ifdef USE_RELAY
 	if (pserver->hasArg("Toggle_Relay"))
 	{
-		Set_Relay_State(0, !Get_Relay_State(0));
-		init_routeur.WriteBool("Relais", "Relais_On", Get_Relay_State(0));
+		int id = pserver->arg("Toggle_Relay").toInt();
+		bool state = (pserver->arg("State").toInt() == 1);
+		Relay.setState(id, state);
+		init_routeur.WriteIntegerIndex(id, "Relais", "State", state);
 	}
-#endif
-
-#ifdef USE_KEYBOARD
-	if (pserver->hasArg("Toggle_Keyboard"))
+	if (pserver->hasArg("AlarmID"))
 	{
-		Toggle_Keyboard = !Toggle_Keyboard;
-//		Keyboard_Txt = "";
+		int id = pserver->arg("AlarmID").toInt();
+		int start = pserver->arg("Alarm1D").toInt();
+		int end = pserver->arg("Alarm1F").toInt();
+		Relay.addAlarm(id, Alarm1, start, end);
+		init_routeur.WriteIntegerIndex(id, "Relais", "Alarm1_start", start);
+		init_routeur.WriteIntegerIndex(id, "Relais", "Alarm1_end", end);
+
+		start = pserver->arg("Alarm2D").toInt();
+		end = pserver->arg("Alarm2F").toInt();
+		Relay.addAlarm(id, Alarm2, start, end);
+		init_routeur.WriteIntegerIndex(id, "Relais", "Alarm2_start", start);
+		init_routeur.WriteIntegerIndex(id, "Relais", "Alarm2_end", end);
 	}
 #endif
 

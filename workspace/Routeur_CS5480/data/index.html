@@ -28,7 +28,7 @@
     <button class="tablink" onclick="openPage('m_Data', this, 'green')" id="defaultOpen">Données</button>
     <button class="tablink" onclick="openPage('m_Graphe', this, '#FFCB00')">Graphiques</button>
     <button class="tablink" onclick="openPage('m_Energy', this, '#C6410D')">Energie</button>
-    <button class="tablink" onclick="openPage('m_SSR', this, '#0ee6f0')">SSR</button>
+    <button class="tablink" onclick="openPage('m_SSR', this, '#0ee6f0')">SSR, Relais</button>
     <button class="tablink" onclick="openPage('m_Config', this, '#cd11e8')">Config</button>
 
     <button class="tablink" style="cursor:default" onmouseover="this.style.background='black'" > &nbsp; </button>
@@ -169,7 +169,6 @@
         <label for="zero">Zéro</label>
         <input type="radio" id="fullpower" name="SSRType" value="fullpower" onchange="doSSRAction('fullpower')">
         <label for="fullpower">Pleine charge</label>        
-<!--        <button class="myButton" id="select_SSRType" onclick="doToggle('SSRType')">Select</button> -->
       </div>
       <div id="powerCE" style="display: none">
         <label for="powerSSR">Puissance CE : </label>
@@ -189,29 +188,78 @@
       </div>
       </fieldset>
     </div>
-    <div class="div_space">
-      <hr>
-    </div>
+
     <div class="div_space">
       <button class="myButton" id="toggle_SSR" onclick="doToggle('SSR')">Toggle SSR</button>
       <label id="label_SSR" for="toggle_SSR">SSR OFF</label>
     </div>
+
     <div class="div_space">
-      <hr>
-    </div>
-    <div class="div_space">
-      <button class="myButton" id="toggle_Relay" onclick="doToggle('Relay')">Toggle Relais</button>
-      <label id="label_Relay" for="toggle_Relay">Relais OFF</label>
-    </div>
-    <div class="div_space">
-      <hr>
-    </div>
-    <div class="div_space">
-      <button class="myButton" id="toggle_Keyboard" onclick="doToggle('Keyboard')">Toggle Clavier</button>
-      <label id="label_Keyboard" for="toggle_Keyboard">Clavier ON</label>
-      <br>
-      <span>Données reçues du Clavier : </span>
-      <span id="data_keyboard"></span>
+      <fieldset>
+      <div>
+        <input type="radio" id="Relay0" name="RelayAction" value="Relay0"  onchange="doRelayAction(0)" checked>
+        <label for="Relay0">Relais 0</label>
+        <input type="radio" id="Relay1" name="RelayAction" value="Relay1"  onchange="doRelayAction(1)">
+        <label for="Relay1">Relais 1</label>
+        <input type="radio" id="Relay2" name="RelayAction" value="Relay2"  onchange="doRelayAction(2)">
+        <label for="Relay2">Relais 2</label>
+        <input type="radio" id="Relay3" name="RelayAction" value="Relay3"  onchange="doRelayAction(3)">
+        <label for="Relay3">Relais 3</label>
+      </div>
+        <div style="display: inline-block;">
+        <table>
+          <tr>
+            <th scope="col" colspan="3">Paramètres Relais</th>
+          </tr>
+          <tr>
+            <td>
+              <label class="label_form">Alarme 1 (début/fin)</label>
+            </td>
+            <td>
+              <input class="config" name="Alarm_1_D" id="Alarm_1_D" placeholder="Heure début" type="text" value="" title="Heure début format hh.mm. Laisser vide si pas d'évènement.">
+            </td>
+            <td>
+              <input class="config" name="Alarm_1_F" id="Alarm_1_F" placeholder="Heure fin" type="text" value="" title="Heure fin format hh.mm. Laisser vide si pas d'évènement.">
+            </td>
+          </tr>
+
+          <tr>
+            <td>
+              <label class="label_form">Alarme 2 (début/fin)</label>
+            </td>
+            <td>
+              <input class="config" name="Alarm_2_D" id="Alarm_2_D" placeholder="Heure début" type="text" value="" title="Heure début format hh.mm. Laisser vide si pas d'évènement.">
+            </td>
+            <td>
+              <input class="config" name="Alarm_2_F" id="Alarm_2_F" placeholder="Heure fin" type="text" value="" title="Heure fin format hh.mm. Laiser vide si pas d'évènement.">
+            </td>
+          </tr>
+
+          <tr>
+            <td colspan="3" style="text-align: center;">
+              <button class="myButton" onclick="sendAlarm()">Mettre à jour les alarmes</button>
+            </td>
+          </tr>
+
+           <tr>
+            <td>
+              <label class="label_form">Forcer Relais </label>
+            </td>
+            <td>
+              <label class="switch switch-flat">     
+                <input id="ToggleRelay" class="switch-input" type="checkbox" />
+                <span class="switch-label" data-on="ON" data-off="OFF"></span>
+                <span class="switch-handle"></span>      	
+              </label>
+            </td>
+            <td>
+              <button class="myButton" onclick="doToggle('Relay')">Mettre à jour</button>
+            </td>
+          </tr>
+
+        </table>
+        </div>
+      </fieldset>
     </div>
   </div>
 
