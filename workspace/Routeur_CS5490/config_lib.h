@@ -57,13 +57,14 @@
  * RTC define : RTCLocal library
  * By default, global instance RTC_Local is created
  **********************************************************/
-#define USE_NTP_SERVER	2 // 1 or 2 for summer time
+#define USE_NTP_SERVER	1 // 1 or 2 for summer time
 //#define RTC_USE_CORRECTION
 
 /**********************************************************
  * LCD, Oled, TFT define
  **********************************************************/
 #define I2C_ADDRESS	0x3C // or 0x78
+//#define I2C_FREQUENCY	800000 // 100000 or 400000. May try 800000 for speed display.
 //#define I2C_SDA_GPIO	GPIO_NUM_21 // ESP32 I2C0
 //#define I2C_SCL_GPIO	GPIO_NUM_22 // ESP32 I2C0
 #define OLED_TIMEOUT	600	// 10 minutes
@@ -93,11 +94,13 @@
 #define TI_RX_GPIO	D7
 
 /**********************************************************
- * Keyboard define
+ * Tore and Keyboard define
  **********************************************************/
 #define KEYBOARD_ADC_GPIO	A0
 #define DEBOUNCING_MS	200
 #define DEBOUNCING_US	200000
+//#define ADC_USE_ARDUINO  // To use Arduino function
+//#define ADC_USE_TASK     // To use task in place of timer in oneshot mode or callback in continuous mode
 
 /**********************************************************
  * Cirrus define
@@ -126,6 +129,7 @@
  **********************************************************/
 #define USE_SSR
 #define ZERO_CROSS_GPIO	D6
+#define ZERO_CROSS_TOP_Xms	20	// Allow to have a top 200 ms created by the zero cross (10 * X ms)
 #define SSR_COMMAND_GPIO	D8
 #define SSR_LED_GPIO	D3
 
@@ -145,4 +149,5 @@
 //#define KEYBOARD_USE_TASK    // A basic task to check keyboard every 10 ms
 //#define CIRRUS_TASK_DELAY	100    // The delay for the Cirrus task. Must be adapted according the time required of the GetData()
 //#define CIRRUS_USE_TASK      // A basic task to check Cirrus data every CIRRUS_TASK_DELAY ms
+//#define RELAY_USE_TASK       // A basic task to update Relay every minute
 

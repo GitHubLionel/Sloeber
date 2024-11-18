@@ -190,8 +190,10 @@ extern volatile Graphe_Data log_cumul;
 // Définition SSR - Relais
 // ********************************************************************************
 
+#ifdef USE_RELAY
 // Pin commande du relais
-uint8_t GPIO_Relay[] = {D0};
+Relay_Class Relay({D0});
+#endif
 
 // ********************************************************************************
 // Définition Clavier
@@ -325,12 +327,8 @@ void setup()
 
 	// **** 8- Initialisation Clavier, relais
 #ifdef USE_KEYBOARD
-	Keyboard_Initialize(KEYBOARD_ADC_GPIO, 3);
+	Keyboard_Initialize(3);
 //  Btn_Check_Config();
-#endif
-
-#ifdef USE_RELAY
-	Relay_Initialize(1, GPIO_Relay);
 #endif
 
 	// **** FIN- Attente connexion réseau
@@ -364,7 +362,7 @@ void loop()
 	// Toutes les 200 ms on récupère les données du Cirrus
 	// Met à jour en même temps le délais SSR
 #ifdef USE_ZC_SSR
-	if (ZC_Top200ms())
+	if (ZC_Top_Xms())
 	{
 		if (Cirrus_OK)
 			Get_Data();
@@ -405,8 +403,8 @@ void loop()
 				if (Button == Btn_K2) // Bouton du milieu
 				{
 					IHM_DisplayOn();
-					Set_Relay_State(0, !Get_Relay_State(0));
-					if (Get_Relay_State(0))
+					Relay.setState(0, !Relay.getState(0));
+					if (Relay.getState(0))
 						Extra_str = "Relais ON";
 					else
 						Extra_str = "Relais OFF";
@@ -560,11 +558,11 @@ void handleInitialization(void)
 		message = "false#";
 	message += (String) SSR_Get_Dump_Power() + '#';
 	message += (String) SSR_Get_Percent() + '#';
-	if (SSR_Get_StateON())
+	if (SSR_Get_State())
 		message += "ON#";
 	else
 		message += "OFF#";
-	if (Get_Relay_State(0))
+	if (Relay.getState(0))
 		message += "ON#";
 	else
 		message += "OFF#";
@@ -585,7 +583,7 @@ void handleLastData(void)
 	String message = String(RTC_Local.the_time);
 	message += '#';
 	graphe = Get_Last_Data(&Energy, &Surplus);
-	message += (String) Current_Data.Cirrus_ch1.Power + '#';
+	message += (String) Current_Data.Cirrus_ch1.ActivePower + '#';
 	message += (String) Current_Data.Cirrus_ch1.Voltage + '#';
 	message += (String) Energy + '#';
 	message += (String) Surplus + '#';
@@ -632,7 +630,7 @@ void handleOperation(void)
 #ifdef USE_RELAY
 	if (server.hasArg("Toggle_Relay"))
 	{
-		Set_Relay_State(0, !Get_Relay_State(0));
+		Relay.setState(0, !Relay.getState(0));
 	}
 #endif
 
@@ -673,7 +671,7 @@ void handleOperation(void)
 	// Allume ou éteint le SSR
 	if (server.hasArg("Toggle_SSR"))
 	{
-		if (SSR_Get_StateON())
+		if (SSR_Get_State())
 		{
 			SSR_Disable();
 		}

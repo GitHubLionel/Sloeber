@@ -25,10 +25,6 @@ extern CIRRUS_CS5490 CS5490;
 // Booléen indiquant une acquisition de donnée en cours
 bool Data_acquisition = false;
 
-// Tension et puissance du premier Cirrus, premier channel
-volatile float Cirrus_voltage = 230.0;
-volatile float Cirrus_power_signed = 0.0;
-
 // Les données actualisées pour le SSR
 #ifdef USE_SSR
 extern Gestion_SSR_TypeDef Gestion_SSR_CallBack;
@@ -99,18 +95,15 @@ void Get_Data(void)
 #ifdef CIRRUS_RMS_FULL
 	Current_Data.Cirrus_ch1.Current = CS5490.GetIRMS();
 #endif
-	Current_Data.Cirrus_ch1.Power = CS5490.GetPRMSSigned();
-	Current_Data.Cirrus_PF = CS5490.GetPowerFactor();
+	Current_Data.Cirrus_ch1.ActivePower = CS5490.GetPRMSSigned();
+	Current_Data.Cirrus_PF = CS5490.GetExtraData(exd_PF);
 	Current_Data.Cirrus_Temp = CS5490.GetTemperature();
 	CS5490.GetEnergy(&energy_day_conso, &energy_day_surplus);
 
 #ifdef USE_SSR
 	// On choisi le premier channel qui mesure la consommation et le surplus
-	Cirrus_voltage = Current_Data.Cirrus_ch1.Voltage;
-	Cirrus_power_signed = Current_Data.Cirrus_ch1.Power;
-
 	if (Gestion_SSR_CallBack != NULL)
-		Gestion_SSR_CallBack();
+		Gestion_SSR_CallBack(Current_Data.Cirrus_ch1.Voltage, Current_Data.Cirrus_ch1.ActivePower);
 #endif
 
 //	uint32_t err = CS5490.GetErrorCount();
@@ -123,7 +116,7 @@ void Get_Data(void)
 		double temp;
 		RMS_Data data = CS5490.GetLog(&temp);
 		log_cumul.Voltage = data.Voltage;
-		log_cumul.Power = data.Power;
+		log_cumul.Power = data.ActivePower;
 		log_cumul.Temp = temp;
 
 		// Pour le rafraichissement de la page Internet si connecté
@@ -188,7 +181,7 @@ uint8_t Update_IHM(const char *first_text, const char *last_text, bool display)
 	IHM_Print(line++, (char*) buffer);
 #endif
 
-	sprintf(buffer, "Prms:%.2f   ", Current_Data.Cirrus_ch1.Power);
+	sprintf(buffer, "Prms:%.2f   ", Current_Data.Cirrus_ch1.ActivePower);
 	IHM_Print(line++, (char*) buffer);
 
 	sprintf(buffer, "Energie:%.2f   ", energy_day_conso);
