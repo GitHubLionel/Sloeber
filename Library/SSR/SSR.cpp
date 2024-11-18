@@ -15,6 +15,7 @@
 TimerInterrupt Timer_SSR;
 #define TIMERMUX_ENTER()	void()
 #define TIMERMUX_EXIT()	void()
+#define TIMERMUX_SECURE(op) op
 #elif ESP32
 // Voir https://deepbluembedded.com/esp32-timers-timer-interrupt-tutorial-arduino-ide/ pour ESP32 2.0.x
 // https://docs.espressif.com/projects/arduino-esp32/en/latest/api/timer.html pour ESP32 3.0.x

@@ -1,5 +1,7 @@
 #include "Keyboard.h"
+#ifdef ESP32
 #include "ADC_Utils.h"
+#endif
 
 #ifdef KEYBOARD_USE_TASK
 #include "Tasks_utils.h"
@@ -20,7 +22,14 @@ static uint32_t ADC_res = 1023;  // Echantillonnage 10 bits
 
 KeyBoard_Click_cb KBClick_cb = NULL;
 
+#if defined(ESP8266) | defined(ADC_USE_ARDUINO)
+bool ADC_Initialized = true;
+#if !defined(KEYBOARD_ADC_GPIO)
+#define KEYBOARD_ADC_GPIO	A0
+#endif
+#else
 extern volatile bool ADC_Initialized;
+#endif
 
 void Btn_Definition_1B();
 void Btn_Definition_2B();
@@ -50,6 +59,10 @@ void __attribute__((weak)) print_debug(const char *mess, bool ln = true)
 void Keyboard_Initialize(uint8_t nbButton, ADC_Sampling sampling,
 		const KeyBoard_Click_cb &kbClick)
 {
+#if defined(ESP8266) | defined(ADC_USE_ARDUINO)
+	// For ESP8266, we have only D0
+	pinMode(KEYBOARD_ADC_GPIO, INPUT);
+#endif
 	Keyboard_Initialized = false;
 	Btn_Count = nbButton;
 	KBClick_cb = kbClick;
@@ -105,6 +118,10 @@ void Keyboard_Initialize(uint8_t nbButton, ADC_Sampling sampling,
 void Keyboard_Initialize(uint8_t nbButton, const uint16_t interval[],
 		const KeyBoard_Click_cb &kbClick)
 {
+#if defined(ESP8266) | defined(ADC_USE_ARDUINO)
+	// For ESP8266, we have only D0
+	pinMode(KEYBOARD_ADC_GPIO, INPUT);
+#endif
 	Keyboard_Initialized = false;
 	Btn_Count = nbButton;
 	KBClick_cb = kbClick;
@@ -122,6 +139,13 @@ void Keyboard_Initialize(uint8_t nbButton, const uint16_t interval[],
 	else
 	  Keyboard_Initialized = true;
 }
+
+#if defined(ESP8266) | defined(ADC_USE_ARDUINO)
+uint16_t ADC_Read0(void)
+{
+	return analogRead(KEYBOARD_ADC_GPIO);
+}
+#endif
 
 /**
  * Set callback for action when button is clicked
@@ -308,8 +332,6 @@ const char* Btn_Click_Name()
 {
 	return Btn_Texte[Btn_Click()];
 }
-
-#define RAW_CUMUL	10
 
 /**
  * Return the raw value of the ADC
