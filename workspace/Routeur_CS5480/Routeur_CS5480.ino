@@ -361,7 +361,7 @@ void UserKeyboardAction(Btn_Action Btn_Clicked)
 		case Btn_K2: // Bouton du milieu : toggle relais
 		{
 			IHM_DisplayOn();
-			Relay.setState(0, Relay.getState(0));
+			Relay.setState(0, !Relay.getState(0));
 			if (Relay.getState(0))
 				Extra_str = "Relais ON";
 			else
