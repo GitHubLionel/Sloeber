@@ -9,7 +9,7 @@
 #include <initializer_list>
 #include <vector>
 
-// To create a basic task to check TeleInfo every 1 minute
+// To create a basic task to update Relay every 1 minute
 #ifdef RELAY_USE_TASK
 #define RELAY_DATA_TASK(start)	{(start), "RELAY_Task", 1024, 2, 60000, CoreAny, RELAY_Task_code}
 void RELAY_Task_code(void *parameter);
@@ -19,8 +19,8 @@ void RELAY_Task_code(void *parameter);
 
 typedef struct
 {
-		int start;
-		int end;
+		int start = -1;
+		int end = -1;
 } Alarm_typedef;
 
 typedef struct
@@ -69,7 +69,7 @@ class Relay_Class
 		bool hasAlarm(uint8_t idRelay);
 		void addAlarm(uint8_t idRelay, AlarmNumber num, int begin, int end);
 		bool getAlarm(uint8_t idRelay, AlarmNumber num, int *begin, int *end);
-		void getAlarm(uint8_t idRelay, AlarmNumber num, String begin, String end);
+		void getAlarm(uint8_t idRelay, AlarmNumber num, String &begin, String &end);
 
 	protected:
 		RelayList _relay;
@@ -82,4 +82,3 @@ class Relay_Class
 		void UpdateNextAlarm(void);
 		void CheckAlarmTime(void);
 };
-

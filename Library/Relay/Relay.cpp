@@ -92,7 +92,7 @@ void Relay_Class::updateTime(int _time)
  */
 void Relay_Class::setState(uint8_t idRelay, bool state)
 {
-	if (idRelay > _relay.size())
+	if (idRelay >= _relay.size())
 		return;
 
 	if (state)
@@ -112,7 +112,7 @@ void Relay_Class::setState(uint8_t idRelay, bool state)
  */
 bool Relay_Class::getState(uint8_t idRelay)
 {
-	if (idRelay > _relay.size())
+	if (idRelay >= _relay.size())
 		return false;
 
 	return _relay[idRelay].state;
@@ -120,7 +120,7 @@ bool Relay_Class::getState(uint8_t idRelay)
 
 bool Relay_Class::hasAlarm(uint8_t idRelay)
 {
-	if (idRelay > _relay.size())
+	if (idRelay >= _relay.size())
 		return false;
 
 	return _relay[idRelay].hasAlarm;
@@ -128,22 +128,43 @@ bool Relay_Class::hasAlarm(uint8_t idRelay)
 
 void Relay_Class::addAlarm(uint8_t idRelay, AlarmNumber num, int begin, int end)
 {
-	if (idRelay > _relay.size())
+	if (idRelay >= _relay.size())
 		return;
+
+	if ((begin >= end) && (begin != -1) && (end != -1))
+	{
+		print_debug("Alarm error: begin >= end");
+		return;
+	}
 
 	if (num == Alarm1)
 	{
 		_relay[idRelay].alarm1.start = begin;
 		_relay[idRelay].alarm1.end = end;
-		_relay[idRelay].hasAlarm = ((begin != -1) && (end != -1));
+		// We can have only begin or end alarm
+		_relay[idRelay].hasAlarm = ((begin != -1) || (end != -1));
 	}
 	else
 	{
 		// Second alarm only if first alarm exist
 		if (_relay[idRelay].hasAlarm)
 		{
-			_relay[idRelay].alarm2.start = begin;
-			_relay[idRelay].alarm2.end = end;
+			if (begin <= _relay[idRelay].alarm1.end)
+			{
+				print_debug("Alarm2 error: begin <= end of Alarm1");
+				_relay[idRelay].alarm2.start = -1;
+				_relay[idRelay].alarm2.end = -1;
+			}
+			else
+			{
+				_relay[idRelay].alarm2.start = begin;
+				_relay[idRelay].alarm2.end = end;
+			}
+		}
+		else
+		{
+			_relay[idRelay].alarm2.start = -1;
+			_relay[idRelay].alarm2.end = -1;
 		}
 	}
 	UpdateTimeList();
@@ -165,15 +186,15 @@ bool Relay_Class::getAlarm(uint8_t idRelay, AlarmNumber num, int *begin, int *en
 	return (*begin != -1);
 }
 
-void Relay_Class::getAlarm(uint8_t idRelay, AlarmNumber num, String begin, String end)
+void Relay_Class::getAlarm(uint8_t idRelay, AlarmNumber num, String &begin, String &end)
 {
 	int _begin, _end;
 	char temp[50];
 	if (getAlarm(idRelay, num, &_begin, &_end))
 	{
-		sprintf(temp, "%d.%2d", _begin / 60, _begin % 60);
+		sprintf(temp, "%d.%02d", _begin / 60, _begin % 60);
 		begin = String(temp);
-		sprintf(temp, "%d.%2d", _end / 60, _end % 60);
+		sprintf(temp, "%d.%02d", _end / 60, _end % 60);
 		end = String(temp);
 	}
 	else
@@ -202,15 +223,24 @@ void Relay_Class::UpdateTimeList(void)
 		{
 			TimeAlarm_typedef time;
 			time.idRelay = relay.idRelay;
-			time.time = relay.alarm1.start;
-			_time.push_back(time);
-			time.time = relay.alarm1.end;
-			_time.push_back(time);
+			if (relay.alarm1.start != -1)
+			{
+				time.time = relay.alarm1.start;
+				_time.push_back(time);
+			}
+			if (relay.alarm1.end != -1)
+			{
+				time.time = relay.alarm1.end;
+				_time.push_back(time);
+			}
 			// check if second alarm
 			if (relay.alarm2.start != -1)
 			{
 				time.time = relay.alarm2.start;
 				_time.push_back(time);
+			}
+			if (relay.alarm2.end != -1)
+			{
 				time.time = relay.alarm2.end;
 				_time.push_back(time);
 			}
@@ -245,13 +275,17 @@ void Relay_Class::CheckAlarmTime(void)
 	if ((idTime == -1) || (idTime == _time.size()))
 		return;
 
+	// We can have the same alarm for several relays
 	while (currentTime == _time[idTime].time)
 	{
 		Relay_typedef relay = _relay[_time[idTime].idRelay];
 		if ((relay.alarm1.start == currentTime) || (relay.alarm2.start == currentTime))
 			setState(relay.idRelay, true);
-		if ((relay.alarm1.end == currentTime) || (relay.alarm2.end == currentTime))
-			setState(relay.idRelay, false);
+		else
+		{
+			if ((relay.alarm1.end == currentTime) || (relay.alarm2.end == currentTime))
+				setState(relay.idRelay, false);
+		}
 		idTime++;
 		if (idTime == _time.size())
 			break;
