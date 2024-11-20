@@ -112,6 +112,11 @@
 			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp32/hardware/esp32/3.0.3/libraries/Wire</locationURI>
 		</link>
 		<link>
+			<name>user_lib/ADC_Utils</name>
+			<type>2</type>
+			<locationURI>USER_LIB/ADC_Utils</locationURI>
+		</link>
+		<link>
 			<name>user_lib/CIRRUS</name>
 			<type>2</type>
 			<locationURI>USER_LIB/CIRRUS</locationURI>
@@ -130,6 +135,11 @@
 			<name>user_lib/Fonts</name>
 			<type>2</type>
 			<locationURI>USER_LIB/Fonts</locationURI>
+		</link>
+		<link>
+			<name>user_lib/IniFiles</name>
+			<type>2</type>
+			<locationURI>USER_LIB/IniFiles</locationURI>
 		</link>
 		<link>
 			<name>user_lib/Keyboard</name>

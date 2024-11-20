@@ -10,7 +10,7 @@
 #include "Server_utils.h"			  // Some utils functions for the server
 #include "RTCLocal.h"					  // A pseudo RTC software library
 #include "Partition_utils.h"		// Some utils functions for LittleFS/SPIFFS/FatFS
-#include "display.h"					  // Display functions
+#include "display.h"				  	// Display functions
 #include "CIRRUS.h"
 #include "Get_Data.h"
 #include "DS18B20.h"
@@ -18,6 +18,9 @@
 #include "SSR.h"
 #include "Keyboard.h"
 #include "Relay.h"
+#include "iniFiles.h"
+//#include "ADC_Utils.h"
+#include "Fast_Printf.h"
 
 /**
  * Define de debug
@@ -28,6 +31,11 @@
 //#define LOG_DEBUG
 //#define USE_SAVE_CRASH   // Permet de sauvegarder les données du crash
 #include "Debug_utils.h"		// Some utils functions for debug
+
+// Calibration
+#ifdef CIRRUS_CALIBRATION
+#include "CIRRUS_Calibration.h"
+#endif
 
 // Use DS18B20
 #define USE_DS
@@ -44,11 +52,8 @@
 // Active le clavier
 #define USE_KEYBOARD
 
-// Calibration
-//#define CALIBRATION
-#ifdef CALIBRATION
-#include "CIRRUS_Calibration.h"
-#endif
+// Active ADC
+//#define USE_ADC
 
 // Liste des taches
 #include "Tasks_utils.h"       // Task list functions
@@ -160,6 +165,7 @@ DS18B20 DS(DS18B20_GPIO);
 // ********************************************************************************
 
 bool TI_OK = false;
+uint32_t TI_Counter = 0;
 TeleInfo TI(TI_RX_GPIO, 5000);
 
 // ********************************************************************************
@@ -194,6 +200,10 @@ CIRRUS_SERIAL_MODE *csSerial = new CIRRUS_SERIAL_MODE(D7, D8); // D7=RX, D8=TX  
 CIRRUS_Communication CS_Com = CIRRUS_Communication(csSerial, CIRRUS_RESET_GPIO);
 CIRRUS_CS548x CS5480 = CIRRUS_CS548x(CS_Com);
 CIRRUS_CS548x CS5484 = CIRRUS_CS548x(CS_Com, true);
+#ifdef CIRRUS_CALIBRATION
+CIRRUS_Calibration CS_Calibration = CIRRUS_Calibration(CS5480);
+extern bool Calibration;
+#endif
 
 bool Cirrus_OK = false;
 bool Mess_For_Cirrus_Connect = false;
@@ -202,13 +212,33 @@ bool Mess_For_Cirrus_Connect = false;
 extern volatile Data_Struct Current_Data;
 extern volatile Graphe_Data log_cumul;
 
+#ifndef USE_ZC_SSR
+extern volatile SemaphoreHandle_t topZC_Semaphore;
+extern void onCirrusZC(void);
+#endif
+
 // ********************************************************************************
-// Définition SSR - Relais
+// Définition Relais, Clavier, ADC
 // ********************************************************************************
 
+#ifdef USE_RELAY
 // Pin commande du relais
-uint8_t GPIO_Relay[] = {GPIO_NUM_26, GPIO_NUM_25, GPIO_NUM_33};    // GPIO_NUM_32
+Relay_Class Relay( {GPIO_NUM_26, GPIO_NUM_25, GPIO_NUM_33}); // @suppress("Invalid arguments")
 #define  GPIO_RELAY_FACADE	GPIO_NUM_15
+
+// callback to update relay every minutes
+void onRelayMinuteChange_cb(uint16_t minuteOfTheDay)
+{
+	Relay.updateTime(minuteOfTheDay);
+}
+#endif
+
+#ifdef USE_KEYBOARD
+bool Toggle_Keyboard = true;
+uint16_t interval[] = {3600, 2500, 1140, 240};
+#endif
+
+bool ADC_OK = false;
 
 // Pour SSR_Compute_Dump_power
 bool CIRRUS_get_rms_data(float *uRMS, float *pRMS)
@@ -217,13 +247,10 @@ bool CIRRUS_get_rms_data(float *uRMS, float *pRMS)
 }
 
 // ********************************************************************************
-// Définition Clavier
+// Définition Fichier ini
 // ********************************************************************************
 
-#ifdef USE_KEYBOARD
-bool Toggle_Keyboard = true;
-uint16_t interval[] = {3600, 2500, 1140, 240};
-#endif
+IniFiles init_routeur = IniFiles("Conf.ini");
 
 // ********************************************************************************
 // Functions prototype
@@ -246,9 +273,20 @@ void Display_Task_code(void *parameter)
 	uint8_t line = 0;
 	for (EVER)
 	{
+#ifdef CIRRUS_CALIBRATION
+		if (Calibration)
+		{
+			END_TASK_CODE();
+			continue;
+		}
+#endif
+
+		Temp_str = "";
 		// Cirrus message
 		if (Cirrus_OK)
+		{
 			line = Update_IHM(RTC_Local.the_time, "", false);
+		}
 		else
 		{
 			line = 0;
@@ -324,8 +362,8 @@ void UserKeyboardAction(Btn_Action Btn_Clicked)
 		case Btn_K2: // Bouton du milieu : toggle relais
 		{
 			IHM_DisplayOn();
-			Set_Relay_State(0, !Get_Relay_State(0));
-			if (Get_Relay_State(0))
+			Relay.setState(0, !Relay.getState(0));
+			if (Relay.getState(0))
 			{
 				digitalWrite(GPIO_RELAY_FACADE, HIGH);
 				Extra_str = "Relais ON";
@@ -406,7 +444,10 @@ void setup()
 #endif
 
 	// Création de la partition data
-//	CreateOpenDataPartition(false, true);
+	CreateOpenDataPartition(false, true);
+
+	// Initialisation fichier ini
+	init_routeur.Begin(true);
 
 	// **** 2- initialisation datetime ****
 	// Essaye de récupérer la dernière heure, utile pour un reboot
@@ -435,6 +476,7 @@ void setup()
 		print_debug(F("Configuration TeleInfo OK"));
 		TI.PrintAllToSerial();
 		TI_OK = true;
+		TI_Counter = TI.getIndexWh();
 	}
 	else
 		print_debug(F("Configuration TeleInfo ERROR"));
@@ -489,21 +531,42 @@ void setup()
 
 	SSR_Action(SSR_Action_Percent);  // Par défaut à 10%, voir page web
 //	SSR_Set_Percent(20);
-	// NOTE : le SSR est éteint, on le démarre dans la page web
+			// NOTE : le SSR est éteint, on le démarre dans la page web
+#else
+	topZC_Semaphore = xSemaphoreCreateBinary();
+	CS5480.ZC_Initialize(ZERO_CROSS_GPIO, onCirrusZC);
 #endif
 
-	// **** 8- Initialisation Clavier, relais
+	// **** 8- Initialisation Clavier, relais, ADC
+#ifdef USE_ADC
+	if ((ADC_OK = ADC_Initialize_OneShot({KEYBOARD_ADC_GPIO, GPIO_NUM_39})) == true) // @suppress("Invalid arguments")
+	{
+		print_debug(F("ADC OK"));
+//		ADC_Begin();
+	}
+	else
+		print_debug(F("ADC Failed"));
+#endif
+
 #ifdef USE_KEYBOARD
-	Keyboard_Initialize(KEYBOARD_ADC_GPIO, 3, interval);
-//	Keyboard_Init(KEYBOARD_ADC_GPIO, 3, ADC_12bits); // pas bon
+	Keyboard_Initialize(3, interval);
+//	Keyboard_Init(3, ADC_12bits); // pas bon
 //	IHM_Print0("Test Btn");
 //  Btn_Check_Config();
 #endif
 
 #ifdef USE_RELAY
-	Relay_Initialize(3, GPIO_Relay);
 	pinMode(GPIO_RELAY_FACADE, OUTPUT);
 	digitalWrite(GPIO_RELAY_FACADE, LOW);
+	for (int i = 0; i < Relay.size(); i++)
+	{
+		Relay.addAlarm(i, Alarm1, init_routeur.ReadIntegerIndex(i, "Relais", "Alarm1_start", -1),
+				init_routeur.ReadIntegerIndex(i, "Relais", "Alarm1_end", -1));
+		Relay.addAlarm(i, Alarm2, init_routeur.ReadIntegerIndex(i, "Relais", "Alarm2_start", -1),
+				init_routeur.ReadIntegerIndex(i, "Relais", "Alarm2_end", -1));
+		Relay.setState(i, init_routeur.ReadBoolIndex(i, "Relais", "State", false));
+	}
+	RTC_Local.setMinuteChangeCallback(onRelayMinuteChange_cb);
 #endif
 
 	// **** FIN- Attente connexion réseau
@@ -534,15 +597,18 @@ void setup()
 #ifdef USE_TI
 	TaskList.AddTask(TELEINFO_DATA_TASK(TI_OK)); // TeleInfo Task
 #endif
-#ifdef USE_ZC_SSR
-	if (Cirrus_OK)
-		TaskList.AddTask(CIRRUS_DATA_TASK(true)); // Cirrus get data Task
-#endif
+	TaskList.AddTask(CIRRUS_DATA_TASK(Cirrus_OK)); // Cirrus get data Task
 	TaskList.AddTask(DISPLAY_DATA_TASK);
 #ifdef USE_KEYBOARD
 	TaskList.AddTask(KEYBOARD_DATA_TASK(true));
 #endif
 	TaskList.Create(USE_IDLE_TASK);
+#ifdef USE_ADC
+	if (ADC_OK)
+	{
+		ADC_Begin();
+	}
+#endif
 }
 
 // The loop function is called in an endless loop
@@ -638,73 +704,96 @@ bool UserAnalyseMessage(void)
 void handleInitialization(CB_SERVER_PARAM)
 {
 	String message = "";
+	// SSR Part
 	if (SSR_Get_Action() == SSR_Action_Percent)
-		message = "true#";
+		message = "1#";
 	else
-		message = "false#";
+		if (SSR_Get_Action() == SSR_Action_Surplus)
+			message = "2#";
+		else
+			message = "3#";
 	message += (String) SSR_Get_Dump_Power() + '#';
+	message += (String) SSR_Get_Target() + '#';
 	message += (String) SSR_Get_Percent() + '#';
-	if (SSR_Get_StateON())
-		message += "ON#";
-	else
+	if (SSR_Get_State() == SSR_OFF)
 		message += "OFF#";
-	if (Get_Relay_State(0))
+	else
 		message += "ON#";
-	else
-		message += "OFF#";
-#ifdef USE_KEYBOARD
-	if (Toggle_Keyboard)
-		message += "ON";
-	else
-#endif
-		message += "OFF";
+
+	// Relay part
+	String alarm = "";
+	String start = "", end = "";
+	for (int i = 0; i < Relay.size(); i++)
+	{
+		(Relay.getState(i)) ? alarm += "ON," : alarm += "OFF,";
+		Relay.getAlarm(i, Alarm1, start, end);
+		alarm += start + "," + end + ",";
+		Relay.getAlarm(i, Alarm2, start, end);
+		alarm += start + "," + end + ",";
+	}
+	message += alarm;
 
 	pserver->send(200, "text/plain", message);
 }
 
+/**
+ * Inst data
+ * Time#Ph1_data#Ph2_data#Ph3_data#Prod_data#Temp_data#SSR_state#Log_data
+ */
 void handleLastData(CB_SERVER_PARAM)
 {
+	char buffer[255] = {0};
+	char *pbuffer = &buffer[0];
+	uint16_t len;
 	float Energy, Surplus, Prod;
-	bool graphe;
-	String message = String(RTC_Local.the_time);
-	message += '#';
-	graphe = Get_Last_Data(&Energy, &Surplus, &Prod);
-	message += (String) Current_Data.Phase1.Voltage + '#';
-	message += (String) Current_Data.Phase1.Power + '#';
-	message += (String) Current_Data.Phase1.Energy + '#';
-	message += (String) Current_Data.Phase2.Voltage + '#';
-	message += (String) Current_Data.Phase2.Power + '#';
-	message += (String) Current_Data.Phase2.Energy + '#';
-	message += (String) Current_Data.Phase3.Voltage + '#';
-	message += (String) Current_Data.Phase3.Power + '#';
-	message += (String) Current_Data.Phase3.Energy + '#';
-	message += (String) Current_Data.Production.Power + '#';
-	message += (String) Current_Data.Production.Energy + '#';
-	message += (String) Surplus + '#';
-//	message += (String) Current_Data.Cirrus1_PF + '#';
-	message += (String) Current_Data.Cirrus1_Temp;
 
+	uint32_t TI_Energy = 0;
+	bool graphe = Get_Last_Data(&Energy, &Surplus, &Prod);
+
+	if (TI_OK)
+		TI_Energy = (TI.getIndexWh() - TI_Counter);
+
+	strcpy(buffer, RTC_Local.the_time); // Copie la date
+	pbuffer = Fast_Pos_Buffer(buffer, "#", Buffer_End, &len); // On se positionne en fin de chaine
+	pbuffer = Fast_Printf(pbuffer, 2, "#", Buffer_End,
+			{Current_Data.Phase1.Voltage, Current_Data.Phase1.ActivePower, Current_Data.Phase1.Energy,
+					Current_Data.Phase2.Voltage, Current_Data.Phase2.ActivePower, Current_Data.Phase2.Energy,
+					Current_Data.Phase3.Voltage, Current_Data.Phase3.ActivePower, Current_Data.Phase3.Energy,
+					Current_Data.Production.ActivePower, Current_Data.Production.Energy, Surplus});
+
+//	pbuffer = Fast_Printf(pbuffer, TI_Energy, 0, "#", "#", Buffer_End, &len);
+
+	// Températures
+	pbuffer = Fast_Printf(pbuffer, Current_Data.Cirrus1_Temp, 2, "#", "#", Buffer_End, &len);
 	if (DS_Count > 0)
 	{
-		message += '#' + DS.get_Temperature_Str(0) + '#';
-		message += DS.get_Temperature_Str(1);
+		pbuffer = Fast_Printf(pbuffer, DS.get_Temperature(0), 2, "", "#", Buffer_End, &len);
+		pbuffer = Fast_Printf(pbuffer, DS.get_Temperature(1), 2, "", "#", Buffer_End, &len);
 	}
 	else
-		message += "#0.0#0.0";
+	{
+		pbuffer = Fast_Printf(pbuffer, 0.0, 2, "", "#", Buffer_End, &len);
+		pbuffer = Fast_Printf(pbuffer, 0.0, 2, "", "#", Buffer_End, &len);
+	}
+
+	// Talema
+//	pbuffer = Fast_Printf(pbuffer, Current_Data.Talema_Power, 2, "", "#", Buffer_End, &len);
+//	pbuffer = Fast_Printf(pbuffer, Current_Data.Talema_Energy, 2, "", "#", Buffer_End, &len);
+
+	// Etat du SSR
+	pbuffer = Fast_Printf(pbuffer, (int) SSR_Get_State(), 0, "SSR=", "", Buffer_End, &len);
 
 	// On a de nouvelles données pour le graphe
 	if (graphe)
 	{
-		message += '#' + (String) log_cumul.Voltage_ph1;
-		message += '#' + (String) log_cumul.Power_ph1;
-		message += '#' + (String) log_cumul.Voltage_ph2;
-		message += '#' + (String) log_cumul.Power_ph2;
-		message += '#' + (String) log_cumul.Voltage_ph3;
-		message += '#' + (String) log_cumul.Power_ph3;
-		message += '#' + (String) log_cumul.Temp;
+		Fast_Set_Decimal_Separator('.');
+		pbuffer = Fast_Pos_Buffer(pbuffer, "#", Buffer_End, &len); // On se positionne en fin de chaine
+		pbuffer = Fast_Printf(pbuffer, 2, "#", Buffer_End, {log_cumul.Voltage_ph1, log_cumul.Power_ph1,
+				log_cumul.Voltage_ph2, log_cumul.Power_ph2, log_cumul.Voltage_ph3, log_cumul.Power_ph3,
+				log_cumul.Temp});
+		Fast_Set_Decimal_Separator(',');
 	}
-
-	pserver->send(200, "text/plain", message);
+	pserver->send(200, "text/plain", buffer);
 }
 
 void handleOperation(CB_SERVER_PARAM)
@@ -725,57 +814,86 @@ void handleOperation(CB_SERVER_PARAM)
 #ifdef USE_RELAY
 	if (pserver->hasArg("Toggle_Relay"))
 	{
-		Set_Relay_State(0, !Get_Relay_State(0));
-		if (Get_Relay_State(0))
+		Relay.setState(0, !Relay.getState(0));
+		if (Relay.getState(0))
 			digitalWrite(GPIO_RELAY_FACADE, HIGH);
 		else
 			digitalWrite(GPIO_RELAY_FACADE, LOW);
+		int id = pserver->arg("Toggle_Relay").toInt();
+		bool state = (pserver->arg("State").toInt() == 1);
+		Relay.setState(id, state);
+		init_routeur.WriteIntegerIndex(id, "Relais", "State", state);
 	}
-#endif
-
-#ifdef USE_KEYBOARD
-	if (pserver->hasArg("Toggle_Keyboard"))
+	if (pserver->hasArg("AlarmID"))
 	{
-		Toggle_Keyboard = !Toggle_Keyboard;
-//		Keyboard_Txt = "";
+		int id = pserver->arg("AlarmID").toInt();
+		int start = pserver->arg("Alarm1D").toInt();
+		int end = pserver->arg("Alarm1F").toInt();
+		Relay.addAlarm(id, Alarm1, start, end);
+		init_routeur.WriteIntegerIndex(id, "Relais", "Alarm1_start", start);
+		init_routeur.WriteIntegerIndex(id, "Relais", "Alarm1_end", end);
+
+		start = pserver->arg("Alarm2D").toInt();
+		end = pserver->arg("Alarm2F").toInt();
+		Relay.addAlarm(id, Alarm2, start, end);
+		init_routeur.WriteIntegerIndex(id, "Relais", "Alarm2_start", start);
+		init_routeur.WriteIntegerIndex(id, "Relais", "Alarm2_end", end);
 	}
 #endif
 
 #ifdef USE_ZC_SSR
+	// Change le mode d'action Pourcent/Zéro
+	// Ne pas oublier de redémarrer le SSR après
+	if (pserver->hasArg("SSRAction"))
+	{
+		if (pserver->arg("SSRAction") == "percent")
+			SSR_Action(SSR_Action_Percent);
+		else
+			if (pserver->arg("SSRAction") == "zero")
+				SSR_Action(SSR_Action_Surplus);
+			else
+				SSR_Action(SSR_Action_FULL);
+
+		init_routeur.WriteInteger("SSR", "Action", SSR_Get_Action(), "Full=1, Percent=2, Zero=3");
+	}
+
 	// La puissance du CE pour le mode zéro
 	if (pserver->hasArg("CEPower"))
 	{
 		float power = pserver->arg("CEPower").toFloat();
 		SSR_Set_Dump_Power(power);
+		init_routeur.WriteFloat("SSR", "P_CE", power);
+
+		print_debug("Operation: " + pserver->argName((int) 1) + "=" + pserver->arg((int) 1));
+		float target = pserver->arg("SSRTarget").toFloat();
+		SSR_Set_Target(target);
+		init_routeur.WriteFloat("SSR", "Target", target);
 	}
 
-	// Change le mode d'action Pourcent/Zéro
-	// Ne pas oublier de redémarrer le SSR après
-	if (pserver->hasArg("SSRType"))
+	if (pserver->hasArg("CheckPower"))
 	{
-		if (pserver->arg("SSRType") == "true")
-			SSR_Action(SSR_Action_Percent);
-		else
-			SSR_Action(SSR_Action_Surplus);
+		TaskList.SuspendTask("CIRRUS_Task");
+		delay(200);
+		double power = SSR_Compute_Dump_power();
+		TaskList.ResumeTask("CIRRUS_Task");
+		init_routeur.WriteFloat("SSR", "P_CE", power);
 	}
 
 	// Gestion dimmer en pourcentage
-	if (pserver->hasArg("Dimmer") && (SSR_Get_Action() == SSR_Action_Percent))
+	if (pserver->hasArg("Pourcent") && (SSR_Get_Action() == SSR_Action_Percent))
 	{
-		float percent = pserver->arg("Dimmer").toFloat();
+		float percent = pserver->arg("Pourcent").toFloat();
 		SSR_Set_Percent(percent);
-//		SSR_Set_Dimme_Target(percent * 10);
+		init_routeur.WriteFloat("SSR", "Pourcent", percent);
 	}
 
 	// Allume ou éteint le SSR
 	if (pserver->hasArg("Toggle_SSR"))
 	{
-		if (SSR_Get_StateON())
-		{
-			SSR_Disable();
-		}
-		else
+		if (SSR_Get_State() == SSR_OFF)
 			SSR_Enable();
+		else
+			SSR_Disable();
 	}
 #endif
 

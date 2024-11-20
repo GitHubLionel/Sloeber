@@ -23,10 +23,6 @@ const String Energy_Filename = "/energy.csv";
 // Data 200 ms
 Data_Struct Current_Data; //{0,{0}};
 
-// Tension et puissance du premier Cirrus, premier channel
-volatile float Cirrus_voltage = 230.0;
-volatile float Cirrus_power_signed = 0.0;
-
 // Les données actualisées pour le SSR
 #ifdef USE_SSR
 extern Gestion_SSR_TypeDef Gestion_SSR_CallBack;
@@ -107,16 +103,16 @@ void Get_Data(void)
 #ifdef CIRRUS_RMS_FULL
 	Current_Data.Phase1.Current = CurrentCirrus->GetIRMS(Channel_1);
 #endif
-	Current_Data.Phase1.Power = CurrentCirrus->GetPRMSSigned(Channel_1);
+	Current_Data.Phase1.ActivePower = CurrentCirrus->GetPRMSSigned(Channel_1);
 	CurrentCirrus->GetEnergy(Channel_1, &Current_Data.Phase1.Energy, &Esurplus);
 	energy_day_surplus = Esurplus;
 
 	Current_Data.Phase2.Voltage = CurrentCirrus->GetURMS(Channel_2);
-	Current_Data.Phase2.Power = CurrentCirrus->GetPRMSSigned(Channel_2);
+	Current_Data.Phase2.ActivePower = CurrentCirrus->GetPRMSSigned(Channel_2);
 	CurrentCirrus->GetEnergy(Channel_2, &Current_Data.Phase2.Energy, &Esurplus);
 	energy_day_surplus += Esurplus;
 
-	Current_Data.Cirrus1_PF = CurrentCirrus->GetPowerFactor(Channel_1);
+	Current_Data.Cirrus1_PF = CurrentCirrus->GetExtraData(Channel_1, exd_PF);
 
 
 	// Sélection du deuxième cirrus : CS5480, phase 3 et production
@@ -129,12 +125,12 @@ void Get_Data(void)
 
 	// Fill current data
 	Current_Data.Phase3.Voltage = CurrentCirrus->GetURMS(Channel_1);
-	Current_Data.Phase3.Power = CurrentCirrus->GetPRMSSigned(Channel_1);
+	Current_Data.Phase3.ActivePower = CurrentCirrus->GetPRMSSigned(Channel_1);
 	CurrentCirrus->GetEnergy(Channel_1, &Current_Data.Phase3.Energy, &Esurplus);
 	energy_day_surplus += Esurplus;
 
 	Current_Data.Production.Voltage = CurrentCirrus->GetURMS(Channel_2);
-	Current_Data.Production.Power = CurrentCirrus->GetPRMSSigned(Channel_2);
+	Current_Data.Production.ActivePower = CurrentCirrus->GetPRMSSigned(Channel_2);
 	CurrentCirrus->GetEnergy(Channel_2, &Current_Data.Production.Energy, &Esurplus);
 	energy_day_surplus += Esurplus;
 
@@ -147,9 +143,8 @@ void Get_Data(void)
 	if (Gestion_SSR_CallBack != NULL)
 	{
 		// On choisi le deuxième cirrus channel 1 qui correspond à la troisième phase
-		Cirrus_voltage = Current_Data.Phase3.Voltage;
-		Cirrus_power_signed = Current_Data.Phase3.Power; // normalement somme des 3 puissances
-		Gestion_SSR_CallBack();
+		// normalement somme des 3 puissances
+		Gestion_SSR_CallBack(Current_Data.Phase3.Voltage, Current_Data.Phase3.ActivePower);
 	}
 #endif
 
@@ -159,13 +154,13 @@ void Get_Data(void)
 		double temp;
 		RMS_Data data = CS5484.GetLog(Channel_1, NULL);
 		log_cumul.Voltage_ph1 = data.Voltage;
-		log_cumul.Power_ph1 = data.Power;
+		log_cumul.Power_ph1 = data.ActivePower;
 		data = CS5484.GetLog(Channel_2, NULL);
 		log_cumul.Voltage_ph2 = data.Voltage;
-		log_cumul.Power_ph2 = data.Power;
+		log_cumul.Power_ph2 = data.ActivePower;
 		data = CS5480.GetLog(Channel_1, &temp);
 		log_cumul.Voltage_ph3 = data.Voltage;
-		log_cumul.Power_ph3 = data.Power;
+		log_cumul.Power_ph3 = data.ActivePower;
 
 		log_cumul.Temp = temp;
 
@@ -229,7 +224,7 @@ uint8_t Update_IHM(const char *first_text, const char *last_text, bool display)
 	IHM_Print(line++, (char*) buffer);
 #endif
 
-	sprintf(buffer, "Prms:%.2f   ", Current_Data.Phase1.Power);
+	sprintf(buffer, "Prms:%.2f   ", Current_Data.Phase1.ActivePower);
 	IHM_Print(line++, (char*) buffer);
 
 	float conso, surplus;

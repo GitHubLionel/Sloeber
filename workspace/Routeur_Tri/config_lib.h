@@ -57,7 +57,7 @@
  * RTC define : RTCLocal library
  * By default, global instance RTC_Local is created
  **********************************************************/
-#define USE_NTP_SERVER	2 // 1 or 2 for summer time
+#define USE_NTP_SERVER	1 // 1 or 2 for summer time
 //#define RTC_USE_CORRECTION
 
 /**********************************************************
@@ -94,11 +94,13 @@
 #define TI_RX_GPIO	GPIO_NUM_14
 
 /**********************************************************
- * Keyboard define
+ * Tore and Keyboard define
  **********************************************************/
 #define KEYBOARD_ADC_GPIO	GPIO_NUM_36
 #define DEBOUNCING_MS	200
 #define DEBOUNCING_US	200000
+#define ADC_USE_ARDUINO  // To use Arduino function
+//#define ADC_USE_TASK     // To use task in place of timer in oneshot mode or callback in continuous mode
 
 /**********************************************************
  * Cirrus define
@@ -119,7 +121,7 @@
 //#define DEBUG_CIRRUS
 //#define DEBUG_CIRRUS_BAUD
 
-//#define CIRRUS_RMS_FULL  // To have U, I and P RMS. Otherwise only U and P RMS
+#define CIRRUS_RMS_FULL  // To have U, I and P RMS. Otherwise only U and P RMS
 //#define CIRRUS_SIMPLE_IS_CS5490	true  // Only used in Simple_Get_Data. true for CS5490, false for CS548x
 
 /**********************************************************
@@ -127,6 +129,7 @@
  **********************************************************/
 #define USE_SSR
 #define ZERO_CROSS_GPIO	GPIO_NUM_34
+//#define ZERO_CROSS_TOP_Xms	20	// Allow to have a top 200 ms created by the zero cross (10 * X ms)
 #define SSR_COMMAND_GPIO	GPIO_NUM_12
 #define SSR_LED_GPIO	GPIO_NUM_13
 
@@ -146,4 +149,4 @@
 #define KEYBOARD_USE_TASK    // A basic task to check keyboard every 10 ms
 #define CIRRUS_TASK_DELAY	100    // The delay for the Cirrus task. Must be adapted according the time required of the GetData()
 #define CIRRUS_USE_TASK      // A basic task to check Cirrus data every CIRRUS_TASK_DELAY ms
-
+//#define RELAY_USE_TASK       // A basic task to update Relay every minute
