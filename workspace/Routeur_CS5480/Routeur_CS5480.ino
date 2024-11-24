@@ -509,6 +509,10 @@ void setup()
 	SSR_Action(action);
 
 	// NOTE : le SSR est éteint, on le démarre dans la page web
+	if (init_routeur.ReadBool("SSR", "StateOFF", true)) // Etat par défaut: OFF
+		SSR_Disable();
+	else
+		SSR_Enable();
 #else
 	topZC_Semaphore = xSemaphoreCreateBinary();
 	CS5480.ZC_Initialize(ZERO_CROSS_GPIO, onCirrusZC);
@@ -859,6 +863,7 @@ void handleOperation(CB_SERVER_PARAM)
 			SSR_Enable();
 		else
 			SSR_Disable();
+		init_routeur.WriteBool("SSR", "StateOFF", (SSR_Get_State() == SSR_OFF));
 	}
 #endif
 
