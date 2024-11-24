@@ -132,9 +132,10 @@ void Get_Data(void)
 	if (ADC_OK)
 	{
 		Current_Data.Talema_Current = ADC_GetTalemaCurrent();
-		Current_Data.Talema_Power = Current_Data.Talema_Current * Current_Data.Cirrus_ch1.Voltage *
-				Current_Data.Cirrus_ch1.PowerFactor;
-		Current_Data.Talema_Energy = Current_Data.Talema_Energy + Current_Data.Talema_Power * ((start_time - last_time) / 1000.0) / 3600.0;
+		Current_Data.Talema_Power = Current_Data.Talema_Current * Current_Data.Cirrus_ch1.Voltage
+				* Current_Data.Cirrus_ch1.PowerFactor;
+		Current_Data.Talema_Energy = Current_Data.Talema_Energy
+				+ Current_Data.Talema_Power * ((start_time - last_time) / 1000.0) / 3600.0;
 		last_time = start_time;
 	}
 
@@ -193,8 +194,8 @@ uint8_t Update_IHM(const char *first_text, const char *last_text, bool display)
 	if (IHM_IsDisplayOff())
 		return line;
 
-  // Efface la mémoire de l'écran si nécessaire
-  IHM_Clear();
+	// Efface la mémoire de l'écran si nécessaire
+	IHM_Clear();
 
 	if (strlen(first_text) > 0)
 	{
@@ -284,19 +285,76 @@ void append_data(void)
 	{
 		// Time, Pconso_rms, Pprod_rms, U_rms, Tcs
 		String data = String(RTC_Local.getUNIXDateTime()) + '\t' + (String) log_cumul.Power_ch1 + '\t'
-				+ (String) log_cumul.Power_ch2 + '\t' + (String) log_cumul.Voltage + '\t' + (String) log_cumul.Temp;
+				+ (String) log_cumul.Power_ch2 + '\t' + (String) log_cumul.Voltage + '\t'
+				+ (String) log_cumul.Temp;
 		// DS Temp
 		if (DS_Count > 0)
 			data += '\t' + DS.get_Temperature_Str(0) + '\t' + DS.get_Temperature_Str(1);
 		else
 			data += "\t0.0\t0.0";
 		// Energy
-		data += '\t' + (String) energy_day_conso + '\t' + (String) energy_day_surplus + '\t' + (String) energy_day_prod;
+		data += '\t' + (String) energy_day_conso + '\t' + (String) energy_day_surplus + '\t'
+				+ (String) energy_day_prod;
 		// End line
 		data += "\r\n";
 		temp.print(data);
 		temp.close();
 	}
+	Lock_File = false;
+}
+
+void reboot_energy(void)
+{
+#define MAX_LINESIZE	255
+	// On vérifie qu'on n'est pas en train de l'uploader
+	if (Lock_File)
+		return;
+
+	// Ouvre le fichier en read
+	Lock_File = true;
+	if (Data_Partition->exists(CSV_Filename))
+	{
+		File temp = Data_Partition->open(CSV_Filename, "r");
+		if (temp)
+		{
+			String strLine = "";
+			char line[MAX_LINESIZE] = {0};
+			char *pbuffer;
+			float data[20]; // to be large
+			int i = 0;
+			// Read until last line
+			while (temp.available())
+			{
+				strLine = temp.readStringUntil('\n');
+			}
+			temp.close();
+
+//			print_debug(strLine);
+
+			// split last line
+			if (!strLine.isEmpty())
+			{
+				strLine.toCharArray(line, MAX_LINESIZE);
+				pbuffer = strtok((char*) line, "\t");
+				while (pbuffer != NULL)
+				{
+					data[i] = strtof(pbuffer, NULL);
+//					print_debug(String(data[i]));
+					pbuffer = strtok(NULL, "\t");
+					i++;
+				}
+			}
+			// The last 3 data is energy
+			if (i > 3)
+			{
+				// energy_day_conso, energy_day_surplus
+				CS5480.RestartEnergy(Channel_1, data[i - 3], data[i - 2]);
+				// energy_day_prod
+				CS5480.RestartEnergy(Channel_2, data[i - 1]);
+			}
+		}
+	}
+
 	Lock_File = false;
 }
 

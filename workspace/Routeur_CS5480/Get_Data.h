@@ -46,5 +46,6 @@ void Get_Data(void);
 uint8_t Update_IHM(const char *first_text, const char *last_text, bool display = true);
 bool Get_Last_Data(float *Energy, float *Surplus, float *Prod);
 
+void reboot_energy(void);
 void onDaychange(uint8_t year, uint8_t month, uint8_t day);
 

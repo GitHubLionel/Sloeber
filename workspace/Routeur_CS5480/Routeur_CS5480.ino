@@ -567,6 +567,10 @@ void setup()
 	print_debug("*** Setup time : " + String(millis() - start_time) + " ms ***\r\n");
 	delay(2000);
 
+	// En cas de reboot, on restaure les dernières énergies sauvegardées
+	// Si on a changé de jour, ce sera sans effet
+	reboot_energy();
+
 	// Initialisation des taches
 	TaskList.AddTask(RTC_DATA_TASK); // RTC Task
 	TaskList.AddTask(UART_DATA_TASK); // UART Task
