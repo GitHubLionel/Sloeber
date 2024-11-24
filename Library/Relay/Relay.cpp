@@ -149,7 +149,7 @@ void Relay_Class::addAlarm(uint8_t idRelay, AlarmNumber num, int begin, int end)
 		// Second alarm only if first alarm exist
 		if (_relay[idRelay].hasAlarm)
 		{
-			if (begin <= _relay[idRelay].alarm1.end)
+			if ((begin != -1) && (begin <= _relay[idRelay].alarm1.end))
 			{
 				print_debug("Alarm2 error: begin <= end of Alarm1");
 				_relay[idRelay].alarm2.start = -1;

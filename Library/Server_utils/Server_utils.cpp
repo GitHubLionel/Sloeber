@@ -142,7 +142,8 @@ void SSIDToFile(const String &filename, const String &ssidpwd)
 	{
 #ifdef ESP8266
 		ssid_file.write(ssidpwd.c_str());
-#elif ESP32
+#endif
+#ifdef ESP32
 		ssid_file.print(ssidpwd);
 #endif
 		ssid_file.close();
@@ -307,7 +308,8 @@ bool ServerConnexion::Connexion(bool toUART)
 	print_debug(_PWD);
 #ifdef ESP8266
 	WiFi.setSleepMode(WIFI_NONE_SLEEP);
-#elif ESP32
+#endif
+#ifdef ESP32
 	WiFi.setSleep(WIFI_PS_NONE);
 #endif
 	if (_IsSoftAP)
@@ -1303,7 +1305,8 @@ void handleListFile(CB_SERVER_PARAM)
 			}
 		}
 	}
-#elif ESP32
+#endif
+#ifdef ESP32
 	File root = FS_Partition->open(path);
 	if (root.isDirectory())
 	{

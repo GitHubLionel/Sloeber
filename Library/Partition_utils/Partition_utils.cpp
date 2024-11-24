@@ -15,7 +15,8 @@ extern "C" {
  */
 #ifdef USE_SPIFFS
 PART_TYPE *FS_Partition = &SPIFFS;
-#elif USE_FATFS
+#endif
+#ifdef USE_FATFS
 PART_TYPE *FS_Partition = &FFat;
 #else
 PART_TYPE *FS_Partition = &LittleFS;
@@ -54,7 +55,8 @@ PART_TYPE *CreatePartition(void)
 // toDo définir FS_PHYS_ADDR, FS_PHYS_SIZE, ...
 #ifdef USE_SPIFFS
 	return new PART_TYPE(FSImplPtr(new spiffs_impl::SPIFFSImpl(FS_PHYS_ADDR, FS_PHYS_SIZE, FS_PHYS_PAGE, FS_PHYS_BLOCK, 5)));
-#elif USE_FATFS
+#endif
+#ifdef USE_FATFS
 	return NULL;
 #else
 	return new PART_TYPE(FSImplPtr(new littlefs_impl::LittleFSImpl(FS_PHYS_ADDR, FS_PHYS_SIZE, FS_PHYS_PAGE, FS_PHYS_BLOCK, 5)));
@@ -170,7 +172,8 @@ void ESPinformations(void)
 	uint32_t realSize = 0;
 #ifdef ESP8266
 	realSize = ESP.getFlashChipRealSize();
-#elif ESP32
+#endif
+#ifdef ESP32
 	realSize = ESP.getFlashChipSize();
 #endif
 	uint32_t ideSize = ESP.getFlashChipSize();
@@ -182,7 +185,8 @@ void ESPinformations(void)
 
 #ifdef ESP8266
 	Serial_Info->printf("Flash chip Id:   %08X\r\n", ESP.getFlashChipId());
-#elif ESP32
+#endif
+#ifdef ESP32
 	Serial_Info->printf("Flash chip Mode:   %08X\r\n", ESP.getFlashChipMode());
 #endif
 	Serial_Info->printf("Flash real size: %u bytes (%s)\r\n\r\n", (unsigned int)realSize,
@@ -206,7 +210,8 @@ void ESPinformations(void)
 	Serial_Info->printf("CPU Frequency: %ld MHz\r\n", F_CPU / 1000000L);
 #ifdef ESP8266
 	Serial_Info->printf("Chip Id: %u\r\n", ESP.getChipId());
-#elif ESP32
+#endif
+#ifdef ESP32
 	Serial_Info->printf("Chip Model: %s\r\n", ESP.getChipModel());
 #endif
 
@@ -228,7 +233,8 @@ size_t Partition_FreeSpace(void)
 	FSInfo fsInfo;
 #ifdef ESP8266
 	Info_Partition->info(fsInfo);
-#elif ESP32
+#endif
+#ifdef ESP32
 	FillFSInfo(fsInfo);
 #endif
 	return fsInfo.totalBytes - fsInfo.usedBytes;
@@ -241,7 +247,8 @@ void Partition_Info(void)
 	FSInfo fsInfo;
 #ifdef ESP8266
 	Info_Partition->info(fsInfo);
-#elif ESP32
+#endif
+#ifdef ESP32
 	FillFSInfo(fsInfo);
 #endif
 
@@ -313,7 +320,8 @@ void Partition_RecurseDir(Dir dir)
 		}
 	}
 }
-#elif ESP32
+#endif
+#ifdef ESP32
 // From https://wokwi.com/projects/383917656227391489
 void scanDir(fs::FS &fs, const char *dirname)
 {
@@ -365,7 +373,8 @@ void Partition_ListDir(void)
 	// Affiche le contenu du dossier racine | Print dir the content
 	Serial_Info->println("\tEnter Dir: /");
 	Partition_RecurseDir(dir);
-#elif ESP32
+#endif
+#ifdef ESP32
 	Serial_Info->println("\tEnter Dir: /");
 	scanDir(*Info_Partition, "/");
 #endif

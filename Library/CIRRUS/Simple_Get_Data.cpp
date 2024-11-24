@@ -27,7 +27,8 @@ extern CIRRUS_Communication CS_Com;
 CIRRUS_CS5490 Current_Cirrus;
 #define CHANNEL
 #define CHANNEL2
-#elif (CIRRUS_SIMPLE_IS_CS5490 == false)
+#endif
+#ifdef (CIRRUS_SIMPLE_IS_CS5490 == false)
 CIRRUS_CS548x Current_Cirrus;
 #define CHANNEL	Channel_1
 #define CHANNEL2	Channel_1,
