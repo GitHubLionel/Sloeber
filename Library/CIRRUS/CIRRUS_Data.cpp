@@ -168,10 +168,19 @@ void CIRRUS_CS548x::SetLogTime(uint32_t second)
 	RMSData_ch2->SetLogTime(second);
 }
 
-void CIRRUS_CS548x::RestartEnergy(void)
+void CIRRUS_CS548x::RestartEnergy()
 {
 	RMSData_ch1->RestartEnergy();
 	RMSData_ch2->RestartEnergy();
+}
+
+void CIRRUS_CS548x::RestartEnergy(CIRRUS_Channel channel, float conso, float surplus)
+{
+	if (channel == Channel_1)
+	  RMSData_ch1->RestartEnergy(conso, surplus);
+	else
+		if (channel == Channel_2)
+			RMSData_ch2->RestartEnergy(conso, surplus);
 }
 
 /**

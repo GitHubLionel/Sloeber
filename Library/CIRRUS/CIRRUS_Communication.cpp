@@ -921,7 +921,8 @@ char* CIRRUS_Communication::COM_Scale(uint8_t *Request, float *scale, char *resp
 			scale[0] = strtof(pbuffer, NULL);
 			for (len = 1; len < 4; len++)
 			{
-				scale[len] = strtof(strtok(NULL, ";#"), NULL);
+				pbuffer = strtok(NULL, ";#");
+				scale[len] = strtof(pbuffer, NULL);
 			}
 			CurrentCirrus->SetScale(scale);
 			strcpy(response, "SCALE_OK");

@@ -1051,10 +1051,10 @@ class CIRRUS_RMSData
 			_ExtraData = extra;
 		}
 
-		void RestartEnergy(void)
+		void RestartEnergy(float conso = 0.0, float surplus = 0.0)
 		{
-			energy_day_conso = 0.0;
-			energy_day_surplus = 0.0;
+			energy_day_conso = conso;
+			energy_day_surplus = surplus;
 		}
 
 		/**
@@ -1209,9 +1209,9 @@ class CIRRUS_CS5490: public CIRRUS_Base
 			RMSData->SetLogTime(second);
 		}
 
-		void RestartEnergy(void)
+		void RestartEnergy(float conso = 0.0, float surplus = 0.0)
 		{
-			RMSData->RestartEnergy();
+			RMSData->RestartEnergy(conso, surplus);
 		}
 
 		/**
@@ -1330,6 +1330,7 @@ class CIRRUS_CS548x: public CIRRUS_Base
 
 		void SetLogTime(uint32_t second);
 		void RestartEnergy(void);
+		void RestartEnergy(CIRRUS_Channel channel, float conso = 0.0, float surplus = 0.0);
 		bool GetData(CIRRUS_Channel channel);
 		float GetURMS(CIRRUS_Channel channel) const;
 		float GetIRMS(CIRRUS_Channel channel) const;
