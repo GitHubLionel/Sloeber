@@ -144,6 +144,7 @@
 
 #define UART_USE_TASK        // A basic task to analyse UART message
 #define RTC_USE_TASK         // To run RTCLocal in a task
+#define KEEP_ALIVE_USE_TASK  // A basic task to keep alive the Wifi connexion
 #define DS18B20_USE_TASK     // A basic task to check DS18B20 temperature every 2 s
 #define TELEINFO_USE_TASK    // A basic task to check TeleInfo every 1 s
 #define KEYBOARD_USE_TASK    // A basic task to check keyboard every 10 ms

@@ -268,7 +268,7 @@ void handleCirrus(CB_SERVER_PARAM);
 
 void Display_Task_code(void *parameter)
 {
-	BEGIN_TASK_CODE("Display_Task");
+	BEGIN_TASK_CODE("DISPLAY_Task");
 	uint8_t line = 0;
 	for (EVER)
 	{
@@ -330,7 +330,7 @@ void Display_Task_code(void *parameter)
 		END_TASK_CODE();
 	}
 }
-#define DISPLAY_DATA_TASK	{true, "Display_Task", 4096, 4, 1000, CoreAny, Display_Task_code}
+#define DISPLAY_DATA_TASK	{true, "DISPLAY_Task", 4096, 4, 1000, Core0, Display_Task_code}
 
 void UserKeyboardAction(Btn_Action Btn_Clicked)
 {
@@ -574,6 +574,7 @@ void setup()
 	// Initialisation des taches
 	TaskList.AddTask(RTC_DATA_TASK); // RTC Task
 	TaskList.AddTask(UART_DATA_TASK); // UART Task
+	TaskList.AddTask(KEEP_ALIVE_DATA_TASK); // Keep alive Wifi Task
 #ifdef USE_DS
 	TaskList.AddTask(DS18B20_DATA_TASK(DS_Count > 0)); // DS18B20 Task
 #endif
