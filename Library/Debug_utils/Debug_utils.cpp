@@ -21,6 +21,12 @@
 #include "Tasks_utils.h"
 #endif
 
+/*
+ * Serial note ESP8266 :
+ * UART 0 possible options are (1, 3), (2, 3) or (15, 13)
+ * UART 1 allows only TX on 2 if UART 0 is not (2, 3)
+ */
+
 // data Log dans un fichier
 const String LOG_Filename = "/log.txt";
 

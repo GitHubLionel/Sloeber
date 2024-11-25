@@ -5,16 +5,10 @@
 #include "RTCLocal.h"		      // A pseudo RTC software library
 #endif
 #include "Debug_utils.h"		  // Some utils functions for debug
-/**
- * Samples on :
- * https://github.com/esp8266/Arduino/tree/master/libraries/ESP8266WiFi/examples
- */
 
-/*
- * Serial note :
- * UART 0 possible options are (1, 3), (2, 3) or (15, 13)
- * UART 1 allows only TX on 2 if UART 0 is not (2, 3)
- */
+#ifdef KEEP_ALIVE_USE_TASK
+#include "Tasks_utils.h"
+#endif
 
 /**
  * Set web server port number to PORT
@@ -213,7 +207,7 @@ void WiFiEvent(WiFiEvent_t event)
 			print_debug("WiFi clients stopped");
 			break;
 		case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
-			print_debug("Disconnected from WiFi access point");
+//			print_debug("Disconnected from WiFi access point");
 			break;
 		case ARDUINO_EVENT_WIFI_STA_AUTHMODE_CHANGE:
 			print_debug("Authentication mode of access point has changed");
@@ -398,6 +392,27 @@ bool ServerConnexion::Connexion(bool toUART)
 
 	// Now, we are connected
 	return true;
+}
+
+/**
+ * Check if we have client connected
+ */
+bool ServerConnexion::WifiConnected(void)
+{
+//	return ((WiFi.status() == WL_CONNECTED) && server.client().connected());
+	return ((WiFi.status() == WL_CONNECTED));
+}
+
+/**
+ * Keep alive connexion
+ * This function should be called regularly in a loop or a task
+ */
+void ServerConnexion::KeepAlive(void)
+{
+	if (!WifiConnected())
+	{
+		Connexion(false);
+	}
 }
 
 /**
@@ -739,6 +754,26 @@ void Auto_Reset(void)
 	ESP.restart();
 #endif
 }
+
+// ********************************************************************************
+// Basic Task function to keep alive the connexion
+// ********************************************************************************
+
+#ifdef KEEP_ALIVE_USE_TASK
+
+// We assume that ServerConnexion instance is myServer
+extern ServerConnexion myServer;
+
+void KEEP_ALIVE_Task_code(void *parameter)
+{
+	BEGIN_TASK_CODE_UNTIL("KEEP_ALIVE_Task");
+	for (EVER)
+	{
+		myServer.KeepAlive();
+		END_TASK_CODE_UNTIL();
+	}
+}
+#endif
 
 // ********************************************************************************
 // server events section

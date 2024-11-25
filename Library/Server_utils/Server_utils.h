@@ -163,6 +163,24 @@ typedef void (*onTimeOut)();
 		return server.send(500, "text/plain", "BAD ARGS");
 #endif
 
+/**
+ * Task to keep alive the connexion
+ * Check the connexion every minute and try to reconnect if connexion is lost
+ */
+#ifdef KEEP_ALIVE_USE_TASK
+#define KEEP_ALIVE_DATA_TASK	{true, "KEEP_ALIVE_Task", 8192, 5, 60000, CoreAny, KEEP_ALIVE_Task_code}
+void KEEP_ALIVE_Task_code(void *parameter);
+#else
+#define KEEP_ALIVE_DATA_TASK	{}
+#endif
+
+/**
+ * Server settings class
+ * Manage the params of a connexion:
+ * - SSID and password
+ * - IP address
+ * - callback after and before connexion
+ */
 class ServerSettings
 {
 	public:
@@ -277,6 +295,9 @@ class ServerConnexion
 		{
 			return (!WaitForNetWork);
 		}
+		bool WifiConnected(void);
+		void KeepAlive(void);
+
 		bool ExtractSSID_Password(void);
 		String IPaddress() const
 		{

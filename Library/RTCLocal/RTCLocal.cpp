@@ -494,6 +494,16 @@ char* RTCLocal::getFormatedDateTime(char *datetime) const
 #if !defined(NO_GLOBAL_INSTANCES) && !defined(NO_GLOBAL_RTCLocal)
 RTCLocal RTC_Local = RTCLocal();
 
+// Calcul UNIX timestamp : Nombre de secondes depuis le 1er janvier 1970 00:00:00 UTC
+time_t RTC_Local_Callback()
+{
+	return (time_t) RTC_Local.getUNIXDateTime();
+}
+
+// ********************************************************************************
+// Basic Task function to update RTC_Local
+// ********************************************************************************
+
 #ifdef RTC_USE_TASK
 void RTC_Task_code(void *parameter)
 {
@@ -506,11 +516,6 @@ void RTC_Task_code(void *parameter)
 }
 #endif
 
-// Calcul UNIX timestamp : Nombre de secondes depuis le 1er janvier 1970 00:00:00 UTC
-time_t RTC_Local_Callback()
-{
-	return (time_t) RTC_Local.getUNIXDateTime();
-}
 #endif
 
 // ********************************************************************************
