@@ -9,22 +9,30 @@
 #ifndef __ST77XX_H
 #define __ST77XX_H
 
-#include "Arduino.h"
+#include <Arduino.h>
+
+#ifdef USE_CONFIG_LIB_FILE
+#include "config_lib.h"
+#endif
+
 #include "SPI.h"
 #include "fonts.h"
 
-#define USE_ST77xx
+//#define TFT_ST77xx
 
-//#define ST77xx_USE_CS  // For ST7735
+// Choose a type you are using
+//#define ST77xx_160X128
+//#define ST77xx_160X128_WS
+//#define ST77xx_128X128
+//#define ST77xx_160X80
+//#define ST77xx_135X240
+//#define ST77xx_240X240
 
-/* Choose a type you are using */
-//#define ST77xx_160X128_UP	// Or DOWN, RR, RL
-//#define ST77xx_160X128_WS_UP	// Or DOWN, RR, RL
-//#define ST77xx_128X128_UP	// Or DOWN, RR, RL
-//#define ST77xx_160X80_UP	// Or DOWN, RR, RL
-//#define ST77xx_135X240_UP	// Or DOWN, RR, RL
-//#define ST77xx_240X240_UP	// Or DOWN, RR, RL
-#define ST77xx_240X240_DOWN
+// Choose the Rotation
+//#define ST77xx_ROTATION_UP
+//#define ST77xx_ROTATION_RR
+//#define ST77xx_ROTATION_RL
+//#define ST77xx_ROTATION_DOWN
 
 typedef enum {
   ST77xx_BLK_ON,
@@ -54,212 +62,171 @@ typedef enum {
 // Default size. Should be override
 #define ST77xx_DEFAULT_SIZE
 
-// AliExpress/eBay 1.8" display, default orientation
-#ifdef ST77xx_160X128_UP
+// AliExpress/eBay 1.8" display
+#ifdef ST77xx_160X128
 #undef ST77xx_DEFAULT_SIZE
 #define ST77xx_IS_160X128 1
-#define ST77xx_WIDTH  128
-#define ST77xx_HEIGHT 160
 #define ST77xx_XSHIFT 0
 #define ST77xx_YSHIFT 0
+#define ST77xx_USE_CS // For ST7735
+
+#ifdef ST77xx_ROTATION_UP // default orientation
+#define ST77xx_WIDTH  128
+#define ST77xx_HEIGHT 160
 #define ST77xx_ROTATION (ST77xx_MADCTL_MX | ST77xx_MADCTL_MY)
-#define ST77xx_USE_CS
 #endif
-
-// AliExpress/eBay 1.8" display, rotate right
-#ifdef ST77xx_160X128_RR
-#undef ST77xx_DEFAULT_SIZE
-#define ST77xx_IS_160X128 1
+#ifdef ST77xx_ROTATION_RR // rotate right
 #define ST77xx_WIDTH  160
 #define ST77xx_HEIGHT 128
-#define ST77xx_XSHIFT 0
-#define ST77xx_YSHIFT 0
 #define ST77xx_ROTATION (ST77xx_MADCTL_MY | ST77xx_MADCTL_MV)
-#define ST77xx_USE_CS
 #endif
-
-// AliExpress/eBay 1.8" display, rotate left
-#ifdef ST77xx_160X128_RL
-#undef ST77xx_DEFAULT_SIZE
-#define ST77xx_IS_160X128 1
+#ifdef ST77xx_ROTATION_RL // rotate left
 #define ST77xx_WIDTH  160
 #define ST77xx_HEIGHT 128
-#define ST77xx_XSHIFT 0
-#define ST77xx_YSHIFT 0
 #define ST77xx_ROTATION (ST77xx_MADCTL_MX | ST77xx_MADCTL_MV)
-#define ST77xx_USE_CS
 #endif
-
-// AliExpress/eBay 1.8" display, upside down
-#ifdef ST77xx_160X128_DOWN
-#undef ST77xx_DEFAULT_SIZE
-#define ST77xx_IS_160X128 1
+#ifdef ST77xx_ROTATION_DOWN // upside down
 #define ST77xx_WIDTH  128
 #define ST77xx_HEIGHT 160
-#define ST77xx_XSHIFT 0
-#define ST77xx_YSHIFT 0
 #define ST77xx_ROTATION (0)
-#define ST77xx_USE_CS
 #endif
 
-// WaveShare ST77xxS-based 1.8" display, default orientation
-#ifdef ST77xx_160X128_WS_UP
+#endif
+
+// WaveShare ST77xxS-based 1.8" display
+#ifdef ST77xx_160X128_WS
 #undef ST77xx_DEFAULT_SIZE
 #define ST77xx_IS_160X128 1
+#define ST77xx_USE_CS // For ST7735
+
+#ifdef ST77xx_ROTATION_UP // default orientation
 #define ST77xx_WIDTH  128
 #define ST77xx_HEIGHT 160
 #define ST77xx_XSHIFT 2
 #define ST77xx_YSHIFT 1
 #define ST77xx_ROTATION (ST77xx_MADCTL_MX | ST77xx_MADCTL_MY | ST77xx_MADCTL_RGB)
-#define ST77xx_USE_CS
 #endif
-
-// WaveShare ST77xxS-based 1.8" display, rotate right
-#ifdef ST77xx_160X128_WS_RR
-#undef ST77xx_DEFAULT_SIZE
-#define ST77xx_IS_160X128 1
+#ifdef ST77xx_ROTATION_RR // rotate right
 #define ST77xx_WIDTH  160
 #define ST77xx_HEIGHT 128
 #define ST77xx_XSHIFT 1
 #define ST77xx_YSHIFT 2
 #define ST77xx_ROTATION (ST77xx_MADCTL_MY | ST77xx_MADCTL_MV | ST77xx_MADCTL_RGB)
-#define ST77xx_USE_CS
 #endif
-
-// WaveShare ST77xxS-based 1.8" display, rotate left
-#ifdef ST77xx_160X128_WS_RL
-#undef ST77xx_DEFAULT_SIZE
-#define ST77xx_IS_160X128 1
+#ifdef ST77xx_ROTATION_RL // rotate left
 #define ST77xx_WIDTH  160
 #define ST77xx_HEIGHT 128
 #define ST77xx_XSHIFT 1
 #define ST77xx_YSHIFT 2
 #define ST77xx_ROTATION (ST77xx_MADCTL_MX | ST77xx_MADCTL_MV | ST77xx_MADCTL_RGB)
-#define ST77xx_USE_CS
 #endif
-
-// WaveShare ST77xxS-based 1.8" display, upside down
-#ifdef ST77xx_160X128_WS_DOWN
-#undef ST77xx_DEFAULT_SIZE
-#define ST77xx_IS_160X128 1
+#ifdef ST77xx_ROTATION_DOWN // upside down
 #define ST77xx_WIDTH  128
 #define ST77xx_HEIGHT 160
 #define ST77xx_XSHIFT 2
 #define ST77xx_YSHIFT 1
 #define ST77xx_ROTATION (ST77xx_MADCTL_RGB)
-#define ST77xx_USE_CS
 #endif
 
-// 1.44" display, default orientation
-#ifdef ST77xx_128X128_UP
+#endif
+
+// 1.44" display
+#ifdef ST77xx_128X128
 #undef ST77xx_DEFAULT_SIZE
 #define ST77xx_IS_128X128 1
 #define ST77xx_WIDTH  128
 #define ST77xx_HEIGHT 128
+#define ST77xx_USE_CS // For ST7735
+
+#ifdef ST77xx_ROTATION_UP // default orientation
 #define ST77xx_XSHIFT 2
 #define ST77xx_YSHIFT 3
 #define ST77xx_ROTATION (ST77xx_MADCTL_MX | ST77xx_MADCTL_MY | ST77xx_MADCTL_BGR)
-#define ST77xx_USE_CS
 #endif
-
-// 1.44" display, rotate right
-#ifdef ST77xx_128X128_RR
-#undef ST77xx_DEFAULT_SIZE
-#define ST77xx_IS_128X128 1
-#define ST77xx_WIDTH  128
-#define ST77xx_HEIGHT 128
+#ifdef ST77xx_ROTATION_RR // rotate right
 #define ST77xx_XSHIFT 3
 #define ST77xx_YSHIFT 2
 #define ST77xx_ROTATION (ST77xx_MADCTL_MY | ST77xx_MADCTL_MV | ST77xx_MADCTL_BGR)
-#define ST77xx_USE_CS
 #endif
-
-// 1.44" display, rotate left
-#ifdef ST77xx_128X128_RL
-#undef ST77xx_DEFAULT_SIZE
-#define ST77xx_IS_128X128 1
-#define ST77xx_WIDTH  128
-#define ST77xx_HEIGHT 128
+#ifdef ST77xx_ROTATION_RL // rotate left
 #define ST77xx_XSHIFT 1
 #define ST77xx_YSHIFT 2
 #define ST77xx_ROTATION (ST77xx_MADCTL_MX | ST77xx_MADCTL_MV | ST77xx_MADCTL_BGR)
-#define ST77xx_USE_CS
 #endif
-
-// 1.44" display, upside down
-#ifdef ST77xx_128X128_DOWN
-#undef ST77xx_DEFAULT_SIZE
-#define ST77xx_IS_128X128 1
-#define ST77xx_WIDTH  128
-#define ST77xx_HEIGHT 128
+#ifdef ST77xx_ROTATION_DOWN // upside down
 #define ST77xx_XSHIFT 2
 #define ST77xx_YSHIFT 1
 #define ST77xx_ROTATION (ST77xx_MADCTL_BGR)
-#define ST77xx_USE_CS
 #endif
 
-// mini 160x80 display (it's unlikely you want the default orientation)
-#ifdef ST77xx_160X80_UP
+#endif
+
+// mini 160x80 display
+#ifdef ST77xx_160X80
 #undef ST77xx_DEFAULT_SIZE
 #define ST77xx_IS_160X80 1
+#define ST77xx_USE_CS // For ST7735
+
+#ifdef ST77xx_ROTATION_UP // default orientation
 #define ST77xx_WIDTH  80
 #define ST77xx_HEIGHT 160
 #define ST77xx_XSHIFT 26
 #define ST77xx_YSHIFT 1
 #define ST77xx_ROTATION (ST77xx_MADCTL_MX | ST77xx_MADCTL_MY | ST77xx_MADCTL_BGR)
-#define ST77xx_USE_CS
 #endif
-
-// mini 160x80, rotate left
-#ifdef ST77xx_160X80_RL
-#undef ST77xx_DEFAULT_SIZE
-#define ST77xx_IS_160X80 1
+#ifdef ST77xx_ROTATION_RR // rotate right
 #define ST77xx_WIDTH  160
 #define ST77xx_HEIGHT 80
 #define ST77xx_XSHIFT 1
 #define ST77xx_YSHIFT 26
 #define ST77xx_ROTATION (ST77xx_MADCTL_MX | ST77xx_MADCTL_MV | ST77xx_MADCTL_BGR)
-#define ST77xx_USE_CS
 #endif
-
-// mini 160x80, rotate right
-#ifdef ST77xx_160X80_RR
-#undef ST77xx_DEFAULT_SIZE
-#define ST77xx_IS_160X80 1
+#ifdef ST77xx_ROTATION_RL // rotate left
 #define ST77xx_WIDTH  160
 #define ST77xx_HEIGHT 80
 #define ST77xx_XSHIFT 1
 #define ST77xx_YSHIFT 26
 #define ST77xx_ROTATION (ST77xx_MADCTL_MY | ST77xx_MADCTL_MV | ST77xx_MADCTL_BGR)
-#define ST77xx_USE_CS
+#endif
+#ifdef ST77xx_ROTATION_DOWN // upside down
+#define ST77xx_WIDTH  80
+#define ST77xx_HEIGHT 160
+#define ST77xx_XSHIFT 26
+#define ST77xx_YSHIFT 1
+#define ST77xx_ROTATION (ST77xx_MADCTL_MX | ST77xx_MADCTL_MY | ST77xx_MADCTL_BGR)
+#endif
+
 #endif
 
 /****************************/
 
 // 0.96 inch 7P TFT-LCD Module 135x240
-#ifdef ST77xx_135X240_UP
+#ifdef ST77xx_135X240
 #undef ST77xx_DEFAULT_SIZE
 #define ST77xx_IS_135X240 1
+
+#ifdef ST77xx_ROTATION_UP // default orientation
 #define ST77xx_WIDTH 135
 #define ST77xx_HEIGHT 240
 #define ST77xx_XSHIFT 53
 #define ST77xx_YSHIFT 40
 #define ST77xx_ROTATION (ST77xx_MADCTL_MX | ST77xx_MADCTL_MY | ST77xx_MADCTL_RGB)
 #endif
-
-#ifdef ST77xx_135X240_RR
-#undef ST77xx_DEFAULT_SIZE
-#define ST77xx_IS_135X240 1
+#ifdef ST77xx_ROTATION_RR // rotate right
 #define ST77xx_WIDTH 240
 #define ST77xx_HEIGHT 135
 #define ST77xx_XSHIFT 40
 #define ST77xx_YSHIFT 52
 #define ST77xx_ROTATION (ST77xx_MADCTL_MY | ST77xx_MADCTL_MV | ST77xx_MADCTL_RGB)
 #endif
-
-#ifdef ST77xx_135X240_DOWN
-#undef ST77xx_DEFAULT_SIZE
-#define ST77xx_IS_135X240 1
+#ifdef ST77xx_ROTATION_RL // rotate left
+#define ST77xx_WIDTH 240
+#define ST77xx_HEIGHT 135
+#define ST77xx_XSHIFT 40
+#define ST77xx_YSHIFT 53
+#define ST77xx_ROTATION (ST77xx_MADCTL_MX | ST77xx_MADCTL_MV | ST77xx_MADCTL_RGB)
+#endif
+#ifdef ST77xx_ROTATION_DOWN // upside down
 #define ST77xx_WIDTH 135
 #define ST77xx_HEIGHT 240
 #define ST77xx_XSHIFT 52
@@ -267,55 +234,36 @@ typedef enum {
 #define ST77xx_ROTATION (ST77xx_MADCTL_RGB)
 #endif
 
-#ifdef ST77xx_135X240_RL
-#undef ST77xx_DEFAULT_SIZE
-#define ST77xx_IS_135X240 1
-#define ST77xx_WIDTH 240
-#define ST77xx_HEIGHT 135
-#define ST77xx_XSHIFT 40
-#define ST77xx_YSHIFT 53
-#define ST77xx_ROTATION (ST77xx_MADCTL_MX | ST77xx_MADCTL_MV | ST77xx_MADCTL_RGB)
 #endif
 
 // 1.3 inch 8P TFT-LCD Module 240x240
-#ifdef ST77xx_240X240_UP
+#ifdef ST77xx_240X240
 #undef ST77xx_DEFAULT_SIZE
 #define ST77xx_IS_240X240 1
 #define ST77xx_WIDTH 240
 #define ST77xx_HEIGHT 240
+
+#ifdef ST77xx_ROTATION_UP // default orientation
 #define ST77xx_XSHIFT 0
 #define ST77xx_YSHIFT 80
 #define ST77xx_ROTATION (ST77xx_MADCTL_MX | ST77xx_MADCTL_MY | ST77xx_MADCTL_RGB)
 #endif
-
-#ifdef ST77xx_240X240_RR
-#undef ST77xx_DEFAULT_SIZE
-#define ST77xx_IS_240X240 1
-#define ST77xx_WIDTH 240
-#define ST77xx_HEIGHT 240
+#ifdef ST77xx_ROTATION_RR // rotate right
 #define ST77xx_XSHIFT 80
 #define ST77xx_YSHIFT 0
 #define ST77xx_ROTATION (ST77xx_MADCTL_MY | ST77xx_MADCTL_MV | ST77xx_MADCTL_RGB)
 #endif
-
-#ifdef ST77xx_240X240_DOWN
-#undef ST77xx_DEFAULT_SIZE
-#define ST77xx_IS_240X240 1
-#define ST77xx_WIDTH 240
-#define ST77xx_HEIGHT 240
+#ifdef ST77xx_ROTATION_RL // rotate left
+#define ST77xx_XSHIFT 0
+#define ST77xx_YSHIFT 0
+#define ST77xx_ROTATION (ST77xx_MADCTL_MX | ST77xx_MADCTL_MV | ST77xx_MADCTL_RGB)
+#endif
+#ifdef ST77xx_ROTATION_DOWN // upside down
 #define ST77xx_XSHIFT 0
 #define ST77xx_YSHIFT 0
 #define ST77xx_ROTATION (ST77xx_MADCTL_RGB)
 #endif
 
-#ifdef ST77xx_240X240_RL
-#undef ST77xx_DEFAULT_SIZE
-#define ST77xx_IS_240X240 1
-#define ST77xx_WIDTH 240
-#define ST77xx_HEIGHT 240
-#define ST77xx_XSHIFT 0
-#define ST77xx_YSHIFT 0
-#define ST77xx_ROTATION (ST77xx_MADCTL_MX | ST77xx_MADCTL_MV | ST77xx_MADCTL_RGB)
 #endif
 
 // Default size. Should be override
