@@ -61,6 +61,10 @@ class RTCLocal
 
 		uint32_t MinuteOfTheDay = 0;
 
+		char time[9] = {0};			// L'heure courante au format hh:nn:ss
+//		char thetime[9] = {0};  // A copy buffer of time
+		char time_separator = ':'; // Le séparateur pour l'heure par défaut
+
 		bool lockUpdate = false;
 
 #ifdef RTC_USE_CORRECTION
@@ -85,6 +89,9 @@ class RTCLocal
 		// Flag de mise à l'heure. Indique si l'heure initiale a été mise à jour
 		bool _IsTimeUpToDate = false;
 
+		// Le nom du fichier de sauvegarde de l'heure
+		char Time_Filename[LITTLEFS_MAX_LEN];
+
 		// Sauvegarde automatique de l'heure dans le fichier Time_Filename tous les SaveDelay secondes
 		bool _AutoSave = true;
 		// Délais pour la sauvegarde automatique
@@ -105,11 +112,9 @@ class RTCLocal
 		void StartTime();
 		void SetSystemTime();
 		void UpdateDateTime(struct tm *t, uint32_t unix_time);
+		void getTime();
 
 	public:
-		char the_time[9];			// L'heure courante au format hh:nn:ss
-		char Time_Filename[LITTLEFS_MAX_LEN]; // Le nom du fichier de sauvegarde de l'heure
-
 		RTCLocal();
 		RTCLocal(const char *filename)
 		{
@@ -122,6 +127,11 @@ class RTCLocal
 		{
 			if (strlen(filename) < LITTLEFS_MAX_LEN)
 				strcpy((char*) Time_Filename, filename);
+		}
+
+		void setTimeSeparator(const char sep)
+		{
+			time_separator = sep;
 		}
 
 		void setAutoSave(const bool autosave)
@@ -140,7 +150,7 @@ class RTCLocal
 		void setDateTime(const char *time, bool with_epoch = true, bool default_format = true);
 		// Met à jour l'heure à partir de l'heure UTC + décalage gmt
 #if defined(USE_NTP_SERVER)
-	bool setEpochTime(int8_t gmt = 1);
+		bool setEpochTime(int8_t gmt = 1);
 #endif
 
 		// Flag de mise à l'heure. Indique si l'heure initiale a été mise à jour
@@ -158,6 +168,12 @@ class RTCLocal
 		bool getTop(uint8_t id, bool reset = true);
 		void clearTop(uint8_t id);
 
+		// L'heure courante au format hh:nn:ss
+		char* the_time(void)
+		{
+			return &time[0];
+			// return &thetime[0]; // If we use thetime buffer, see getTime() function
+		}
 		char* getTime(char *time, const char sep = ':') const;
 		char* getShortDate(char *date, const char sep = '/') const;
 		char* getDate(char *date, bool millenium) const;

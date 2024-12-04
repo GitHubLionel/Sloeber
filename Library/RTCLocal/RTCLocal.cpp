@@ -153,7 +153,7 @@ bool RTCLocal::update()
 	}
 
 	// Met à jour la string heure
-	getTime(this->the_time);
+	getTime();
 
 	// Sauvegarde automatique de l'heure
 	if (this->_IsTimeUpToDate && this->_AutoSave && (this->seconds_count % this->_SaveDelay == 0))
@@ -177,7 +177,7 @@ void RTCLocal::StartTime()
 	this->correctedToday = true;
 #endif
 	// Met à jour la string heure
-	getTime(this->the_time);
+	getTime();
 }
 
 void RTCLocal::UpdateDateTime(struct tm *t, uint32_t unix_time)
@@ -236,11 +236,9 @@ void RTCLocal::setDateTime(const char *time, bool with_epoch, bool default_forma
 	else
 	{
 		if (default_format)
-			sscanf(time, "%d-%hhu-%dH%d-%d-%d", &t.tm_mday, &_month, &t.tm_year, &t.tm_hour, &t.tm_min,
-				&t.tm_sec);
+			sscanf(time, "%d-%hhu-%dH%d-%d-%d", &t.tm_mday, &_month, &t.tm_year, &t.tm_hour, &t.tm_min, &t.tm_sec);
 		else
-			sscanf(time, "%d/%hhu/%d#%d:%d:%d", &t.tm_mday, &_month, &t.tm_year, &t.tm_hour, &t.tm_min,
-				&t.tm_sec);
+			sscanf(time, "%d/%hhu/%d#%d:%d:%d", &t.tm_mday, &_month, &t.tm_year, &t.tm_hour, &t.tm_min, &t.tm_sec);
 	}
 	t.tm_mon = _month - 1;  // Month, where 0 = jan
 	t.tm_year += 100;       // Year start in 1900
@@ -373,6 +371,22 @@ void RTCLocal::clearTop(uint8_t id)
 	this->Top[id] = false;
 }
 
+void RTCLocal::getTime(void)
+{
+	char *ptime = this->time;
+
+	*ptime++ = (char) (48 + (this->hours / 10)); // or digits[this->hours / 10];
+	*ptime++ = (char) (48 + (this->hours % 10));
+	*ptime++ = time_separator;
+	*ptime++ = (char) (48 + (this->minutes / 10));
+	*ptime++ = (char) (48 + (this->minutes % 10));
+	*ptime++ = time_separator;
+	*ptime++ = (char) (48 + (this->seconds / 10));
+	*ptime++ = (char) (48 + (this->seconds % 10));
+	*ptime = 0; // end string
+//	strcpy(this->thetime, this->time); // It is really necessary ?
+}
+
 /**
  * Return the time in string format hh:nn:ss
  * sep is the separator. By défault it is : " "
@@ -382,8 +396,7 @@ void RTCLocal::clearTop(uint8_t id)
 char* RTCLocal::getTime(char *time, const char sep) const
 {
 	//  static const char *digits = "0123456789";  // Les chiffres
-	char tmp[10] = {0};
-	char *ptime = tmp;
+	char *ptime = time;
 
 	*ptime++ = (char) (48 + (this->hours / 10)); // or digits[this->hours / 10];
 	*ptime++ = (char) (48 + (this->hours % 10));
@@ -392,9 +405,9 @@ char* RTCLocal::getTime(char *time, const char sep) const
 	*ptime++ = (char) (48 + (this->minutes % 10));
 	*ptime++ = sep;
 	*ptime++ = (char) (48 + (this->seconds / 10));
-	*ptime = (char) (48 + (this->seconds % 10));
+	*ptime++ = (char) (48 + (this->seconds % 10));
+	*ptime = 0; // end string
 
-	strcpy(time, tmp);
 	return time;
 
 	// 7 times faster than :
@@ -406,16 +419,15 @@ char* RTCLocal::getTime(char *time, const char sep) const
  */
 char* RTCLocal::getShortDate(char *date, const char sep) const
 {
-	char tmp[7] = {0};
-	char *pdate = tmp;
+	char *pdate = date;
 
 	*pdate++ = (char) (48 + (this->day / 10));
 	*pdate++ = (char) (48 + (this->day % 10));
 	*pdate++ = sep;
 	*pdate++ = (char) (48 + (this->month / 10));
-	*pdate = (char) (48 + (this->month % 10));
+	*pdate++ = (char) (48 + (this->month % 10));
+	*pdate = 0; // end string
 
-	strcpy(date, tmp);
 	return date;
 }
 
@@ -425,8 +437,7 @@ char* RTCLocal::getShortDate(char *date, const char sep) const
  */
 char* RTCLocal::getDate(char *date, bool millenium) const
 {
-	char tmp[12] = {0};
-	char *pdate = tmp;
+	char *pdate = date;
 
 	*pdate++ = (char) (48 + (this->day / 10));
 	*pdate++ = (char) (48 + (this->day % 10));
@@ -440,9 +451,9 @@ char* RTCLocal::getDate(char *date, bool millenium) const
 		*pdate++ = '0';
 	}
 	*pdate++ = (char) (48 + (this->year / 10));
-	*pdate = (char) (48 + (this->year % 10));
+	*pdate++ = (char) (48 + (this->year % 10));
+	*pdate = 0; // end string
 
-	strcpy(date, tmp);
 	return date;
 
 	// 7 times faster than :
@@ -460,7 +471,7 @@ char* RTCLocal::getDateTime(char *datetime, bool millenium, const char sep) cons
 	strcpy(datetime, getDate(tmp, millenium));
 	datetime[strlen(datetime)] = sep;
 	datetime[strlen(datetime) + 1] = 0;
-	strcat(datetime, this->the_time);
+	strcat(datetime, this->time);
 	return datetime;
 }
 
@@ -482,7 +493,7 @@ char* RTCLocal::getFormatedDateTime(char *datetime) const
 	strcat(datetime, "H");
 	strcat(datetime, getTime(tmp, '-'));
 	strcat(datetime, "U");
-	sprintf(tmp, "%u", (unsigned int)this->UNIX_time);
+	sprintf(tmp, "%u", (unsigned int) this->UNIX_time);
 	strcat(datetime, tmp);
 
 	return datetime;
