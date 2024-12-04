@@ -77,6 +77,7 @@ bool CIRRUS_RMSData::GetData(bool reset_ready)
 			else
 				energy_day_surplus += fabs(_inst_data.Energy);
 
+			_last_mean_active_power = _inst_data_cumul.ActivePower;
 			_log_cumul_data += _inst_data_cumul;
 			_log_count++;
 			_inst_data_cumul.Zero();
@@ -255,6 +256,21 @@ float CIRRUS_CS548x::GetPRMSSigned(CIRRUS_Channel channel) const
 	else
 		if (channel == Channel_2)
 			return RMSData_ch2->GetPRMSSigned();
+		else
+			return 0;
+}
+
+/**
+ * Return the last mean of P RMS of the selected channel
+ * This is usefull when you have several Cirrus and need to compute energy
+ */
+float CIRRUS_CS548x::GetLastMeanPRMSSigned(CIRRUS_Channel channel) const
+{
+	if (channel == Channel_1)
+		return RMSData_ch1->GetlastMeanPRMSSigned();
+	else
+		if (channel == Channel_2)
+			return RMSData_ch2->GetlastMeanPRMSSigned();
 		else
 			return 0;
 }

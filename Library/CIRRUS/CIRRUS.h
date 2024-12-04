@@ -1083,6 +1083,15 @@ class CIRRUS_RMSData
 			return _inst_data.ActivePower;
 		}
 
+		/**
+		 * Return the last mean of P RMS
+		 * This is usefull when you have several Cirrus and need to compute energy
+		 */
+		float GetlastMeanPRMSSigned() const
+		{
+			return _last_mean_active_power;
+		}
+
 		float GetTemperature() const
 		{
 			return _inst_data.Temperature;
@@ -1119,6 +1128,7 @@ class CIRRUS_RMSData
 
 		/**
 		 * Get log data. Flag log available is reseted.
+		 * Should be called if GetData() return true
 		 */
 		RMS_Data GetLog(double *temp)
 		{
@@ -1151,8 +1161,11 @@ class CIRRUS_RMSData
 
 		bool _temperature = true;
 
-		// Extra data
+		// Extra data flag
 		uint16_t _ExtraData = exd_Null;
+
+		// la dernière puissance moyenne
+		float _last_mean_active_power = 0.0;
 
 		float energy_day_conso = 0.0;
 		float energy_day_surplus = 0.0;
@@ -1166,8 +1179,6 @@ class CIRRUS_RMSData
 		uint32_t _inst_count = 0;
 		uint32_t _log_count = 0;
 
-//		unsigned long _start = 0;
-//		unsigned long _startLog = 0;
 		unsigned long _ref_time = 0;
 		unsigned long _last_time = 0;
 		unsigned long _log_time = 0;
@@ -1247,6 +1258,14 @@ class CIRRUS_CS5490: public CIRRUS_Base
 		float GetPRMSSigned(void) const
 		{
 			return RMSData->GetPRMSSigned();
+		}
+
+		/**
+		 * Return last mean P RMS
+		 */
+		float GetLastMeanPRMSSigned(void) const
+		{
+			return RMSData->GetlastMeanPRMSSigned();
 		}
 
 		/**
@@ -1335,6 +1354,7 @@ class CIRRUS_CS548x: public CIRRUS_Base
 		float GetURMS(CIRRUS_Channel channel) const;
 		float GetIRMS(CIRRUS_Channel channel) const;
 		float GetPRMSSigned(CIRRUS_Channel channel) const;
+		float GetLastMeanPRMSSigned(CIRRUS_Channel channel) const;
 		float GetTemperature(void) const;
 #ifdef CIRRUS_RMS_FULL
 		float GetExtraData(CIRRUS_Channel channel, ExtraData_typedef extra) const;
