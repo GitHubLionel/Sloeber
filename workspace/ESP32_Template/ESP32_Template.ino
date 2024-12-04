@@ -22,9 +22,9 @@
 //#define USE_SAVE_CRASH   // Permet de sauvegarder les données du crash
 #include "Debug_utils.h"		// Some utils functions for debug
 
-// A cause de l'erreur : Brownout detector was triggered
-#include "soc/soc.h"
-#include "soc/rtc_cntl_reg.h"
+//USER CODE BEGIN Includes
+
+//USER CODE END Includes
 
 /**
  * Ce programme executé par l'ESPxx fait le lien entre l'interface web et le hardware
@@ -111,6 +111,10 @@ void OnAfterConnexion(void);
 #endif
 String UART_Message = "";
 
+//USER CODE BEGIN Privates
+
+//USER CODE END Privates
+
 // ********************************************************************************
 // Functions prototype
 // ********************************************************************************
@@ -178,11 +182,11 @@ void setup()
 		print_debug(F("Display Ok"));
 	IHM_TimeOut_Display(OLED_TIMEOUT);
 
+	//USER CODE BEGIN Initialization
+
+	//USER CODE END Initialization
+
 	// **** FIN- Attente connexion réseau
-
-	// A cause de l'erreur : Brownout detector was triggered
-//	WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
-
 	IHM_Print0("Connexion .....");
 	print_debug(F("==> Wait for network <=="));
 	if (!myServer.WaitForConnexion((Conn_typedef) SSID_CONNEXION))
@@ -219,7 +223,7 @@ void loop()
 	// Opération à faire si on est à l'heure : par exemple afficher l'heure
 	if (uptodate)
 	{
-		IHM_Print0(RTC_Local.the_time);
+		IHM_Print0(RTC_Local.the_time());
 		// Test extinction de l'écran
 		IHM_CheckTurnOff();
 	}
@@ -256,7 +260,7 @@ void OnAfterConnexion(void)
 
 	server.on("/getLastData", HTTP_GET, [](CB_SERVER_PARAM)
 	{
-		pserver->send(200, "text/plain", (String(RTC_Local.the_time) + '#' + UART_Message));
+		pserver->send(200, "text/plain", (String(RTC_Local.the_time()) + '#' + UART_Message));
 	});
 
 	server.on("/operation", HTTP_PUT, handleOperation);
