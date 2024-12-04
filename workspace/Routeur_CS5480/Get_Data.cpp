@@ -296,6 +296,7 @@ void append_data(void)
 	{
 		// Time, Pconso_rms, Pprod_rms, U_rms, Tcs
 		sprintf(buffer, "%ld", RTC_Local.getUNIXDateTime()); // Copie la date
+		Fast_Set_Decimal_Separator('.');
 		pbuffer = Fast_Pos_Buffer(buffer, "\t", Buffer_End, &len); // On se positionne en fin de chaine
 		pbuffer = Fast_Printf(pbuffer, 2, "\t", Buffer_End, true,
 				{log_cumul.Power_ch1, log_cumul.Power_ch2, log_cumul.Voltage});
@@ -307,6 +308,7 @@ void append_data(void)
 
 		// End line
 		Fast_Add_EndLine(pbuffer, Buffer_End);
+		Fast_Set_Decimal_Separator(',');
 		temp.print(buffer);
 		temp.close();
 	}
@@ -386,12 +388,14 @@ void append_energy(void)
 		char date[7] = {0};
 		// Time, Econso, Esurplus, Eprod
 		sprintf(buffer, "%s", RTC_Local.getShortDate(date)); // Copie la date
+		Fast_Set_Decimal_Separator('.');
 		pbuffer = Fast_Pos_Buffer(buffer, "\t", Buffer_End, &len); // On se positionne en fin de chaine
 		pbuffer = Fast_Printf(pbuffer, 2, "\t", Buffer_End, false,
 				{energy_day_conso, energy_day_surplus, energy_day_prod});
 
 		// End line
 		Fast_Add_EndLine(pbuffer, Buffer_End);
+		Fast_Set_Decimal_Separator(',');
 
 		temp.print(buffer);
 		temp.close();
