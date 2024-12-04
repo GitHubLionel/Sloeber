@@ -358,12 +358,12 @@ void SSD1327_ClearAndDisplay(COLOR Color)
  ********************************************************************************/
 void SSD1327_Display(void)
 {
-	LENGTH page;
-	COLOR *pBuf = (COLOR*) Buffer;
-
 	// No need to display if screen is off
 	if (!DisplayIsOn)
 		return;
+
+	LENGTH page;
+	COLOR *pBuf = (COLOR*) Buffer;
 
 	SSD1327_SetWindow(TPoint(0, 0), TPoint(sSSD1327_DIS.Column - 1, sSSD1327_DIS.Row - 1));
 
@@ -380,8 +380,6 @@ void SSD1327_Display(void)
  ********************************************************************************/
 void SSD1327_DisplayWindow(TPoint p_start, TPoint p_end)
 {
-	LENGTH page, Xpoint, Ypoint;
-
 	// No need to display if screen is off
 	if (!DisplayIsOn)
 		return;
@@ -389,6 +387,7 @@ void SSD1327_DisplayWindow(TPoint p_start, TPoint p_end)
 	if (p_start == p_end)
 		return;
 
+	LENGTH page, Xpoint, Ypoint;
 	p_start.Limit(sSSD1327_DIS.Size);
 	p_end.Limit(sSSD1327_DIS.Size);
 
@@ -430,8 +429,10 @@ void SSD1327_DisplayWindow(TPoint p_start, TPoint p_end)
  */
 void SSD1327_ON(void)
 {
+	if (DisplayIsOn)
+		return;
 	SSD1327_WriteReg(SET_DISPLAY_ON);
-	SSD_1327_DELAY(200);
+	SSD_1327_DELAY(50);
 	DisplayIsOn = true;
 	// Refresh screen
 	SSD1327_Display();
@@ -442,6 +443,8 @@ void SSD1327_ON(void)
  */
 void SSD1327_OFF(void)
 {
+	if (!DisplayIsOn)
+		return;
 	SSD1327_WriteReg(SET_DISPLAY_OFF);
 	DisplayIsOn = false;
 }
@@ -451,14 +454,7 @@ void SSD1327_OFF(void)
  */
 void SSD1327_ToggleOnOff(void)
 {
-	if (DisplayIsOn)
-	{
-		SSD1327_OFF();
-	}
-	else
-	{
-		SSD1327_ON();
-	}
+	(DisplayIsOn) ? SSD1327_OFF() : SSD1327_ON();
 }
 
 // ********************************************************************************

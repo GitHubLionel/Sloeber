@@ -290,13 +290,19 @@ void SH1107_Power(uint8_t bOn)
 {
 	if (bOn)
 	{
-		SH1107_WriteCommand(SH110X_DISPLAYON); // turn on OLED
-		DisplayIsOn = true;
+		if (!DisplayIsOn)
+		{
+			SH1107_WriteCommand(SH110X_DISPLAYON); // turn on OLED
+			DisplayIsOn = true;
+		}
 	}
 	else
 	{
-		SH1107_WriteCommand(SH110X_DISPLAYOFF); // turn off OLED
-		DisplayIsOn = false;
+		if (DisplayIsOn)
+		{
+			SH1107_WriteCommand(SH110X_DISPLAYOFF); // turn off OLED
+			DisplayIsOn = false;
+		}
 	}
 } /* SH1107_Power() */
 
@@ -1904,10 +1910,12 @@ void SH1107_Rectangle(int x1, int y1, int x2, int y2, uint8_t ucColor, uint8_t b
  */
 void SH1107_ON(void)
 {
+	bool state = DisplayIsOn;
 	SH1107_Power(true);
 
-	// Refresh screen
-	SH1107_DumpBuffer();
+	// Refresh screen if it was off
+	if (!state)
+	  SH1107_DumpBuffer();
 }
 
 /**
@@ -1923,14 +1931,7 @@ void SH1107_OFF(void)
  */
 void SH1107_ToggleOnOff(void)
 {
-	if (DisplayIsOn)
-	{
-		SH1107_OFF();
-	}
-	else
-	{
-		SH1107_ON();
-	}
+	(DisplayIsOn) ? SH1107_OFF() : SH1107_ON();
 }
 
 // ********************************************************************************
