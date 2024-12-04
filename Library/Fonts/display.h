@@ -1,8 +1,9 @@
 /**
- * Some usefull functions to manage display
- * Display can be : LCD (I2C), OLED (1306) or TFT (1327)
+ * Some usefull functions to manage I2C display
+ * Display can be : LCD (I2C), OLED (1306) or TFT (1327, SH1107)
  * So you must use the directive according your display :
- * USE_LCD or OLED_SSD1306 or OLED_SSD1327
+ * USE_LCD, OLED_SSD1306, OLED_SSD1327 or OLED_SH1107
+ * All this display use I2C
  */
 #pragma once
 

@@ -28,6 +28,14 @@ bool TurnOff = false;
 
 /* Private function prototypes -----------------------------------------------*/
 
+// Function for debug message, may be redefined elsewhere
+void __attribute__((weak)) PrintTerminal(const char *mess)
+{
+	// Just to avoid compile warning
+	(void) mess;
+}
+
+
 /**
  * Initialization of the display
  * address : the address of the I2C port, generally 0x3C other 0x78
@@ -294,7 +302,7 @@ void IHM_IPAddress(const char *ip)
 //  SH1107_Fill(0x0, 1);
 #endif
 #ifdef DEFAULT_OUTPUT
-  (void) ip;
+	PrintTerminal(ip);
 #endif
 }
 
