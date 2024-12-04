@@ -196,10 +196,11 @@ char* Fast_Printf(char *buffer, float value, uint8_t prec, const char *firststri
  * prec : la précision souhaitée.
  * separator : le séparateur entre chaque float
  * pos_def : position du pointeur dans la chaine finale
+ * keep_last_separator : conserve le separateur en fin de chaîne
  * count : nombre de float
  */
 char* Fast_Printf(char *buffer, uint8_t prec, const char *separator, Buffer_Pos_Def pos_def,
-		uint8_t count, ...)
+		bool keep_last_separator, uint8_t count, ...)
 {
 	char *pbuffer_origine = buffer;  // Le début du buffer initial
 	char *pbuffer = buffer;
@@ -214,8 +215,9 @@ char* Fast_Printf(char *buffer, uint8_t prec, const char *separator, Buffer_Pos_
 	}
 
 	// Supprimer le dernier séparateur
-	for (uint8_t i = 0; i < strlen(separator); i++)
-		pbuffer--;
+	if (!keep_last_separator)
+		for (uint8_t i = 0; i < strlen(separator); i++)
+			pbuffer--;
 	*pbuffer = 0;
 
 	va_end(args);
@@ -232,10 +234,11 @@ char* Fast_Printf(char *buffer, uint8_t prec, const char *separator, Buffer_Pos_
  * prec : la précision souhaitée.
  * separator : le séparateur entre chaque float
  * pos_def : position du pointeur dans la chaine finale
+ * keep_last_separator : conserve le separateur en fin de chaîne
  * values : list de float, format {v1, v2, ... }
  */
 char* Fast_Printf(char *buffer, uint8_t prec, const char *separator, Buffer_Pos_Def pos_def,
-		std::initializer_list<double> values)
+		bool keep_last_separator, std::initializer_list<double> values)
 {
 	char *pbuffer_origine = buffer;  // Le début du buffer initial
 	char *pbuffer = buffer;
@@ -247,14 +250,32 @@ char* Fast_Printf(char *buffer, uint8_t prec, const char *separator, Buffer_Pos_
 	}
 
 	// Supprimer le dernier séparateur
-	for (uint8_t i = 0; i < strlen(separator); i++)
-		pbuffer--;
+	if (!keep_last_separator)
+		for (uint8_t i = 0; i < strlen(separator); i++)
+			pbuffer--;
 	*pbuffer = 0;
 
 	if (pos_def == Buffer_End)
 		return pbuffer;
 	else
 		return pbuffer_origine;
+}
+
+/**
+ * Add \r\n to the end of buffer
+ * pos_def : the actual position of the pointer in the buffer
+ */
+void Fast_Add_EndLine(char *buffer, Buffer_Pos_Def pos_def)
+{
+	char *pbuffer = buffer;
+	if (pos_def == Buffer_Begin)
+	{
+		pbuffer += strlen(buffer);
+	}
+
+	*pbuffer++ = '\r';
+	*pbuffer++ = '\n';
+	*pbuffer = 0;
 }
 
 // ********************************************************************************

@@ -21,7 +21,10 @@ char *Fast_Pos_Buffer(char *buffer, Buffer_Pos_Def pos_def, uint16_t *buffer_len
 char *Fast_Pos_Buffer(char *buffer, const char *string, Buffer_Pos_Def pos_def, uint16_t *buffer_len);
 char *Fast_Printf(char *buffer, float value, uint8_t prec, const char *firststring,
 		const char *laststring, Buffer_Pos_Def pos_def, uint16_t *end_len);
-char *Fast_Printf(char *buffer, uint8_t prec, const char *separator, Buffer_Pos_Def pos_def, uint8_t count, ...);
-char *Fast_Printf(char *buffer, uint8_t prec, const char *separator, Buffer_Pos_Def pos_def, std::initializer_list<double> values);
+char *Fast_Printf(char *buffer, uint8_t prec, const char *separator, Buffer_Pos_Def pos_def,
+		bool keep_last_separator, uint8_t count, ...);
+char *Fast_Printf(char *buffer, uint8_t prec, const char *separator, Buffer_Pos_Def pos_def,
+		bool keep_last_separator, std::initializer_list<double> values);
+void Fast_Add_EndLine(char *buffer, Buffer_Pos_Def pos_def);
 
 #endif /* __FAST_PRINTF_H */
