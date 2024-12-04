@@ -22,6 +22,10 @@
 //#define USE_SAVE_CRASH   // Permet de sauvegarder les données du crash
 #include "Debug_utils.h"		// Some utils functions for debug
 
+//USER CODE BEGIN Includes
+
+//USER CODE END Includes
+
 /**
  * Ce programme executé par l'ESPxx fait le lien entre l'interface web et le hardware
  * WEB <--- Wifi ---> ESPxx <--- UART ---> Hardware (BluePill, Nucleo, ...)
@@ -107,6 +111,10 @@ void OnAfterConnexion(void);
 #endif
 String UART_Message = "";
 
+//USER CODE BEGIN Privates
+
+//USER CODE END Privates
+
 // ********************************************************************************
 // Functions prototype
 // ********************************************************************************
@@ -174,6 +182,10 @@ void setup()
 		print_debug(F("Display Ok"));
 	IHM_TimeOut_Display(OLED_TIMEOUT);
 
+	//USER CODE BEGIN Initialization
+
+	//USER CODE END Initialization
+
 	// **** FIN- Attente connexion réseau
 	IHM_Print0("Connexion .....");
 	print_debug(F("==> Wait for network <=="));
@@ -211,7 +223,7 @@ void loop()
 	// Opération à faire si on est à l'heure : par exemple afficher l'heure
 	if (uptodate)
 	{
-		IHM_Print0(RTC_Local.the_time);
+		IHM_Print0(RTC_Local.the_time());
 		// Test extinction de l'écran
 		IHM_CheckTurnOff();
 	}
@@ -248,7 +260,7 @@ void OnAfterConnexion(void)
 
 	server.on("/getLastData", HTTP_GET, [](CB_SERVER_PARAM)
 	{
-		server.send(200, "text/plain", (String(RTC_Local.the_time) + '#' + UART_Message));
+		server.send(200, "text/plain", (String(RTC_Local.the_time()) + '#' + UART_Message));
 	});
 
 	server.on("/operation", HTTP_PUT, handleOperation);
