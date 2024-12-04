@@ -14,13 +14,14 @@
 #ifdef ESP8266
 	#ifdef USE_SPIFFS  // SPIFFS partition
 	#include "spiffs_api.h"
+  #else
+		#ifdef USE_FATFS  // FatFS partition
+		#error "No fatfs partition for ESP8266"
+		#else
+		#include <LittleFS.h>
+		#define USE_LITTLEFS  // LITTLEFS partition
+		#endif
   #endif
-	#ifdef USE_FATFS  // FatFS partition
-	#error "No fatfs partition for ESP8266"
-	#else
-	#include <LittleFS.h>
-	#define USE_LITTLEFS  // LITTLEFS partition
-	#endif
 	#define PART_TYPE	FS
 #endif
 
@@ -28,17 +29,16 @@
 	#ifdef USE_SPIFFS  // SPIFFS partition
 	#include <SPIFFS.h>
 	#define PART_TYPE	fs::SPIFFSFS
-  #endif
-	#ifdef USE_FATFS  // FatFS partition
-	#include <FFat.h>
-	#define PART_TYPE	fs::F_Fat
-	#else
-	#include <LittleFS.h>
-	#define USE_LITTLEFS  // LITTLEFS partition
-	#define PART_TYPE	fs::LittleFSFS
+  #else
+		#ifdef USE_FATFS  // FatFS partition
+		#include <FFat.h>
+		#define PART_TYPE	fs::F_Fat
+		#else
+		#include <LittleFS.h>
+		#define USE_LITTLEFS  // LITTLEFS partition
+		#define PART_TYPE	fs::LittleFSFS
+		#endif
 	#endif
-#else
-	#error "Platform not supported"
 #endif
 
 // The pre-defined filesystem partition
