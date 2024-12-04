@@ -1415,7 +1415,7 @@ void handleCreateFile(CB_SERVER_PARAM)
 void handleGetTime(CB_SERVER_PARAM)
 {
 #if defined(USE_RTCLocal)
-	pserver->send(200, "text/plain", (RTC_Local.the_time));
+	pserver->send(200, "text/plain", (RTC_Local.the_time()));
 #endif
 }
 
