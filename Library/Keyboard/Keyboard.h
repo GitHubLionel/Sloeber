@@ -40,17 +40,21 @@ extern const char *Btn_Texte[BTN_MAX];
 #define DEBOUNCING_US      200000  // Minimum time in us between two button click readings
 #endif
 
-// To create a basic task to check TeleInfo every 1 s
+#define SECOND_TO_DEBOUNCING(second)	(((second) * 1000) / DEBOUNCING_MS)
+
+// Callback to be executed if button is clicked
+typedef void (*KeyBoard_Click_cb)(Btn_Action Btn, uint32_t count);
+
 #ifdef KEYBOARD_USE_TASK
+// To create a basic task to check keyboard every 10 ms
+// You need to overload UserKeyboardAction function
 #define KEYBOARD_DATA_TASK(start)	{(start), "KEYBOARD_Task", 4096, 10, 10, Core1, KEYBOARD_Task_code}
 void KEYBOARD_Task_code(void *parameter);
-void UserKeyboardAction(Btn_Action Btn_Clicked);
+//KeyBoard_Click_cb UserKeyboardAction;
+//void UserKeyboardAction(Btn_Action Btn_Clicked, uint32_t count);
 #else
 #define KEYBOARD_DATA_TASK(start)	{}
 #endif
-
-// Callback to be executed if button is clicked
-typedef void (*KeyBoard_Click_cb)(Btn_Action Btn);
 
 // Initialisation du clavier
 void Keyboard_Initialize(uint8_t nbButton, ADC_Sampling sampling = ADC_10bits,

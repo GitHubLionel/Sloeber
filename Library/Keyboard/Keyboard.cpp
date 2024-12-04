@@ -16,6 +16,8 @@ static uint16_t Low_sampling[BTN_MAX];  // tableau de stockage des valeurs basse
 static uint8_t Btn_Count = 0;
 static bool Keyboard_Initialized = false;
 volatile Btn_Action Btn_Clicked = Btn_NOP;
+volatile Btn_Action Last_Btn_Clicked = Btn_NOP;
+volatile uint32_t Btn_Clicked_count = 0;
 volatile uint16_t last_ADC = 0;
 
 static uint32_t ADC_res = 1023;  // Echantillonnage 10 bits
@@ -36,6 +38,7 @@ void Btn_Definition_2B();
 void Btn_Definition_3B();
 void Btn_Definition_4B();
 Btn_Action RawToBtn(uint16_t val);
+void Check_Btn_Clicked(unsigned long ms);
 
 // Function for debug message, may be redefined elsewhere
 void __attribute__((weak)) print_debug(const char *mess, bool ln = true)
@@ -56,8 +59,7 @@ void __attribute__((weak)) print_debug(const char *mess, bool ln = true)
  * Ne pas oublier de mettre la fonction Keyboard_UpdateTime() dans le loop principal
  * IMPORTANT: ADC must be initialized before
  */
-void Keyboard_Initialize(uint8_t nbButton, ADC_Sampling sampling,
-		const KeyBoard_Click_cb &kbClick)
+void Keyboard_Initialize(uint8_t nbButton, ADC_Sampling sampling, const KeyBoard_Click_cb &kbClick)
 {
 #if defined(ESP8266) | defined(ADC_USE_ARDUINO)
 	// For ESP8266, we have only D0
@@ -105,7 +107,7 @@ void Keyboard_Initialize(uint8_t nbButton, ADC_Sampling sampling,
 		Keyboard_Initialized = false;
 	}
 	else
-	  Keyboard_Initialized = true;
+		Keyboard_Initialized = true;
 }
 
 /**
@@ -137,7 +139,7 @@ void Keyboard_Initialize(uint8_t nbButton, const uint16_t interval[],
 		Keyboard_Initialized = false;
 	}
 	else
-	  Keyboard_Initialized = true;
+		Keyboard_Initialized = true;
 }
 
 #if defined(ESP8266) | defined(ADC_USE_ARDUINO)
@@ -165,47 +167,16 @@ void SetKeyBoardCallback(const KeyBoard_Click_cb &kbClick)
 void Keyboard_UpdateTime(void)
 {
 	static unsigned long lastTimeRead = millis();
-	static unsigned long Start_click = 0;
-	static uint64_t cumul = 0;
-	static uint64_t count = 0;
-	uint16_t raw = 0;
+	unsigned long now;
 
 	if (Keyboard_Initialized)
 	{
 		// Each 10 ms
-		if ((millis() - lastTimeRead) > 10)
+		now = millis();
+		if ((now - lastTimeRead) > 10)
 		{
-			lastTimeRead = millis();
-
-			// Read raw adc value and test is in the minimal interval
-			if (Btn_Click_Val(&raw))
-			{
-				// We start a cumul
-				if (count == 0)
-					Start_click = lastTimeRead;
-
-				cumul += raw;
-				count++;
-
-				// Ok, we have a real click
-				if (lastTimeRead - Start_click > DEBOUNCING_MS)
-				{
-					Btn_Clicked = RawToBtn(cumul / count);
-					cumul = 0;
-					count = 0;
-				}
-			}
-			else
-			{
-				// raw is not significatif or debouncing time is not reached
-				cumul = 0;
-				count = 0;
-			}
-			if (KBClick_cb)
-			{
-				KBClick_cb(Btn_Clicked);
-			  Btn_Clicked = Btn_NOP;
-			}
+			lastTimeRead = now;
+			Check_Btn_Clicked(lastTimeRead);
 		}
 	}
 }
@@ -218,8 +189,8 @@ void Keyboard_UpdateTime(void)
  */
 bool Check_Keyboard(Btn_Action *Btn)
 {
-	*Btn = Btn_Clicked;
-	Btn_Clicked = Btn_NOP;  // On "mange" la valeur
+	*Btn = Last_Btn_Clicked;
+	Last_Btn_Clicked = Btn_NOP;  // On "mange" la valeur
 	return (bool) (*Btn != Btn_NOP);
 }
 
@@ -282,6 +253,54 @@ void Btn_Definition_4B()
 // ********************************************************************************
 // Gestion clavier
 // ********************************************************************************
+
+void Check_Btn_Clicked(unsigned long ms)
+{
+	static unsigned long lastTimeRead = millis();
+	static unsigned long Start_click = 0;
+	static uint64_t cumul = 0;
+	static uint64_t count = 0;
+	uint16_t raw = 0;
+
+	lastTimeRead = ms;
+
+	// Read raw adc value and test is in the minimal interval
+	if (Btn_Click_Val(&raw))
+	{
+		// We start a cumul
+		if (count == 0)
+			Start_click = lastTimeRead;
+
+		cumul += raw;
+		count++;
+
+		// Ok, we have a real click
+		if (lastTimeRead - Start_click > DEBOUNCING_US)
+		{
+			Btn_Clicked = RawToBtn(cumul / count);
+			if (Last_Btn_Clicked == Btn_Clicked)
+				Btn_Clicked_count = Btn_Clicked_count + 1;
+			else
+			{
+				Last_Btn_Clicked = Btn_Clicked;
+				Btn_Clicked_count = 1;
+			}
+
+			if (KBClick_cb)
+				KBClick_cb(Btn_Clicked, Btn_Clicked_count);
+			cumul = 0;
+			count = 0;
+		}
+	}
+	else
+	{
+		// raw is not significatif
+		cumul = 0;
+		count = 0;
+		Btn_Clicked_count = 0;
+		Btn_Clicked = Btn_NOP;
+	}
+}
 
 Btn_Action Btn_Click()
 {
@@ -399,55 +418,27 @@ void Btn_Check_Config(bool infinite)
 /**
  * This functions should be redefined elsewhere with your analyse
  */
-void __attribute__((weak)) UserKeyboardAction(Btn_Action Btn_Clicked)
+void __attribute__((weak)) UserKeyboardAction(Btn_Action Btn_Clicked, uint32_t count)
 {
 	if (Btn_Clicked != Btn_NOP)
+	{
 		Serial.println(Btn_Texte[Btn_Clicked]);
+		Serial.println(count);
+	}
 }
 
 void KEYBOARD_Task_code(void *parameter)
 {
 	BEGIN_TASK_CODE("KEYBOARD_Task");
 
-	static int64_t lastTimeRead = esp_timer_get_time();
-	static int64_t Start_click = 0;
-	static uint64_t cumul = 0;
-	static uint64_t count = 0;
-	uint16_t raw = 0;
+	// Set user keyboard callback action
+	KBClick_cb = &UserKeyboardAction;
 
 	for (EVER)
 	{
 		if (Keyboard_Initialized)
 		{
-			lastTimeRead = esp_timer_get_time();
-
-			// Read raw adc value and test is in the minimal interval
-			if (Btn_Click_Val(&raw))
-			{
-				// We start a cumul
-				if (count == 0)
-					Start_click = lastTimeRead;
-
-				cumul += raw;
-				count++;
-
-				// Ok, we have a real click
-				if (lastTimeRead - Start_click > DEBOUNCING_US)
-				{
-					Btn_Clicked = RawToBtn(cumul / count);
-					cumul = 0;
-					count = 0;
-				}
-			}
-			else
-			{
-				// raw is not significatif or debouncing time is not reached
-				cumul = 0;
-				count = 0;
-			}
-			UserKeyboardAction(Btn_Clicked);
-			Btn_Clicked = Btn_NOP;
-
+			Check_Btn_Clicked(esp_timer_get_time());
 		}
 		END_TASK_CODE();
 	}
