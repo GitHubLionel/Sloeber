@@ -9,6 +9,7 @@
 #include "DS18B20.h"
 #include "TeleInfo.h"
 #include "ADC_Utils.h"
+#include "Fast_Printf.h"
 
 #ifdef CIRRUS_USE_TASK
 #include "Tasks_utils.h"
@@ -278,26 +279,35 @@ void append_data(void)
 	if (Lock_File)
 		return;
 
+	char buffer[255] = {0};
+	char *pbuffer = &buffer[0];
+	uint16_t len;
+	float temp1 = 0.0, temp2 = 0.0;
+	if (DS_Count > 0)
+	{
+		temp1 = DS.get_Temperature(0);
+		temp2 = DS.get_Temperature(1);
+	}
+
 	// Ouvre le fichier en append, le crée s'il n'existe pas
 	Lock_File = true;
 	File temp = Data_Partition->open(CSV_Filename, "a");
 	if (temp)
 	{
 		// Time, Pconso_rms, Pprod_rms, U_rms, Tcs
-		String data = String(RTC_Local.getUNIXDateTime()) + '\t' + (String) log_cumul.Power_ch1 + '\t'
-				+ (String) log_cumul.Power_ch2 + '\t' + (String) log_cumul.Voltage + '\t'
-				+ (String) log_cumul.Temp;
-		// DS Temp
-		if (DS_Count > 0)
-			data += '\t' + DS.get_Temperature_Str(0) + '\t' + DS.get_Temperature_Str(1);
-		else
-			data += "\t0.0\t0.0";
-		// Energy
-		data += '\t' + (String) energy_day_conso + '\t' + (String) energy_day_surplus + '\t'
-				+ (String) energy_day_prod;
+		sprintf(buffer, "%ld", RTC_Local.getUNIXDateTime()); // Copie la date
+		pbuffer = Fast_Pos_Buffer(buffer, "\t", Buffer_End, &len); // On se positionne en fin de chaine
+		pbuffer = Fast_Printf(pbuffer, 2, "\t", Buffer_End, true,
+				{log_cumul.Power_ch1, log_cumul.Power_ch2, log_cumul.Voltage});
+
+		// Temperatures, Energy
+		pbuffer = Fast_Printf(pbuffer, 2, "\t", Buffer_End, false,
+				{log_cumul.Temp, temp1, temp2,
+						energy_day_conso, energy_day_surplus, energy_day_prod});
+
 		// End line
-		data += "\r\n";
-		temp.print(data);
+		Fast_Add_EndLine(pbuffer, Buffer_End);
+		temp.print(buffer);
 		temp.close();
 	}
 	Lock_File = false;
@@ -364,6 +374,10 @@ void append_energy(void)
 	if (Lock_File)
 		return;
 
+	char buffer[255] = {0};
+	char *pbuffer = &buffer[0];
+	uint16_t len;
+
 	// Ouvre le fichier en append, le crée s'il n'existe pas
 	Lock_File = true;
 	File temp = Data_Partition->open(Energy_Filename, "a");
@@ -371,9 +385,15 @@ void append_energy(void)
 	{
 		char date[7] = {0};
 		// Time, Econso, Esurplus, Eprod
-		String data = String(RTC_Local.getShortDate(date)) + '\t' + (String) energy_day_conso + '\t'
-				+ (String) energy_day_surplus + '\t' + (String) energy_day_prod + "\r\n";
-		temp.print(data);
+		sprintf(buffer, "%s", RTC_Local.getShortDate(date)); // Copie la date
+		pbuffer = Fast_Pos_Buffer(buffer, "\t", Buffer_End, &len); // On se positionne en fin de chaine
+		pbuffer = Fast_Printf(pbuffer, 2, "\t", Buffer_End, false,
+				{energy_day_conso, energy_day_surplus, energy_day_prod});
+
+		// End line
+		Fast_Add_EndLine(pbuffer, Buffer_End);
+
+		temp.print(buffer);
 		temp.close();
 	}
 	Lock_File = false;

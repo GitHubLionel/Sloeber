@@ -148,7 +148,7 @@ String UART_Message = "";
 String Temp_str = "";
 String Extra_str = "";
 #define EXTRA_TIMEOUT	5  // L'extra texte est affiché durant EXTRA_TIMEOUT secondes
-uint8_t count_Extra_Display = 0;
+volatile uint8_t count_Extra_Display = 0;
 
 // ********************************************************************************
 // Définition DS18B20
@@ -284,13 +284,13 @@ void Display_Task_code(void *parameter)
 		// Cirrus message
 		if (Cirrus_OK)
 		{
-			line = Update_IHM(RTC_Local.the_time, "", false);
+			line = Update_IHM(RTC_Local.the_time(), "", false);
 		}
 		else
 		{
 			line = 0;
 			IHM_Clear();
-			IHM_Print(line++, RTC_Local.the_time);
+			IHM_Print(line++, RTC_Local.the_time());
 			UART_Message = "Cirrus failled";
 		}
 
@@ -312,7 +312,7 @@ void Display_Task_code(void *parameter)
 		if (count_Extra_Display != 0)
 		{
 			IHM_Print(line++, Extra_str.c_str());
-			count_Extra_Display--;
+			count_Extra_Display = count_Extra_Display - 1;
 			if (count_Extra_Display == 0)
 				Extra_str = "";
 		}
@@ -332,53 +332,57 @@ void Display_Task_code(void *parameter)
 }
 #define DISPLAY_DATA_TASK	{true, "DISPLAY_Task", 4096, 4, 1000, Core0, Display_Task_code}
 
-void UserKeyboardAction(Btn_Action Btn_Clicked)
+void UserKeyboardAction(Btn_Action Btn_Clicked, uint32_t count)
 {
-	static uint32_t Btn_K1_count = 0;
-	if (Btn_Clicked != Btn_NOP)
-		Serial.println(Btn_Texte[Btn_Clicked]);
+//	if (Btn_Clicked != Btn_NOP)
+//		Serial.println(Btn_Texte[Btn_Clicked]);
 
 	switch (Btn_Clicked)
 	{
 		case Btn_K1: // Bouton du bas : Affiche IP et reset
 		{
-			IHM_DisplayOn();
-			if (Extra_str.isEmpty())
+			if (count == 1)
+			{
+				IHM_DisplayOn();
 				Extra_str = myServer.IPaddress();
-			count_Extra_Display = EXTRA_TIMEOUT;
-			Btn_K1_count++;
-			// On a appuyé plus de 2 secondes sur le bouton
-			if (Btn_K1_count > (DEBOUNCING_MS * 10) / 1000)
+				count_Extra_Display = EXTRA_TIMEOUT;
+			}
+
+			// On a appuyé plus de 5 secondes sur le bouton
+			if (count == SECOND_TO_DEBOUNCING(5))
 			{
 				Extra_str = "SSID reset";
+				count_Extra_Display = EXTRA_TIMEOUT;
 				// Delete SSID file
-//				DeleteSSID();
-				Btn_K1_count = 0;
+				DeleteSSID();
 			}
 			break;
 		}
 
 		case Btn_K2: // Bouton du milieu : toggle relais
 		{
-			IHM_DisplayOn();
-			Relay.setState(0, !Relay.getState(0));
-			if (Relay.getState(0))
-				Extra_str = "Relais ON";
-			else
-				Extra_str = "Relais OFF";
-			count_Extra_Display = EXTRA_TIMEOUT;
+			if (count == 1)
+			{
+				IHM_DisplayOn();
+				Relay.setState(0, !Relay.getState(0));
+				if (Relay.getState(0))
+					Extra_str = "Relais ON";
+				else
+					Extra_str = "Relais OFF";
+				count_Extra_Display = EXTRA_TIMEOUT;
+			}
 			break;
 		}
 
 		case Btn_K3: // Bouton du haut : toggle display
 		{
-			IHM_ToggleDisplay();
+			if (count == 1)
+				IHM_ToggleDisplay();
 			break;
 		}
 
 		case Btn_NOP:
 		{
-			Btn_K1_count = 0;
 			break;
 		}
 
@@ -543,7 +547,7 @@ void setup()
 				init_routeur.ReadIntegerIndex(i, "Relais", "Alarm1_end", -1));
 		Relay.addAlarm(i, Alarm2, init_routeur.ReadIntegerIndex(i, "Relais", "Alarm2_start", -1),
 				init_routeur.ReadIntegerIndex(i, "Relais", "Alarm2_end", -1));
-	  Relay.setState(i, init_routeur.ReadBoolIndex(i, "Relais", "State", false));
+		Relay.setState(i, init_routeur.ReadBoolIndex(i, "Relais", "State", false));
 	}
 	RTC_Local.setMinuteChangeCallback(onRelayMinuteChange_cb);
 #endif
@@ -572,6 +576,16 @@ void setup()
 	reboot_energy();
 
 	// Initialisation des taches
+//	--- Memory free stack ---
+//	Memory_Task: 1316 / 4096
+//	RTC_Task: 1372 / 4096
+//	UART_Task: 3396 / 4096
+//	KEEP_ALIVE_Task: 7504 / 8192
+//	DS18B20_Task: 604 / 1536
+//	TELEINFO_Task: 180 / 1024
+//	CIRRUS_Task: 3192 / 6144
+//	DISPLAY_Task: 2312 / 4096
+//	KEYBOARD_Task: 3464 / 4096
 	TaskList.AddTask(RTC_DATA_TASK); // RTC Task
 	TaskList.AddTask(UART_DATA_TASK); // UART Task
 	TaskList.AddTask(KEEP_ALIVE_DATA_TASK); // Keep alive Wifi Task
@@ -707,7 +721,7 @@ void handleInitialization(CB_SERVER_PARAM)
 	// Relay part
 	String alarm = "";
 	String start = "", end = "";
-	for (int i=0; i<Relay.size(); i++)
+	for (int i = 0; i < Relay.size(); i++)
 	{
 		(Relay.getState(i)) ? alarm += "ON," : alarm += "OFF,";
 		Relay.getAlarm(i, Alarm1, start, end);
@@ -730,31 +744,41 @@ void handleLastData(CB_SERVER_PARAM)
 	char *pbuffer = &buffer[0];
 	uint16_t len;
 	float Energy, Surplus, Prod;
+	float temp1 = 0.0, temp2 = 0.0;
 	uint32_t TI_Energy = 0;
+
+	if (DS_Count > 0)
+	{
+		temp1 = DS.get_Temperature(0);
+		temp2 = DS.get_Temperature(1);
+	}
 	bool graphe = Get_Last_Data(&Energy, &Surplus, &Prod);
 
 	if (TI_OK)
 		TI_Energy = (TI.getIndexWh() - TI_Counter);
 
-	strcpy(buffer, RTC_Local.the_time); // Copie la date
+	strcpy(buffer, RTC_Local.the_time()); // Copie la date
 	pbuffer = Fast_Pos_Buffer(buffer, "#", Buffer_End, &len); // On se positionne en fin de chaine
-	pbuffer = Fast_Printf(pbuffer, 2, "#", Buffer_End, {Current_Data.Cirrus_ch1.ActivePower, Current_Data.Cirrus_ch1.Voltage,
-			Energy, Surplus, Current_Data.Cirrus_ch1.PowerFactor, Current_Data.Cirrus_ch2.ActivePower, Prod});
+	pbuffer = Fast_Printf(pbuffer, 2, "#", Buffer_End, true,
+			{Current_Data.Cirrus_ch1.ActivePower, Current_Data.Cirrus_ch1.Voltage,
+					Energy, Surplus, Current_Data.Cirrus_ch1.PowerFactor, Current_Data.Cirrus_ch2.ActivePower, Prod});
 
-	pbuffer = Fast_Printf(pbuffer, TI_Energy, 0, "#", "#", Buffer_End, &len);
+	pbuffer = Fast_Printf(pbuffer, TI_Energy, 0, "", "#", Buffer_End, &len);
 
 	// Températures
-	pbuffer = Fast_Printf(pbuffer, Current_Data.Cirrus_ch1.Temperature, 2, "", "#", Buffer_End, &len);
-	if (DS_Count > 0)
-	{
-		pbuffer = Fast_Printf(pbuffer, DS.get_Temperature(0), 2, "", "#", Buffer_End, &len);
-		pbuffer = Fast_Printf(pbuffer, DS.get_Temperature(1), 2, "", "#", Buffer_End, &len);
-	}
-	else
-		{
-			pbuffer = Fast_Printf(pbuffer, 0.0, 2, "", "#", Buffer_End, &len);
-			pbuffer = Fast_Printf(pbuffer, 0.0, 2, "", "#", Buffer_End, &len);
-		}
+	pbuffer = Fast_Printf(pbuffer, 2, "#", Buffer_End, true,
+			{Current_Data.Cirrus_ch1.Temperature, temp1, temp2});
+//	pbuffer = Fast_Printf(pbuffer, Current_Data.Cirrus_ch1.Temperature, 2, "", "#", Buffer_End, &len);
+//	if (DS_Count > 0)
+//	{
+//		pbuffer = Fast_Printf(pbuffer, DS.get_Temperature(0), 2, "", "#", Buffer_End, &len);
+//		pbuffer = Fast_Printf(pbuffer, DS.get_Temperature(1), 2, "", "#", Buffer_End, &len);
+//	}
+//	else
+//		{
+//			pbuffer = Fast_Printf(pbuffer, 0.0, 2, "", "#", Buffer_End, &len);
+//			pbuffer = Fast_Printf(pbuffer, 0.0, 2, "", "#", Buffer_End, &len);
+//		}
 
 	// Talema
 	pbuffer = Fast_Printf(pbuffer, Current_Data.Talema_Power, 2, "", "#", Buffer_End, &len);
@@ -768,7 +792,8 @@ void handleLastData(CB_SERVER_PARAM)
 	{
 		Fast_Set_Decimal_Separator('.');
 		pbuffer = Fast_Pos_Buffer(pbuffer, "#", Buffer_End, &len); // On se positionne en fin de chaine
-		pbuffer = Fast_Printf(pbuffer, 2, "#", Buffer_End, {log_cumul.Power_ch1, log_cumul.Power_ch2, log_cumul.Voltage, log_cumul.Temp});
+		pbuffer = Fast_Printf(pbuffer, 2, "#", Buffer_End, false,
+				{log_cumul.Power_ch1, log_cumul.Power_ch2, log_cumul.Voltage, log_cumul.Temp});
 		Fast_Set_Decimal_Separator(',');
 	}
 
