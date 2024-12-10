@@ -88,12 +88,12 @@
 
 // Adafruit
 const unsigned char oled128_initbuf[] PROGMEM = {
-		SH110X_COMMAND,
+    SH110X_COMMAND,
     SH110X_DISPLAYOFF,               // 0xAE
-    SH110X_SETDISPLAYCLOCKDIV, 0x51, // 0xd5, 0x51,
-    SH110X_MEMORYMODE,               // 0x20
-    SH110X_SETCONTRAST, 0xDF,        // 0x81, 0x4F
-    SH110X_DCDC, 0x8A,               // 0xAD, 0x8A
+		SH110X_SETDISPLAYCLOCKDIV, 0x51, // 0xd5, 0x51,
+		SH110X_MEMORYMODE,               // 0x20
+		SH110X_SETCONTRAST, 0xDF,        // 0x81, 0x4F
+		SH110X_DCDC, 0x8A,               // 0xAD, 0x8A
 #if ((defined(OLED_TOP_DOWN)) || (defined(OLED_LEFT_RIGHT)))
 		SH110X_SEGREMAP,
 		SH110X_COMSCANINC,
@@ -102,15 +102,15 @@ const unsigned char oled128_initbuf[] PROGMEM = {
 		SH110X_SEGREMAPFLIP,
 		SH110X_COMSCANDEC,
 #endif
-    SH110X_SETDISPSTARTLINE, 0x00,    // 0xDC 0x00
-    SH110X_SETPRECHARGE, 0x22,        // 0xd9, 0x22,
-    SH110X_SETVCOMDETECT, 0x35,       // 0xdb, 0x35,
-    SH110X_SETCOMPINS, 0x12,          // 0xda, 0x12,
+		SH110X_SETDISPSTARTLINE, 0x00,    // 0xDC 0x00
+		SH110X_SETPRECHARGE, 0x22,        // 0xd9, 0x22,
+		SH110X_SETVCOMDETECT, 0x35,       // 0xdb, 0x35,
+		SH110X_SETCOMPINS, 0x12,          // 0xda, 0x12,
 		SH110X_SETDISPLAYOFFSET, 0x00,
 		SH110X_SETMULTIPLEX, 0x7F,
 		SH110X_DISPLAYALLON_ON,           // 0xa4
-    SH110X_NORMALDISPLAY,             // 0xa6
-};
+		SH110X_NORMALDISPLAY,             // 0xa6
+		};
 
 extern uint8_t ucFont[];
 extern uint8_t ucBigFont[];
@@ -119,7 +119,7 @@ extern uint8_t ucSmallFont[];
 // some globals
 #define OLED_WIDTH 128
 #define OLED_HEIGHT 128
-#define BUFFER_SIZE (128 * 128 / 8)  // One octet = 8 screen points
+#define BUFFER_SIZE (OLED_WIDTH * OLED_HEIGHT / 8)  // One octet = 8 screen points
 OLED_1107 oled_1107;
 static uint8_t ucBackBuffer[BUFFER_SIZE];  // worked buffer
 #ifdef ROTATED_90
@@ -129,9 +129,21 @@ static bool DisplayIsOn = true;
 
 static void SH1107_InvertBytes(uint8_t *pData, uint8_t bLen);
 
+/**
+ * Send data with I2C
+ * WARNING : iLen must be <= 128
+ */
 static void _I2CWrite(unsigned char *pData, int iLen)
 {
 	Wire.beginTransmission(oled_1107.oled_addr);
+	Wire.write(pData, (uint8_t) iLen);
+	Wire.endTransmission();
+} /* _I2CWrite() */
+
+static void _I2CWrite(uint8_t command, unsigned char *pData, int iLen)
+{
+	Wire.beginTransmission(oled_1107.oled_addr);
+	Wire.write(command);
 	Wire.write(pData, (uint8_t) iLen);
 	Wire.endTransmission();
 } /* _I2CWrite() */
@@ -240,8 +252,19 @@ void SH1107_Test_Screen(void)
 
 	SH1107_Fill(0x0, 0);
 	SH1107_WriteString(0, 16, 0, (char*) "SH1107 Demo", FONT_NORMAL, 0);
-	SH1107_WriteString(0, 0, 1, (char*) "---------------------", FONT_SMALL, 1);
+	SH1107_WriteString(0, 0, 1, (char*) "---------------------", FONT_SMALL, 0);
 	SH1107_WriteString(0, 0, 3, (char*) "**Demo**", FONT_LARGE, 0);
+	SH1107_DumpBuffer();
+	delay(2000);
+
+	// Test char
+	SH1107_Fill(0x0, 0);
+	char text[20] = {0};
+	for (i = 0; i < 16; i++)
+	{
+		text[i] = (char) (48 + i);
+		SH1107_WriteString(0, 0, i, (char*) text, FONT_NORMAL, 0, 0);
+	}
 	SH1107_DumpBuffer();
 	delay(2000);
 
@@ -250,13 +273,14 @@ void SH1107_Test_Screen(void)
 	for (i = 0; i < BUFFER_SIZE; i++)
 	{
 		ucBackBuffer[i] = p;
-		if ((i+1) % 4 == 0) {
+		if ((i + 1) % 4 == 0)
+		{
 			q = p;
 			p = p << 4;
 			p |= q >> 4;
 		}
 	}
-	SH1107_WriteString(0, 5, 6, (char*) "Invert", FONT_LARGE, 0);
+	SH1107_WriteString(0, 5, 7, (char*) "Invert", FONT_LARGE, 0);
 	SH1107_DumpBuffer();
 	delay(500);
 
@@ -279,7 +303,7 @@ void SH1107_Test_Screen(void)
 	}
 	delay(2000);
 
-	SH1107_Fill(0, 1);
+	SH1107_Fill(0, 0);
 	SH1107_DumpBuffer();
 }
 
@@ -392,15 +416,13 @@ static void SH1107_SetPosition(int x, int y, int bRender)
 
 //
 // Write a block of pixel data to the OLED
-// Length can be anything from 1 to 1024 (whole display)
+// Length must be <= 127
 //
 static void SH1107_WriteDataBlock(unsigned char *ucBuf, int iLen, int bRender)
 {
 	unsigned char ucTemp[129];
 
 	ucTemp[0] = SH110X_DATA; // data command
-// Copying the data has the benefit in SPI mode of not letting
-// the original data get overwritten by the SPI.transfer() function
 	if (bRender)
 	{
 		memcpy(&ucTemp[1], ucBuf, iLen);
@@ -411,7 +433,7 @@ static void SH1107_WriteDataBlock(unsigned char *ucBuf, int iLen, int bRender)
 	{
 		memcpy(&oled_1107.ucScreen[oled_1107.iScreenOffset], ucBuf, iLen);
 		oled_1107.iScreenOffset += iLen;
-		oled_1107.iScreenOffset &= 1023; // we use a fixed stride of 128 no matter what the display size
+		oled_1107.iScreenOffset &= BUFFER_SIZE - 1;
 	}
 }
 
@@ -1267,9 +1289,7 @@ int SH1107_DrawGFX(uint8_t *pBuffer, int iSrcCol, int iSrcRow, int iDestCol, int
 } /* SH1107_DrawGFX() */
 
 #ifdef ROTATED_90
-//
 // Rotate the buffer
-//
 void SH1107_Rotate90(uint8_t *pSource)
 {
 	uint16_t src_addr, dst_addr;
@@ -1301,40 +1321,44 @@ void SH1107_DumpBuffer(uint8_t *pBuffer)
 
 #ifdef ROTATED_90
 	static uint8_t saveBuffer[BUFFER_SIZE];  // rotated buffer
-	bool needRestaure = false;
 	if (pBuffer != NULL)
-	  SH1107_Rotate90(pBuffer);
+	{
+		SH1107_Rotate90(pBuffer);
+		pBuffer = rotBuffer;
+	}
 	else
 	{
-		mempcpy(saveBuffer, oled_1107.ucScreen, BUFFER_SIZE);
-		needRestaure = true;
-		SH1107_Rotate90(oled_1107.ucScreen);
+		if (oled_1107.ucScreen != NULL)
+		{
+			mempcpy(saveBuffer, oled_1107.ucScreen, BUFFER_SIZE);
+			SH1107_Rotate90(saveBuffer);
+			pBuffer = rotBuffer;
+		}
 	}
-	pBuffer = rotBuffer;
-#endif
-
+#else
 	if (pBuffer == NULL) // dump the internal buffer if none is given
 		pBuffer = oled_1107.ucScreen;
+#endif
+
 	if (pBuffer == NULL)
 		return; // no backbuffer and no provided buffer
 
-	int iLines = oled_1107.oled_y >> 3;
-	int iCols = oled_1107.oled_x >> 4;
-	for (int y = 0; y < iLines; y++)
-	{
-		for (int x = 0; x < iCols; x++) // wiring library has a 32-byte buffer, so send 16 bytes so that the data prefix (0x40) can fit
-		{
-			SH1107_SetPosition(x * 16, y, 1);
-			SH1107_WriteDataBlock(pBuffer, 16, 1);
+	const uint8_t step = 64; // must be a divisor of 128
 
-			pBuffer += 16;
+	uint8_t iLines = oled_1107.oled_y >> 3;
+	int lastScreenOffset = oled_1107.iScreenOffset;
+
+	for (uint8_t y = 0; y < iLines; y++)
+	{
+		SH1107_SetPosition(0, y, 1);
+		for (uint8_t x = 0; x < 128 / step; x++)
+		{
+			_I2CWrite(SH110X_DATA, pBuffer, step);
+			pBuffer += step;
 		} // for x
 	} // for y
-
-#ifdef ROTATED_90
-	if (needRestaure)
-		mempcpy(oled_1107.ucScreen, saveBuffer, BUFFER_SIZE);
-#endif
+	// Restaure ScreenOffset
+	oled_1107.iScreenOffset = lastScreenOffset;
 } /* SH1107_DumpBuffer() */
 
 //
@@ -1343,31 +1367,11 @@ void SH1107_DumpBuffer(uint8_t *pBuffer)
 //
 void SH1107_Fill(unsigned char ucData, int bRender)
 {
-	uint8_t x, y;
-	uint8_t iLines, iCols;
-	unsigned char temp[16];
-
-	iLines = oled_1107.oled_y >> 3;
-	iCols = oled_1107.oled_x >> 4;
-	memset(temp, ucData, 16);
-	oled_1107.iCursorX = oled_1107.iCursorY = 0;
+	if (oled_1107.ucScreen)
+		memset(oled_1107.ucScreen, ucData, BUFFER_SIZE);
 
 	if (bRender)
-	{
-		for (y = 0; y < iLines; y++)
-		{
-			SH1107_SetPosition(0, y, bRender); // set to (0,Y)
-			for (x = 0; x < iCols; x++) // wiring library has a 32-byte buffer, so send 16 bytes so that the data prefix (0x40) can fit
-			{
-				SH1107_WriteDataBlock(temp, 16, bRender);
-			} // for x
-		} // for y
-	}
-
-	if (oled_1107.ucScreen)
-	{
-		memset(oled_1107.ucScreen, ucData, BUFFER_SIZE);
-	}
+		SH1107_DumpBuffer();
 } /* SH1107_Fill() */
 
 void SH1107_DrawLine(int x1, int y1, int x2, int y2, int bRender)
@@ -1915,7 +1919,7 @@ void SH1107_ON(void)
 
 	// Refresh screen if it was off
 	if (!state)
-	  SH1107_DumpBuffer();
+		SH1107_DumpBuffer();
 }
 
 /**
