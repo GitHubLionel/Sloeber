@@ -55,6 +55,9 @@ uint32_t last_time = millis();
 volatile Graphe_Data log_cumul;
 bool log_new_data = false;
 
+// Sauvegarde du log
+volatile SemaphoreHandle_t logSemaphore = NULL;
+
 // ********************************************************************************
 // Functions prototype
 // ********************************************************************************
@@ -159,8 +162,10 @@ void Get_Data(void)
 		// Pour le rafraichissement de la page Internet si connecté
 		log_new_data = true;
 
-		// Sauvegarde des données
-		append_data();
+		// Sauvegarde des données, à faire dans une task
+//		append_data();
+		if (logSemaphore != NULL)
+		  xSemaphoreGive(logSemaphore);
 	}
 
 //	if (countmessage < 20)
@@ -385,9 +390,8 @@ void append_energy(void)
 	File temp = Data_Partition->open(Energy_Filename, "a");
 	if (temp)
 	{
-		char date[7] = {0};
 		// Time, Econso, Esurplus, Eprod
-		sprintf(buffer, "%s", RTC_Local.getShortDate(date)); // Copie la date
+		RTC_Local.getShortDate(buffer); // Copie la date
 		Fast_Set_Decimal_Separator('.');
 		pbuffer = Fast_Pos_Buffer(buffer, "\t", Buffer_End, &len); // On se positionne en fin de chaine
 		pbuffer = Fast_Printf(pbuffer, 2, "\t", Buffer_End, false,
@@ -424,6 +428,25 @@ void onDaychange(uint8_t year, uint8_t month, uint8_t day)
 		char Day_Name[20] = {0};
 		sprintf(Day_Name, "/%02d-%02d-%02d.csv", year, month, day);
 		Data_Partition->rename(CSV_Filename, String(Day_Name));
+	}
+}
+
+// ********************************************************************************
+// Task function to save the log
+// ********************************************************************************
+
+void Log_Data_Task_code(void *parameter)
+{
+	BEGIN_TASK_CODE("LOG_DATA_Task");
+
+	// Create the semaphore
+	logSemaphore = xSemaphoreCreateBinary();
+
+	for (EVER)
+	{
+		if (xSemaphoreTake(logSemaphore, 0) == pdTRUE)
+			append_data();
+		END_TASK_CODE();
 	}
 }
 

@@ -112,9 +112,9 @@
 			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp32/hardware/esp32/3.0.3/libraries/Wire</locationURI>
 		</link>
 		<link>
-			<name>user_lib/ADC_Utils</name>
+			<name>user_lib/ADC_utils</name>
 			<type>2</type>
-			<locationURI>USER_LIB/ADC_Utils</locationURI>
+			<locationURI>USER_LIB/ADC_utils</locationURI>
 		</link>
 		<link>
 			<name>user_lib/CIRRUS</name>
@@ -165,11 +165,6 @@
 			<name>user_lib/SH1107</name>
 			<type>2</type>
 			<locationURI>USER_LIB/SH1107</locationURI>
-		</link>
-		<link>
-			<name>user_lib/SSD1327</name>
-			<type>2</type>
-			<locationURI>USER_LIB/SSD1327</locationURI>
 		</link>
 		<link>
 			<name>user_lib/SSR</name>

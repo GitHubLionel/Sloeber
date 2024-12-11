@@ -40,12 +40,12 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Debug_utils}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/RTCLocal}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Server_utils}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/SSD1327}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/SH1107}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/DS18B20}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/CIRRUS}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/TeleInfo}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/SSR}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/ADC_utils}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Keyboard}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Relay}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Task_utils}&quot;"/>
@@ -78,12 +78,12 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Debug_utils}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/RTCLocal}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Server_utils}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/SSD1327}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/SH1107}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/DS18B20}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/CIRRUS}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/TeleInfo}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/SSR}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/ADC_utils}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Keyboard}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Relay}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Task_utils}&quot;"/>
@@ -115,12 +115,12 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Debug_utils}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/RTCLocal}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Server_utils}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/SSD1327}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/SH1107}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/DS18B20}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/CIRRUS}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/TeleInfo}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/SSR}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/ADC_utils}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Keyboard}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Relay}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Task_utils}&quot;"/>
@@ -166,7 +166,7 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="user_lib/ADC_Utils/ADC_Utils.cpp|libraries/ESP32TimerInterrupt/utils|libraries/ESP32TimerInterrupt/platformio|libraries/FreeRTOS/doc|user_lib/CIRRUS/Simple_Get_Data.cpp|libraries/TimerInterrupt_Generic/src_h|libraries/TimerInterrupt_Generic/src_cpp|libraries/TimerInterrupt_Generic/platformio|libraries/TimerInterrupt_Generic/Packages_Patches|libraries/TimerInterrupt_Generic/LibraryPatches|libraries/TimerInterrupt/platformio|libraries/OneWire/util|libraries/OneWire/docs|libraries/LittleFS/lib|libraries/?*/**/?xamples/**|libraries/?*/**/?xtras/**|libraries/?*/**/test*/**|libraries/?*/**/third-party/**|libraries/**/._*|libraries/?*/utility/*/*" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="libraries/ESP32TimerInterrupt/utils|libraries/ESP32TimerInterrupt/platformio|libraries/FreeRTOS/doc|user_lib/CIRRUS/Simple_Get_Data.cpp|libraries/TimerInterrupt_Generic/src_h|libraries/TimerInterrupt_Generic/src_cpp|libraries/TimerInterrupt_Generic/platformio|libraries/TimerInterrupt_Generic/Packages_Patches|libraries/TimerInterrupt_Generic/LibraryPatches|libraries/TimerInterrupt/platformio|libraries/OneWire/util|libraries/OneWire/docs|libraries/LittleFS/lib|libraries/?*/**/?xamples/**|libraries/?*/**/?xtras/**|libraries/?*/**/test*/**|libraries/?*/**/third-party/**|libraries/**/._*|libraries/?*/utility/*/*" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>

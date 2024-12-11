@@ -19,7 +19,7 @@
 #include "Keyboard.h"
 #include "Relay.h"
 #include "iniFiles.h"
-#include "ADC_Utils.h"
+#include "ADC_utils.h"
 #include "Fast_Printf.h"
 
 /**
@@ -244,6 +244,7 @@ uint16_t interval[] = {1250, 950, 650, 250};
 #endif
 
 bool ADC_OK = false;
+bool Test_Zero = false;
 
 // ********************************************************************************
 // Définition Fichier ini
@@ -457,7 +458,6 @@ void setup()
 	if (IHM_Initialization(I2C_ADDRESS, false))
 		print_debug(F("Display Ok"));
 	IHM_TimeOut_Display(OLED_TIMEOUT);
-	Display_offset_line = 0;
 
 	// **** 4- initialisation DS18B20 ****
 #ifdef USE_DS
@@ -524,7 +524,7 @@ void setup()
 
 	// **** 8- Initialisation Clavier, relais, ADC
 #ifdef USE_ADC
-	if ((ADC_OK = ADC_Initialize_OneShot({KEYBOARD_ADC_GPIO, GPIO_NUM_39})) == true) // @suppress("Invalid arguments")
+	if ((ADC_OK = ADC_Initialize_OneShot({KEYBOARD_ADC_GPIO, GPIO_NUM_39}, Test_Zero)) == true) // @suppress("Invalid arguments")
 	{
 		print_debug(F("ADC OK"));
 //		ADC_Begin();
@@ -600,7 +600,9 @@ void setup()
 #ifdef USE_KEYBOARD
 	TaskList.AddTask(KEYBOARD_DATA_TASK(true));
 #endif
+	TaskList.AddTask(LOG_DATA_TASK);  // Save log Task
 	TaskList.Create(USE_IDLE_TASK);
+	TaskList.InfoTask();
 #ifdef USE_ADC
 	if (ADC_OK)
 	{
@@ -768,17 +770,6 @@ void handleLastData(CB_SERVER_PARAM)
 	// Températures
 	pbuffer = Fast_Printf(pbuffer, 2, "#", Buffer_End, true,
 			{Current_Data.Cirrus_ch1.Temperature, temp1, temp2});
-//	pbuffer = Fast_Printf(pbuffer, Current_Data.Cirrus_ch1.Temperature, 2, "", "#", Buffer_End, &len);
-//	if (DS_Count > 0)
-//	{
-//		pbuffer = Fast_Printf(pbuffer, DS.get_Temperature(0), 2, "", "#", Buffer_End, &len);
-//		pbuffer = Fast_Printf(pbuffer, DS.get_Temperature(1), 2, "", "#", Buffer_End, &len);
-//	}
-//	else
-//		{
-//			pbuffer = Fast_Printf(pbuffer, 0.0, 2, "", "#", Buffer_End, &len);
-//			pbuffer = Fast_Printf(pbuffer, 0.0, 2, "", "#", Buffer_End, &len);
-//		}
 
 	// Talema
 	pbuffer = Fast_Printf(pbuffer, Current_Data.Talema_Power, 2, "", "#", Buffer_End, &len);

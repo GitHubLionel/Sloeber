@@ -27,6 +27,7 @@
   <div style="margin-bottom: 44px;">
     <button class="tablink" onclick="openPage('m_Data', this, 'green')" id="defaultOpen">Données</button>
     <button class="tablink" onclick="openPage('m_Graphe', this, '#FFCB00')">Graphiques</button>
+    <button class="tablink" onclick="openPage('m_VoltageTemp', this, '#1FCB00')">Tension, Temp.</button>
     <button class="tablink" onclick="openPage('m_Energy', this, '#C6410D')">Energie</button>
     <button class="tablink" onclick="openPage('m_SSR', this, '#0ee6f0')">SSR, Relais</button>
     <button class="tablink" onclick="openPage('m_Config', this, '#cd11e8')">Config</button>
@@ -140,7 +141,22 @@
     </div>
 
   </div>
+  
+  <div id="m_VoltageTemp" class="tabcontent">
+    <div class="divSplitter">
+      <div class="divDown">
 
+        <div class="padCanvas">
+          <canvas id="can_mean_voltage"></canvas>
+          <div class="btnZoom">
+            <button class="myButton" onclick="undoZoom('can_mean_voltage')">Dézoomer</button>
+          </div>         
+        </div>          
+      </div>
+    </div>
+
+  </div>
+  
   <div id="m_Energy" class="tabcontent">
     <div class="divSplitter">
       <div class="divUp">
@@ -213,7 +229,14 @@
 
     <div class="div_space">
       <button class="myButton" id="toggle_SSR" onclick="doToggle('SSR')">Toggle SSR</button>
-      <label id="label_SSR" for="toggle_SSR">SSR OFF</label>
+      <label id="label_SSR" for="toggle_SSR">SSR OFF</label><br>
+      <label id="label_CEPhase" for="CEPhase">Phase du chauffe-eau : </label>
+      <select name="CEPhase" id="CEPhase" size="1" onchange="">
+        <option value="1">Phase 1</option>
+        <option value="2">Phase 2</option>
+        <option value="3">Phase 3</option>
+      </select>
+      <button class="myButton" onclick="sendCEPhase()">Mettre à jour</button>
     </div>
 
     <div class="div_space">

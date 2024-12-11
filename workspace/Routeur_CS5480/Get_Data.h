@@ -42,6 +42,10 @@ typedef struct
 		float Talema_Energy = 0.0;
 } Data_Struct;
 
+// Task to save log every 10 s
+#define LOG_DATA_TASK	{true, "LOG_DATA_Task", 4096, 3, 10000, Core1, Log_Data_Task_code}
+void Log_Data_Task_code(void *parameter);
+
 void Get_Data(void);
 uint8_t Update_IHM(const char *first_text, const char *last_text, bool display = true);
 bool Get_Last_Data(float *Energy, float *Surplus, float *Prod);
