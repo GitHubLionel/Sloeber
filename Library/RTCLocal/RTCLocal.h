@@ -33,7 +33,7 @@ typedef void (*RTC_minutechange_cb)(uint16_t minuteOfTheDay);
 
 // To use RTCLocal in a task
 #ifdef RTC_USE_TASK
-#define RTC_DATA_TASK	{true, "RTC_Task", 4096, 10, 100, CoreAny, RTC_Task_code}
+#define RTC_DATA_TASK	{true, "RTC_Task", 4096, ESP_TASK_PRIO_MAX / 2, 10, CoreAny, RTC_Task_code}
 void RTC_Task_code(void *parameter);
 #else
 #define RTC_DATA_TASK	{}
