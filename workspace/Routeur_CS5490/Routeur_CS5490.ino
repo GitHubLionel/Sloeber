@@ -278,7 +278,6 @@ void setup()
 	if (IHM_Initialization(I2C_ADDRESS, false))
 		print_debug(F("Display Ok"));
 	IHM_TimeOut_Display(OLED_TIMEOUT);
-	Display_offset_line = 1;
 
 	// **** 4- initialisation DS18B20 ****
 #ifdef USE_DS
@@ -448,10 +447,10 @@ void loop()
 #endif
 
 		if (Cirrus_OK)
-			line = Update_IHM(RTC_Local.the_time, "", false);
+			line = Update_IHM(RTC_Local.the_time(), "", false);
 		else
 		{
-			IHM_Print(line++, RTC_Local.the_time);
+			IHM_Print(line++, RTC_Local.the_time());
 			UART_Message = "Cirrus failled";
 		}
 
@@ -580,7 +579,7 @@ void handleLastData(void)
 {
 	float Energy, Surplus;
 	bool graphe;
-	String message = String(RTC_Local.the_time);
+	String message = String(RTC_Local.the_time());
 	message += '#';
 	graphe = Get_Last_Data(&Energy, &Surplus);
 	message += (String) Current_Data.Cirrus_ch1.ActivePower + '#';
