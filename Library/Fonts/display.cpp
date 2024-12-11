@@ -21,7 +21,6 @@
 #endif
 #endif
 
-volatile uint8_t Display_offset_line = 0;
 uint32_t Oled_timeout = 600; // 10 minutes
 int Oled_timeout_count = 600; // 10 minutes
 bool TurnOff = false;
@@ -34,7 +33,6 @@ void __attribute__((weak)) PrintTerminal(const char *mess)
 	// Just to avoid compile warning
 	(void) mess;
 }
-
 
 /**
  * Initialization of the display
@@ -134,7 +132,6 @@ void IHM_Print(uint8_t line, const char *text, bool update_screen)
   // Si l'écran est éteint, on ne fait rien
   if (TurnOff)
   	return;
-  line += Display_offset_line;
 #ifdef USE_LCD
   LCD_I2C_Str(line+1, 1 ,text, true);
 #endif
@@ -150,7 +147,7 @@ void IHM_Print(uint8_t line, const char *text, bool update_screen)
   	SSD1327_Display();
 #endif
 #ifdef OLED_SH1107
-	SH1107_WriteString(0, 0, line, (char*) text, FONT_SMALL, 0);
+	SH1107_WriteString(0, 0, line, (char*) text, FONT_SMALL, 0, 0);
   if (update_screen)
   	SH1107_DumpBuffer();
 #endif
@@ -273,36 +270,48 @@ void IHM_DisplayOff(void)
 
 /**
  * Display the IPAddress
+ * if waitAndClear_ms <> 0 (default 0), wait ms then clear screen
  */
-void IHM_IPAddress(const char *ip)
+void IHM_IPAddress(const char *ip, uint16_t waitAndClear_ms)
 {
 #ifdef USE_LCD
   LCD_I2C_Str(1, 1 ,ip, true);
+  (void) waitAndClear_ms;
 #endif
 #ifdef OLED_SSD1306
   SSD1306_Clear_Screen();
 	SSD1306_GotoXY(0, 0);
 	SSD1306_PutString(ip, Font_7x10, SSD1306_COLOR_WHITE);
 	SSD1306_UpdateScreen();
-//	delay(2000);
-//	SSD1306_Clear_Screen();
+	if (waitAndClear_ms > 0)
+	{
+		delay(waitAndClear_ms);
+		SSD1306_Clear_Screen();
+	}
 #endif
 #ifdef OLED_SSD1327
 	SSD1327_String({0, 12}, ip, &Font12, FONT_BACKGROUND, SSD1327_WHITE);
 	SSD1327_DisplayUpdated();
-//	delay(2000);
-//	SSD1327_Clear(SSD1327_BACKGROUND);
-//	SSD1327_Display();
+	if (waitAndClear_ms > 0)
+	{
+		delay(waitAndClear_ms);
+		SSD1327_Clear(SSD1327_BACKGROUND);
+		SSD1327_Display();
+	}
 #endif
 #ifdef OLED_SH1107
 	SH1107_Fill(0x0, 0);
 	SH1107_WriteString(0, 0, 2, (char*) ip, FONT_SMALL, 0);
 	SH1107_DumpBuffer();
-//	delay(2000);
-//  SH1107_Fill(0x0, 1);
+	if (waitAndClear_ms > 0)
+	{
+		delay(waitAndClear_ms);
+		SH1107_Fill(0x0, 1);
+	}
 #endif
 #ifdef DEFAULT_OUTPUT
 	PrintTerminal(ip);
+	(void) waitAndClear_ms;
 #endif
 }
 

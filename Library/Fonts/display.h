@@ -56,9 +56,6 @@
 #define OLED_DEFINED
 #endif
 
-// Offset for the first line of display
-extern volatile uint8_t Display_offset_line;
-
 // Print terminal to be defined elsewhere
 extern void PrintTerminal(const char *text);
 
@@ -73,4 +70,4 @@ void IHM_ToggleDisplay(void);
 void IHM_CheckTurnOff(void);
 void IHM_DisplayOn(void);
 void IHM_DisplayOff(void);
-void IHM_IPAddress(const char *ip);
+void IHM_IPAddress(const char *ip, uint16_t waitAndClear_ms = 0);
