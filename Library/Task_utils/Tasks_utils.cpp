@@ -320,6 +320,25 @@ TaskHandle_t TaskList_c::GetTaskHandle(const String &name)
 		return NULL;
 }
 
+/**
+ * Print info (priority, sleep, n° core, size) of each tasks
+ */
+void TaskList_c::InfoTask(void)
+{
+	String info = "--- Task Info ---\r\n";
+	for (int i = 0; i < Tasks.size(); i++)
+	{
+		TaskData_t *td = &Tasks[i];
+		if (td->Handle != NULL)
+			info += String(td->Name) + ":" + " Priority = " + String(td->Priority) +
+				", Sleep_ms = " + String(td->Sleep_ms) +
+				", Core = " + String(td->Core) +
+				", Size = " + String(td->StackSize) + "\r\n";
+	}
+
+	print_debug(info, false);
+}
+
 // ********************************************************************************
 // The purpose of this section is to evaluate the memory used by each task
 // ********************************************************************************

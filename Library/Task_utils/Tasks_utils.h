@@ -163,6 +163,8 @@ class TaskList_c
 		String GetIdleStr(void) const;
 		String GetMemoryStr(void) const;
 
+		void InfoTask(void);
+
 		// Put in public to have access with the global instance
 		void Task_Memory_code(void *parameter);
 
