@@ -795,7 +795,7 @@ int SH1107_SetPixel(int x, int y, unsigned char ucColor, int bRender)
 	unsigned char uc, ucOld;
 
 	i = ((y >> 3) * 128) + x;
-	if (i < 0 || i > 1023) // off the screen
+	if (i < 0 || i > BUFFER_SIZE - 1) // off the screen
 		return -1;
 	SH1107_SetPosition(x, y >> 3, bRender);
 
@@ -1319,35 +1319,20 @@ void SH1107_DumpBuffer(uint8_t *pBuffer)
 	if (!DisplayIsOn)
 		return;
 
-#ifdef ROTATED_90
-	static uint8_t saveBuffer[BUFFER_SIZE];  // rotated buffer
-	if (pBuffer != NULL)
-	{
-		SH1107_Rotate90(pBuffer);
-		pBuffer = rotBuffer;
-	}
-	else
-	{
-		if (oled_1107.ucScreen != NULL)
-		{
-			mempcpy(saveBuffer, oled_1107.ucScreen, BUFFER_SIZE);
-			SH1107_Rotate90(saveBuffer);
-			pBuffer = rotBuffer;
-		}
-	}
-#else
 	if (pBuffer == NULL) // dump the internal buffer if none is given
 		pBuffer = oled_1107.ucScreen;
-#endif
 
 	if (pBuffer == NULL)
 		return; // no backbuffer and no provided buffer
 
+#ifdef ROTATED_90
+	SH1107_Rotate90(pBuffer);
+	pBuffer = rotBuffer;
+#endif
+
 	const uint8_t step = 64; // must be a divisor of 128
 
 	uint8_t iLines = oled_1107.oled_y >> 3;
-	int lastScreenOffset = oled_1107.iScreenOffset;
-
 	for (uint8_t y = 0; y < iLines; y++)
 	{
 		SH1107_SetPosition(0, y, 1);
@@ -1357,8 +1342,6 @@ void SH1107_DumpBuffer(uint8_t *pBuffer)
 			pBuffer += step;
 		} // for x
 	} // for y
-	// Restaure ScreenOffset
-	oled_1107.iScreenOffset = lastScreenOffset;
 } /* SH1107_DumpBuffer() */
 
 //
