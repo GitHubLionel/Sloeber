@@ -89,12 +89,14 @@ void SSD1327_WriteReg(uint8_t command)
 	Wire.endTransmission();
 }
 
+// count should be < I2C_BUFFER_LENGTH
 void SSD1327_WriteData(uint8_t *data, uint16_t count)
 {
 	Wire.beginTransmission(SSD1327_I2C_ADDR);
 	Wire.write(SSD1327_DATA);
-	while (count-- > 0)
-		Wire.write(*data++);
+	Wire.write(data, count);
+//	while (count-- > 0)
+//		Wire.write(*data++);
 	Wire.endTransmission();
 }
 
