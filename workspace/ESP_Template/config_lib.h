@@ -54,7 +54,7 @@
  * RTC define : RTCLocal library
  * By default, global instance RTC_Local is created
  **********************************************************/
-#define USE_NTP_SERVER	2 // 1 or 2 for summer time
+#define USE_NTP_SERVER	1 // 1 or 2 for summer time
 //#define RTC_USE_CORRECTION
 
 /**********************************************************
@@ -116,8 +116,9 @@
 //#define KEYBOARD_ADC_GPIO	GPIO_NUM_36
 //#define DEBOUNCING_MS	200
 //#define DEBOUNCING_US	200000
-//#define ADC_USE_ARDUINO  // To use Arduino function
-//#define ADC_USE_TASK     // To use task in place of timer in oneshot mode or callback in continuous mode
+//#define KEYBOARD_WITH_ADC // Use ADC library
+//#define ADC_USE_ARDUINO   // To use Arduino function
+//#define ADC_USE_TASK      // To use task in place of timer in oneshot mode or callback in continuous mode
 
 /**********************************************************
  * Cirrus define
