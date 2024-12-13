@@ -154,7 +154,7 @@ void DS18B20_Task_code(void *parameter)
 	for (EVER)
 	{
 		DS.check_dallas();
-		END_TASK_CODE();
+		END_TASK_CODE(false);
 	}
 }
 #endif

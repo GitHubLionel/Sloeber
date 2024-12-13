@@ -580,7 +580,7 @@ void UART_Task_code(void *parameter)
 			if (! BasicAnalyseMessage())
 				UserAnalyseMessage();
 		}
-		END_TASK_CODE();
+		END_TASK_CODE(false);
 	}
 }
 #endif

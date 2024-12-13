@@ -522,7 +522,7 @@ void RTC_Task_code(void *parameter)
 	for (EVER)
 	{
 		RTC_Local.update();
-		END_TASK_CODE_UNTIL();
+		END_TASK_CODE_UNTIL(false);
 	}
 }
 #endif

@@ -639,7 +639,7 @@ void TELEINFO_Task_code(void *parameter)
 	for (EVER)
 	{
 		TI.Process();
-		END_TASK_CODE();
+		END_TASK_CODE(false);
 	}
 }
 #endif

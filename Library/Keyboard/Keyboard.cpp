@@ -441,7 +441,7 @@ void KEYBOARD_Task_code(void *parameter)
 		{
 			Check_Btn_Clicked(esp_timer_get_time());
 		}
-		END_TASK_CODE();
+		END_TASK_CODE(false);
 	}
 }
 #endif

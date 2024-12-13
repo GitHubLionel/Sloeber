@@ -137,7 +137,9 @@ bool TaskList_c::Create(bool with_idle_task)
 }
 
 /**
- * Add task to the task list
+ * Add task to the task list.
+ * This is just the parameters of the Task, the task itself is not created.
+ * The task would be created with the Create function (create all the tasks) or with CreateTask function.
  * BEWARE: if the task can self delete, then do not forget to initialize the Handle of the task data to NULL
  * in the code of the function.
  * Example:
@@ -154,7 +156,7 @@ bool TaskList_c::Create(bool with_idle_task)
 			 td->Handle = NULL;
 		 }
 		 else
-		 	 END_TASK_CODE();
+		 	 END_TASK_CODE(false);
 	 }
  }
  */
@@ -173,9 +175,11 @@ void TaskList_c::DeleteTask(const String &name)
 	TaskData_t *td = GetTaskByName(name);
 	if ((td != NULL) && (td->Handle != NULL))
 	{
-		vTaskSuspend(td->Handle);
+		if (!td->IsSuspended)
+			vTaskSuspend(td->Handle);
 		vTaskDelete(td->Handle);
 		td->Handle = NULL;
+		td->IsSuspended = false;
 	}
 }
 
@@ -193,9 +197,11 @@ bool TaskList_c::CreateTask(const String &name, bool force, void *param)
 		// If task exist and force = true, then delete the task
 		if ((td->Handle != NULL) && force)
 		{
-			vTaskSuspend(td->Handle);
+			if (!td->IsSuspended)
+				vTaskSuspend(td->Handle);
 			vTaskDelete(td->Handle);
 			td->Handle = NULL;
+			td->IsSuspended = false;
 		}
 
 		// Create the task
@@ -239,7 +245,11 @@ void TaskList_c::SuspendTask(const String &name)
 	TaskData_t *td = GetTaskByName(name);
 	if (td != NULL)
 	{
-		vTaskSuspend(td->Handle);
+		if (!td->IsSuspended)
+		{
+			td->IsSuspended = true;
+			vTaskSuspend(td->Handle);
+		}
 	}
 }
 
@@ -251,12 +261,17 @@ void TaskList_c::ResumeTask(const String &name)
 	TaskData_t *td = GetTaskByName(name);
 	if (td != NULL)
 	{
-		vTaskResume(td->Handle);
+		if (td->IsSuspended)
+		{
+			td->IsSuspended = false;
+			vTaskResume(td->Handle);
+		}
 	}
 }
 
 /**
  * Change the sleep time of a task and reload (default false)
+ * If the task is running, stop it before.
  */
 void TaskList_c::ChangeSleepTask(const String &name, int sleep_ms, bool reload)
 {
@@ -276,6 +291,18 @@ bool TaskList_c::IsTaskRunning(const String &name)
 {
 	TaskData_t *td = GetTaskByName(name);
 	return ((td != NULL) && (td->Handle != NULL));
+}
+
+/**
+ * Return true if the task exist and is suspended
+ */
+bool TaskList_c::IsTaskSuspended(const String &name)
+{
+	TaskData_t *td = GetTaskByName(name);
+	if ((td != NULL) && (td->Handle != NULL))
+		return td->IsSuspended;
+	else
+		return false;
 }
 
 /**
@@ -331,9 +358,9 @@ void TaskList_c::InfoTask(void)
 		TaskData_t *td = &Tasks[i];
 		if (td->Handle != NULL)
 			info += String(td->Name) + ":" + " Priority = " + String(td->Priority) +
-				", Sleep_ms = " + String(td->Sleep_ms) +
+				", Sleep_ms = "	+ String(td->Sleep_ms) +
 				", Core = " + String(td->Core) +
-				", Size = " + String(td->StackSize) + "\r\n";
+				", Size = "	+ String(td->StackSize) + "\r\n";
 	}
 
 	print_debug(info, false);

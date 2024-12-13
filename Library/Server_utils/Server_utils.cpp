@@ -770,7 +770,7 @@ void KEEP_ALIVE_Task_code(void *parameter)
 	for (EVER)
 	{
 		myServer.KeepAlive();
-		END_TASK_CODE_UNTIL();
+		END_TASK_CODE_UNTIL(false);
 	}
 }
 #endif

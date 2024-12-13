@@ -315,7 +315,7 @@ void RELAY_Task_code(void *parameter)
 #else
 		Relay.updateTime();
 #endif
-		END_TASK_CODE();
+		END_TASK_CODE(false);
 	}
 }
 #endif

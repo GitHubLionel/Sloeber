@@ -392,7 +392,7 @@ void CIRRUS_Task_code(void *parameter)
 	for (EVER)
 	{
 		Get_Data();
-		END_TASK_CODE_UNTIL();
+		END_TASK_CODE_UNTIL(false);
 	}
 }
 #endif

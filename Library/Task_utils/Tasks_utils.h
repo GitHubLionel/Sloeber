@@ -84,11 +84,15 @@
 		int sleep = pdMS_TO_TICKS(td->Sleep_ms);
 
 #if RUN_TASK_MEMORY == true
-#define END_TASK_CODE()	{ td->Memory = uxTaskGetStackHighWaterMark(NULL); \
+#define END_TASK_CODE(suspend)	{ td->Memory = uxTaskGetStackHighWaterMark(NULL); \
 		taskYIELD(); \
-		if (sleep != 0) vTaskDelay(sleep); }
+		if (sleep != 0) vTaskDelay(sleep); \
+		if ((suspend) && !td->IsSuspended) \
+			{ td->IsSuspended = true; vTaskSuspend(td->Handle);}}
 #else
-#define END_TASK_CODE()	taskYIELD(); if (sleep != 0) vTaskDelay(sleep);
+#define END_TASK_CODE(suspend)	{ taskYIELD(); if (sleep != 0) vTaskDelay(sleep); \
+		if ((suspend) && !td->IsSuspended) \
+			{ td->IsSuspended = true; vTaskSuspend(td->Handle);}}
 #endif
 
 // The same couple of define to use with DelayUntil
@@ -97,10 +101,14 @@
 		TickType_t xLastWakeTime;
 
 #if RUN_TASK_MEMORY == true
-#define END_TASK_CODE_UNTIL()	{ td->Memory = uxTaskGetStackHighWaterMark(NULL); \
-		xTaskDelayUntil(&xLastWakeTime, sleep); }
+#define END_TASK_CODE_UNTIL(suspend)	{ td->Memory = uxTaskGetStackHighWaterMark(NULL); \
+		xTaskDelayUntil(&xLastWakeTime, sleep); \
+		if ((suspend) && !td->IsSuspended) \
+			{ td->IsSuspended = true; vTaskSuspend(td->Handle);}}
 #else
-#define END_TASK_CODE_UNTIL()	xTaskDelayUntil(&xLastWakeTime, sleep);
+#define END_TASK_CODE_UNTIL(suspend)	{ xTaskDelayUntil(&xLastWakeTime, sleep); \
+		if ((suspend) && !td->IsSuspended) \
+			{ td->IsSuspended = true; vTaskSuspend(td->Handle);}}
 #endif
 
 // Core used by a task
@@ -134,6 +142,7 @@ typedef struct
 		int Memory = 0;                          // Task stack staying memory (used by the "Memory" task)
 		void *UserParam = NULL;						  		 // A parameter that can be used in the code function
 		TaskHandle_t Handle = NULL;							 // The handle of the task
+		bool IsSuspended = false;                // Is the task suspended ?
 } TaskData_t;
 
 /**
@@ -155,6 +164,7 @@ class TaskList_c
 		void ResumeTask(const String &name);
 		void ChangeSleepTask(const String &name, int sleep_ms, bool reload = false);
 		bool IsTaskRunning(const String &name);
+		bool IsTaskSuspended(const String &name);
 
 		TaskData_t* GetTaskByName(const String &name);
 		int GetTaskSleep(const String &name, bool to_ticks = true);
