@@ -276,7 +276,7 @@ void Display_Task_code(void *parameter)
 #ifdef CIRRUS_CALIBRATION
 		if (Calibration)
 		{
-			END_TASK_CODE();
+			END_TASK_CODE(false);
 			continue;
 		}
 #endif
@@ -328,7 +328,9 @@ void Display_Task_code(void *parameter)
 
 		// Test extinction de l'écran
 		IHM_CheckTurnOff();
-		END_TASK_CODE();
+
+		// End task
+		END_TASK_CODE(IHM_IsDisplayOff());
 	}
 }
 #define DISPLAY_DATA_TASK	{true, "DISPLAY_Task", 4096, 4, 1000, Core0, Display_Task_code}
@@ -345,6 +347,7 @@ void UserKeyboardAction(Btn_Action Btn_Clicked, uint32_t count)
 			if (count == 1)
 			{
 				IHM_DisplayOn();
+				TaskList.ResumeTask("DISPLAY_Task");
 				Extra_str = myServer.IPaddress();
 				count_Extra_Display = EXTRA_TIMEOUT;
 			}
@@ -365,6 +368,7 @@ void UserKeyboardAction(Btn_Action Btn_Clicked, uint32_t count)
 			if (count == 1)
 			{
 				IHM_DisplayOn();
+				TaskList.ResumeTask("DISPLAY_Task");
 				Relay.setState(0, !Relay.getState(0));
 				if (Relay.getState(0))
 					Extra_str = "Relais ON";
@@ -378,7 +382,12 @@ void UserKeyboardAction(Btn_Action Btn_Clicked, uint32_t count)
 		case Btn_K3: // Bouton du haut : toggle display
 		{
 			if (count == 1)
-				IHM_ToggleDisplay();
+			{
+				if (IHM_ToggleDisplay())
+					TaskList.ResumeTask("DISPLAY_Task");
+				else
+					TaskList.SuspendTask("DISPLAY_Task");
+			}
 			break;
 		}
 
@@ -801,7 +810,10 @@ void handleOperation(CB_SERVER_PARAM)
 #if defined(OLED_DEFINED)
 	if (pserver->hasArg("Toggle_Oled"))
 	{
-		IHM_ToggleDisplay();
+		if (IHM_ToggleDisplay())
+			TaskList.ResumeTask("DISPLAY_Task");
+		else
+			TaskList.SuspendTask("DISPLAY_Task");
 	}
 #endif
 

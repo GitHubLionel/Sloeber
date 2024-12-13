@@ -483,7 +483,7 @@ void Log_Data_Task_code(void *parameter)
 	{
 		if (xSemaphoreTake(logSemaphore, 0) == pdTRUE)
 			append_data();
-		END_TASK_CODE();
+		END_TASK_CODE(false);
 	}
 }
 
