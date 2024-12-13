@@ -453,10 +453,12 @@ void SSD1327_OFF(void)
 
 /**
  * Toggle Display On <-> Off
+ * return true if Display is On
  */
-void SSD1327_ToggleOnOff(void)
+bool SSD1327_ToggleOnOff(void)
 {
 	(DisplayIsOn) ? SSD1327_OFF() : SSD1327_ON();
+	return DisplayIsOn;
 }
 
 // ********************************************************************************

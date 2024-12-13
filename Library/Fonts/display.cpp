@@ -205,20 +205,22 @@ void IHM_TimeOut_Display(uint32_t time)
 
 /**
  * toggle On/Off the display
+ * return true if Display is On
  */
-void IHM_ToggleDisplay(void)
+bool IHM_ToggleDisplay(void)
 {
-#ifdef OLED_SSD1306
-	SSD1306_ToggleOnOff();
-#endif
-#ifdef OLED_SSD1327
-	SSD1327_ToggleOnOff();
-#endif
-#ifdef OLED_SH1107
-	SH1107_ToggleOnOff();
-#endif
 	// Re-init timeout
 	IHM_TimeOut_Display(Oled_timeout);
+
+#ifdef OLED_SSD1306
+	return SSD1306_ToggleOnOff();
+#endif
+#ifdef OLED_SSD1327
+	return SSD1327_ToggleOnOff();
+#endif
+#ifdef OLED_SH1107
+	return SH1107_ToggleOnOff();
+#endif
 }
 
 /**

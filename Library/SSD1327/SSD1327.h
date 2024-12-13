@@ -158,7 +158,7 @@ void SSD1327_Display(void);
 void SSD1327_DisplayWindow(TPoint p_start, TPoint p_end);
 void SSD1327_ON(void);
 void SSD1327_OFF(void);
-void SSD1327_ToggleOnOff(void);
+bool SSD1327_ToggleOnOff(void);
 
 /********************************************************************************
  function:	GUI part

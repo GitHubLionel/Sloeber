@@ -66,7 +66,7 @@ void IHM_Print(uint8_t line, const char *text, bool update_screen = false);
 void IHM_Display(void);
 void IHM_Clear(bool refresh = false);
 void IHM_TimeOut_Display(uint32_t time);
-void IHM_ToggleDisplay(void);
+bool IHM_ToggleDisplay(void);
 void IHM_CheckTurnOff(void);
 void IHM_DisplayOn(void);
 void IHM_DisplayOff(void);

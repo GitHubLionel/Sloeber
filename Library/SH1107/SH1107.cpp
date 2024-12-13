@@ -1915,10 +1915,12 @@ void SH1107_OFF(void)
 
 /**
  * Toggle Display On <-> Off
+ * return true if Display is On
  */
-void SH1107_ToggleOnOff(void)
+bool SH1107_ToggleOnOff(void)
 {
 	(DisplayIsOn) ? SH1107_OFF() : SH1107_ON();
+	return DisplayIsOn;
 }
 
 // ********************************************************************************

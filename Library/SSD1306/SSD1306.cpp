@@ -63,8 +63,9 @@ void SSD1306_WRITEDATA(uint8_t *data, uint16_t count)
 {
 	Wire.beginTransmission(SSD1306_I2C_ADDR);
 	Wire.write(SSD1306_DATA);
-	while (count-- > 0)
-		Wire.write(*data++);
+	Wire.write(data, count);
+//	while (count-- > 0)
+//		Wire.write(*data++);
 	Wire.endTransmission();
 }
 
@@ -691,17 +692,12 @@ void SSD1306_OFF(void)
 
 /**
  * Toggle display
+ * return true if Display is On
  */
-void SSD1306_ToggleOnOff(void)
+bool SSD1306_ToggleOnOff(void)
 {
-	if (DisplayIsOn)
-	{
-		SSD1306_OFF();
-	}
-	else
-	{
-		SSD1306_ON();
-	}
+	(DisplayIsOn) ? SSD1306_OFF() : SSD1306_ON();
+	return DisplayIsOn;
 }
 
 // ********************************************************************************

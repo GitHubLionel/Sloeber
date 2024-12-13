@@ -104,7 +104,7 @@ void SH1107_Power(uint8_t bOn);
 //
 void SH1107_ON(void);
 void SH1107_OFF(void);
-void SH1107_ToggleOnOff(void);
+bool SH1107_ToggleOnOff(void);
 
 //
 // Sets the brightness (0=off, 255=brightest)

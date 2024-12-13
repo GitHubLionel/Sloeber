@@ -284,5 +284,5 @@ void SSD1306_OFF(void);
  * @param  None
  * @retval None
  */
-void SSD1306_ToggleOnOff(void);
+bool SSD1306_ToggleOnOff(void);
 
