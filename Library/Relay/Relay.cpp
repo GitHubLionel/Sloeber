@@ -24,6 +24,7 @@ Relay_Class::Relay_Class()
 	currentTime = -1;
 	idTime = -1;
 	isTimeInitialized = false;
+	relaisOnCount = 0;
 }
 
 /**
@@ -49,6 +50,10 @@ Relay_Class::~Relay_Class()
 // Relay_Class public functions
 // ********************************************************************************
 
+/**
+ * Add relay to the list
+ * Relay is initialized off
+ */
 void Relay_Class::add(uint8_t gpio)
 {
 	Relay_typedef relay;
@@ -97,13 +102,21 @@ void Relay_Class::setState(uint8_t idRelay, bool state)
 
 	if (state)
 	{
-		_relay[idRelay].state = true;
-		digitalWrite(_relay[idRelay].gpio, HIGH);
+		if (!_relay[idRelay].state)
+		{
+			_relay[idRelay].state = true;
+			digitalWrite(_relay[idRelay].gpio, HIGH);
+			relaisOnCount++;
+		}
 	}
 	else
 	{
-		_relay[idRelay].state = false;
-		digitalWrite(_relay[idRelay].gpio, LOW);
+		if (_relay[idRelay].state)
+		{
+			_relay[idRelay].state = false;
+			digitalWrite(_relay[idRelay].gpio, LOW);
+			relaisOnCount--;
+		}
 	}
 }
 

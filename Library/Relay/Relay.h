@@ -65,6 +65,13 @@ class Relay_Class
 
 		void setState(uint8_t idRelay, bool state);
 		bool getState(uint8_t idRelay);
+		/**
+		 * Return true if one relay is ON, false if all relay are OFF
+		 */
+		bool IsOneRelayON(void)
+		{
+			return (relaisOnCount > 0);
+		}
 
 		bool hasAlarm(uint8_t idRelay);
 		void addAlarm(uint8_t idRelay, AlarmNumber num, int begin, int end);
@@ -77,6 +84,7 @@ class Relay_Class
 		int currentTime;
 		int idTime;
 		bool isTimeInitialized;
+		int relaisOnCount;
 	private:
 		void UpdateTimeList(void);
 		void UpdateNextAlarm(void);
