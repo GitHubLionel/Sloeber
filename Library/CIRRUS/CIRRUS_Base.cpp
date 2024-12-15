@@ -355,7 +355,7 @@ bool CIRRUS_Base::SetUARTBaud(uint32_t baud, bool change_UART)
 		return true;
 	}
 	else
-		print_str("CIRRUS Start Error");
+		print_str("CIRRUS_Base::SetUARTBaud Error");
 	return false;
 }
 

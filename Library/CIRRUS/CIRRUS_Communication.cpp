@@ -112,6 +112,9 @@ void CIRRUS_Communication::Register_To_FLASH(char id_cirrus)
 	CIRRUS_Calib_typedef calib;
 	CIRRUS_Config_typedef config;
 
+	if (CurrentCirrus == NULL)
+		return ;
+
 	CurrentCirrus->Get_Parameters(&calib, &config);
 	CIRRUS_Save_To_FLASH(id_cirrus, &calib, &config);
 }
@@ -333,6 +336,7 @@ CIRRUS_Base* CIRRUS_Communication::SelectCirrus(uint8_t position, CIRRUS_Channel
 	CurrentCirrus->print_int("New Selected : ", position);
 #endif
 
+	// We already are in the selected Cirrus, just update pointer
 	if (Selected == position)
 	{
 		CIRRUS_Base *cs = GetCirrus(position);
@@ -371,7 +375,7 @@ CIRRUS_Base* CIRRUS_Communication::SelectCirrus(uint8_t position, CIRRUS_Channel
 
 	CurrentCirrus = cs;
 
-	if (SelectChange_cb != NULL)
+	if ((CurrentCirrus != NULL) && (SelectChange_cb != NULL))
 		SelectChange_cb(*CurrentCirrus);
 
 	return cs;
@@ -402,7 +406,10 @@ uint8_t CIRRUS_Communication::GetNumberCirrus(void)
  */
 bool CIRRUS_Communication::Get_rms_data(float *uRMS, float *pRMS)
 {
-	return CurrentCirrus->get_rms_data(uRMS, pRMS);
+	if (CurrentCirrus != NULL)
+	  return CurrentCirrus->get_rms_data(uRMS, pRMS);
+	else
+		return false;
 }
 
 // ********************************************************************************
@@ -525,6 +532,9 @@ void CIRRUS_Interrupt_DO_Action_SSR()
  */
 void CIRRUS_Communication::COM_ChangeCirrus(uint8_t *Request)
 {
+	if (CurrentCirrus == NULL)
+		return;
+
 	// we must have more than one cirrus
 	if (GetNumberCirrus() > 1)
 	{
@@ -580,6 +590,9 @@ uint8_t CIRRUS_Communication::UART_Message_Cirrus(uint8_t *RxBuffer)
 	static uint8_t Cirrus_message[100];
 	uint8_t message[100] = {0};
 	uint16_t len = 0;
+
+	if (CurrentCirrus == NULL)
+		return 1;
 
 //  ************** Lecture/écriture registre du Cirrus ************************
 	if (Search_Balise(RxBuffer, "REG=", LOG_ETX_STR, (char*) message, &len) != NULL)
@@ -688,6 +701,9 @@ String CIRRUS_Communication::Handle_Common_Request(CS_Common_Request Common_Requ
 		CIRRUS_Calib_typedef *CS_Calib, CIRRUS_Config_typedef *CS_Config)
 {
 	char response[255] = {0};
+
+	if (CurrentCirrus == NULL)
+		return "ERROR: CurrentCirrus is NULL in Handle_Common_Request\n";
 
 	// Lock IHM
 	Do_Lock_IHM(true);
@@ -834,6 +850,7 @@ String CIRRUS_Communication::Handle_Common_Request(CS_Common_Request Common_Requ
 
 /**
  * Change Cirrus baud when use UART
+ * Note: If we have several Cirrus, we must change the speed of all.
  */
 bool CIRRUS_Communication::COM_ChangeBaud(uint8_t *Baud, char *response)
 {
@@ -854,7 +871,10 @@ bool CIRRUS_Communication::COM_ChangeBaud(uint8_t *Baud, char *response)
 		return true;
 	}
 
-	bool result = false;
+	if (CurrentCirrus == NULL)
+		return "ERROR: CurrentCirrus is NULL in COM_ChangeBaud\n";
+
+	bool result = true;
 	Do_Lock_IHM(true);
 	CSDelay(1);
 	if (nb == 1)
@@ -863,12 +883,16 @@ bool CIRRUS_Communication::COM_ChangeBaud(uint8_t *Baud, char *response)
 	}
 	else
 	{
-		SelectCirrus(0);
-		result = CurrentCirrus->SetUARTBaud(CirrusNewBaud, false);
-		SelectCirrus(1);
-		result &= CurrentCirrus->SetUARTBaud(CirrusNewBaud, true);
-		// Go back to first Cirrus
-		SelectCirrus(0);
+		// The current Cirrus used
+		uint8_t id = GetSelectedID();
+		for (uint8_t i = 0; i < nb; i++)
+		{
+			SelectCirrus(i);
+			result &= CurrentCirrus->SetUARTBaud(CirrusNewBaud, (i == nb - 1));
+		}
+
+		// Go back to the initial Cirrus selected
+		SelectCirrus(id);
 	}
 	Do_Lock_IHM(false);
 
@@ -905,6 +929,12 @@ char* CIRRUS_Communication::COM_Scale(uint8_t *Request, float *scale, char *resp
 {
 	char *pbuffer;
 	uint8_t len = strlen((const char*) Request);
+
+	if (CurrentCirrus == NULL)
+	{
+		strcpy(response, "ERROR: CurrentCirrus is NULL in COM_Scale\n");
+		return response;
+	}
 
 	// Récupération des SCALE
 	if (len == 0)
@@ -952,6 +982,12 @@ char* CIRRUS_Communication::COM_Register(uint8_t *Request, char *response)
 	if (CIRRUS_Command)
 	{
 		strcpy(response, "#Cirrus busy");
+		return response;
+	}
+
+	if (CurrentCirrus == NULL)
+	{
+		strcpy(response, "ERROR: CurrentCirrus is NULL in COM_Register\n");
 		return response;
 	}
 

@@ -23,20 +23,21 @@ extern CIRRUS_Communication CS_Com;
 
 // Current cirrus initialized in Simple_Set_Cirrus() function
 #if defined(CIRRUS_SIMPLE_IS_CS5490)
-#if (CIRRUS_SIMPLE_IS_CS5490 == true)
-CIRRUS_CS5490 Current_Cirrus;
-#define CHANNEL
-#define CHANNEL2
-#endif
-#ifdef (CIRRUS_SIMPLE_IS_CS5490 == false)
-CIRRUS_CS548x Current_Cirrus;
-#define CHANNEL	Channel_1
-#define CHANNEL2	Channel_1,
+	#if (CIRRUS_SIMPLE_IS_CS5490 == true)
+	CIRRUS_CS5490 Current_Cirrus;
+	#define CHANNEL
+	#define CHANNEL2
+	#else
+		#if (CIRRUS_SIMPLE_IS_CS5490 == false)
+		CIRRUS_CS548x Current_Cirrus;
+		#define CHANNEL	Channel_1
+		#define CHANNEL2	Channel_1,
+		#else
+			#error "You must define CIRRUS_SIMPLE_IS_CS5490 to true or false"
+		#endif
+	#endif
 #else
-#error "You must define CIRRUS_SIMPLE_IS_CS5490 to true or false"
-#endif
-#else
-#error "You must define CIRRUS_SIMPLE_IS_CS5490 to true or false, or exclude this file to build"
+	#error "You must define CIRRUS_SIMPLE_IS_CS5490 to true or false, or exclude this file to build"
 #endif
 
 bool Cirrus_defined = false;
@@ -128,7 +129,7 @@ void Simple_Get_Data(void)
 	Simple_Current_Data.Cirrus_ch1.Current = Current_Cirrus.GetIRMS(CHANNEL);
 #endif
 	Simple_Current_Data.Cirrus_ch1.ActivePower = Current_Cirrus.GetPRMSSigned(CHANNEL);
-	Simple_Current_Data.Cirrus_PF = Current_Cirrus.GetPowerFactor(CHANNEL);
+	Simple_Current_Data.Cirrus_PF = Current_Cirrus.GetExtraData(CHANNEL2 exd_PF);
 	Simple_Current_Data.Cirrus_Temp = Current_Cirrus.GetTemperature();
 	Current_Cirrus.GetEnergy(CHANNEL2 &energy_day_conso, &energy_day_surplus);
 
@@ -218,7 +219,7 @@ uint8_t Simple_Update_IHM(const char *first_text, const char *last_text, bool di
 	IHM_Print(line++, (char*) buffer);
 #endif
 
-	sprintf(buffer, "Prms:%.2f   ", Simple_Current_Data.Cirrus_ch1.Power);
+	sprintf(buffer, "Prms:%.2f   ", Simple_Current_Data.Cirrus_ch1.ActivePower);
 	IHM_Print(line++, (char*) buffer);
 
 	sprintf(buffer, "Energie:%.2f   ", energy_day_conso);
