@@ -36,12 +36,6 @@
 // Active le clavier
 #define USE_KEYBOARD
 
-// Calibration
-//#define CALIBRATION
-#ifdef CALIBRATION
-#include "CIRRUS_Calibration.h"
-#endif
-
 // Liste des taches
 #include "Tasks_utils.h"       // Task list functions
 
@@ -151,20 +145,27 @@ DS18B20 DS(DS18B20_GPIO);
 // Définition Cirrus
 // ********************************************************************************
 
-#define TWO_CIRRUS
+// Pour la version tri, sinon version mono
+#define TWO_CIRRUS	true
 
-CIRRUS_Calib_typedef CS1_Calib = CS_CALIB0;
-CIRRUS_Config_typedef CS1_Config = CS_CONFIG0;
-CIRRUS_Calib_typedef CS2_Calib = CS_CALIB0;
-CIRRUS_Config_typedef CS2_Config = CS_CONFIG0;
+//CIRRUS_Calib_typedef CS1_Calib = CS_CALIB0;
+//CIRRUS_Config_typedef CS1_Config = CS_CONFIG0;
+//CIRRUS_Calib_typedef CS2_Calib = CS_CALIB0;
+//CIRRUS_Config_typedef CS2_Config = CS_CONFIG0;
 
 // Cirrus1 (CS5484 pour le tri)
+CIRRUS_Calib_typedef CS1_Calib = {242.00, 33.15, 0x3C638E, 0x3F94EA, 0x629900, 0x000000, 0x800000,
+		242.00, 33.15, 0x3C2EE9, 0x3F8CDA, 0xEC5B10, 0x000000, 0x800000};
+
+//CIRRUS_Calib_typedef CS1_Calib = {242.00, 33.15, 0x3D4A81, 0x3FB28B, 0x7025B9, 0x000000, 0x000000,
+//			242.00, 33.15, 0x3D15C6, 0x3F67DA, 0x8A6100, 0x000000, 0x000000};
+
 //CIRRUS_Calib_typedef CS1_Calib = {242.00, 33.15, 0x3CC756, 0x40D6B0, 0x7025B9, 0x0, 0x0, 242.00,
 //		33.15, 0x3CC756, 0x4303EE, 0x8A6100, 0x0, 0x0};
 
 //CIRRUS_Calib_typedef CS1_Calib = {242.00, 33.15, 0x3C5C3B, 0x401665, 0x532144, 0x0, 0x0,
 //		242.00, 33.15, 0x3C5C3B, 0x3FE51B, 0x81EF04, 0x0, 0x0};
-//CIRRUS_Config_typedef CS1_Config = {0xC00000, 0x44E2EB, 0x2AA, 0x731F0, 0x51D67C, 0x0}; // 0x400000
+CIRRUS_Config_typedef CS1_Config = {0xC00000, 0x44E2EB, 0x2AA, 0x731F0, 0x51D67C, 0x0}; // 0x400000
 
 // Config1 = 0x44E2EB : version ZC sur DO0
 // Config1 = 0x00E4EB : version ZC sur DO0, P1 négatif sur DO3
@@ -173,12 +174,17 @@ CIRRUS_Config_typedef CS2_Config = CS_CONFIG0;
 // Config1 = 0x22E51B : version ZC sur DO0, EPG2 output (P1 avg) sur DO2, P2 négatif sur DO3
 
 // Cirrus2 (5480 pour le tri)
+CIRRUS_Calib_typedef CS2_Calib = {242.00, 33.15, 0x3C65AD, 0x3F48B7, 0x5AD0F1, 0x000000, 0x800000,
+		242.00, 33.15, 0x3C65AD, 0x3EE855, 0x2605A4, 0x000000, 0x800000};
+
+//CIRRUS_Calib_typedef CS2_Calib = {242.00, 33.15, 0x3C5375, 0x3E8464, 0x05CF11, 0x000009, 0x800009,
+//		242.00, 33.15, 0x3C5375, 0x3E1C67, 0x000000, 0x000000, 0x000000};
 //CIRRUS_Calib_typedef CS2_Calib = {242.00, 33.15, 0x3CC00B, 0x41B8D9, 0x5CF11, 0x9, 0x800009, 242.00,
 //		33.15, 0x400000, 0x400000, 0x0, 0x0, 0x0};
 
 //CIRRUS_Calib_typedef CS2_Calib = {242.00, 33.15, 0x3BEEE2, 0x3FE47F, 0x8FC5F9, 0x0, 0x0,
 //		242.00, 33.15, 0x3BEEE2, 0x3FB374, 0x278251, 0x0, 0x0};
-//CIRRUS_Config_typedef CS2_Config = {0xC02000, 0x44E2E4, 0x1002AA, 0x931F0, 0x6C77D9, 0x0};
+CIRRUS_Config_typedef CS2_Config = {0xC02000, 0x44E2E4, 0x1002AA, 0x931F0, 0x6C77D9, 0x0};
 
 #ifdef CIRRUS_USE_UART
 #if CIRRUS_UART_HARD == 1
@@ -194,11 +200,11 @@ SPIClass *csCom = &SPI;
 #endif
 
 CIRRUS_Communication CS_Com = CIRRUS_Communication(csCom, CIRRUS_RESET_GPIO);
-#ifdef TWO_CIRRUS
+#if TWO_CIRRUS == true
 CIRRUS_CS548x Cirrus1 = CIRRUS_CS548x(CS_Com, true); // CS5484
 CIRRUS_CS548x Cirrus2 = CIRRUS_CS548x(CS_Com); // CS5480
 #else
-CIRRUS_CS548x Cirrus1 = CIRRUS_CS548x(CS_Com, true); // CS5484
+CIRRUS_CS548x Cirrus1 = CIRRUS_CS548x(CS_Com); // CS5480 (routeur version mono)
 #endif
 #ifdef CIRRUS_CALIBRATION
 CIRRUS_Calibration CS_Calibration = CIRRUS_Calibration(Cirrus1);
@@ -225,10 +231,16 @@ uint16_t interval[] = {1250, 950, 650, 250};
 
 // UART message
 bool UserAnalyseMessage(void);
+void handleLastData(CB_SERVER_PARAM);
 void handleInitialization(CB_SERVER_PARAM);
 void handleOperation(CB_SERVER_PARAM);
 void handleCirrus(CB_SERVER_PARAM);
 void Selectchange_cb(CIRRUS_Base &cirrus);
+void SecondeChange_cb(void)
+{
+	if (Cirrus_OK && !Calibration)
+		Simple_Get_Data();
+}
 
 // ********************************************************************************
 // Task functions
@@ -236,7 +248,7 @@ void Selectchange_cb(CIRRUS_Base &cirrus);
 
 void Display_Task_code(void *parameter)
 {
-	BEGIN_TASK_CODE("Display_Task");
+	BEGIN_TASK_CODE("DISPLAY_Task");
 	uint8_t line = 0;
 	for (EVER)
 	{
@@ -245,14 +257,13 @@ void Display_Task_code(void *parameter)
 			// Cirrus message
 			if (Cirrus_OK)
 			{
-				Simple_Get_Data();
-				line = Simple_Update_IHM(RTC_Local.the_time, "", false);
+				line = Simple_Update_IHM(RTC_Local.the_time(), "", false);
 			}
 			else
 			{
 				line = 0;
 				IHM_Clear();
-				IHM_Print(line++, RTC_Local.the_time);
+				IHM_Print(line++, RTC_Local.the_time());
 				UART_Message = "Cirrus failled";
 			}
 
@@ -283,52 +294,75 @@ void Display_Task_code(void *parameter)
 
 		// Test extinction de l'écran
 		IHM_CheckTurnOff();
-		END_TASK_CODE();
+		END_TASK_CODE(IHM_IsDisplayOff());
 	}
 }
-#define DISPLAY_DATA_TASK	{true, "Display_Task", 4096, 4, 1000, CoreAny, Display_Task_code}
+#define DISPLAY_DATA_TASK	{true, "DISPLAY_Task", 4096, 4, 1000, Core0, Display_Task_code}
 
-void UserKeyboardAction(Btn_Action Btn_Clicked)
+void UserKeyboardAction(Btn_Action Btn_Clicked, uint32_t count)
 {
-	static uint32_t Btn_K1_count = 0;
-	if (Btn_Clicked != Btn_NOP)
-		Serial.println(Btn_Texte[Btn_Clicked]);
+//	if (Btn_Clicked != Btn_NOP)
+//		Serial.println(Btn_Texte[Btn_Clicked]);
 
 	switch (Btn_Clicked)
 	{
 		case Btn_K1: // Bouton du bas : Affiche IP et reset
 		{
-			IHM_DisplayOn();
-			if (Extra_str.isEmpty())
+			if (count == 1)
+			{
+				IHM_DisplayOn();
+				TaskList.ResumeTask("DISPLAY_Task");
 				Extra_str = myServer.IPaddress();
-			count_Extra_Display = EXTRA_TIMEOUT;
-			Btn_K1_count++;
-			// On a appuyé plus de 2 secondes sur le bouton
-			if (Btn_K1_count > (DEBOUNCING_MS * 10) / 1000)
+				count_Extra_Display = EXTRA_TIMEOUT;
+			}
+
+			// On a appuyé plus de 5 secondes sur le bouton
+			if (count == SECOND_TO_DEBOUNCING(5))
 			{
 				Extra_str = "SSID reset";
+				count_Extra_Display = EXTRA_TIMEOUT;
 				// Delete SSID file
-//				DeleteSSID();
-				Btn_K1_count = 0;
+				DeleteSSID();
 			}
 			break;
 		}
 
 		case Btn_K2: // Bouton du milieu : toggle relais
 		{
-			IHM_DisplayOn();
+			if (count == 1)
+			{
+				IHM_DisplayOn();
+				TaskList.ResumeTask("DISPLAY_Task");
+//				Relay.setState(0, !Relay.getState(0));
+//				if (Relay.getState(0))
+//				{
+//					digitalWrite(GPIO_RELAY_FACADE, HIGH);
+//					Extra_str = "Relais ON";
+//				}
+//				else
+//				{
+//					digitalWrite(GPIO_RELAY_FACADE, LOW);
+//					Extra_str = "Relais OFF";
+//				}
+//				count_Extra_Display = EXTRA_TIMEOUT;
+			}
 			break;
 		}
 
 		case Btn_K3: // Bouton du haut : toggle display
 		{
-			IHM_ToggleDisplay();
+			if (count == 1)
+			{
+				if (IHM_ToggleDisplay())
+					TaskList.ResumeTask("DISPLAY_Task");
+				else
+					TaskList.SuspendTask("DISPLAY_Task");
+			}
 			break;
 		}
 
 		case Btn_NOP:
 		{
-			Btn_K1_count = 0;
 			break;
 		}
 
@@ -390,12 +424,12 @@ void setup()
 	// Essaye de récupérer la dernière heure, utile pour un reboot
 	// Paramètres éventuellement à adapter : AutoSave et SaveDelay (par défaut toutes les 10 s)
 	RTC_Local.setupDateTime();
+	RTC_Local.setSecondeChangeCallback(SecondeChange_cb); // Cirrus get data toutes les secondes
 
 	// **** 3- Initialisation du display
 	if (IHM_Initialization(I2C_ADDRESS, false))
 		print_debug(F("Display Ok"));
 	IHM_TimeOut_Display(OLED_TIMEOUT);
-	Display_offset_line = 0;
 
 	// **** 4- initialisation DS18B20 ****
 #ifdef USE_DS
@@ -409,7 +443,7 @@ void setup()
 	CS_Com.begin();
 	CS_Com.setCirrusChangeCallback(Selectchange_cb);
 
-#ifdef TWO_CIRRUS
+#if TWO_CIRRUS == true
 	// Add Cirrus
 	// Cirrus1 = CS5484, Cirrus2 = CS5480
 	CS_Com.AddCirrus(&Cirrus1, CIRRUS_CS1_GPIO);
@@ -431,22 +465,22 @@ void setup()
 
 	// Initialisation Cirrus1 : phase 1, phase 2
 	if (Cirrus_OK)
-		Cirrus_OK = CIRRUS_Generic_Initialization(Cirrus1, &CS1_Calib, &CS1_Config, false, true, '1');
+		Cirrus_OK = CIRRUS_Generic_Initialization(Cirrus1, &CS1_Calib, &CS1_Config, false, false, '1');
 
 	// Configure second Cirrus : Cirrus2
 	CS_Com.SelectCirrus(1);
 
 	// Initialisation Cirrus2 : phase 3, production
 	if (Cirrus_OK)
-		Cirrus_OK = CIRRUS_Generic_Initialization(Cirrus2, &CS2_Calib, &CS2_Config, false, true, '2');
+		Cirrus_OK = CIRRUS_Generic_Initialization(Cirrus2, &CS2_Calib, &CS2_Config, false, false, '2');
 
 	// On revient sur le premier Cirrus : Cirrus1
 	CS_Com.SelectCirrus(0);
 #else
 	// Si on ne sélectionne pas le deuxième (cas ou on a deux Cirrus)
-//	CS_Com.DisableCirrus(CIRRUS_CS2_GPIO);
-//	CS_Com.AddCirrus(&Cirrus1, CIRRUS_CS1_GPIO);
-//	CS_Com.SelectCirrus(0);
+	CS_Com.DisableCirrus(CIRRUS_CS2_GPIO);
+	CS_Com.AddCirrus(&Cirrus1, CIRRUS_CS1_GPIO);
+	CS_Com.SelectCirrus(0);
 
 	// Start the Cirrus
 	Cirrus_OK = Cirrus1.begin(CS_BEGIN_PARAM(true));
@@ -457,11 +491,10 @@ void setup()
 
 	if (Cirrus_OK)
 	{
-		// Pour le channel 1, on veut le PF et pas la fréquence
-		Cirrus1.GetRMSData(Channel_1)->SetWantData(true, false);
+		// Pour le channel 1, on veut le PF et la puissance apparente
+		Cirrus1.GetRMSData(Channel_1)->SetWantData(exd_PF | exd_PApparent);
 		// Pour le channel 2, on ne veut pas la temprérature, ni le PF ni la fréquence
 		Cirrus1.GetRMSData(Channel_2)->SetTemperature(false); // Normalement déjà  false
-		Cirrus1.GetRMSData(Channel_2)->SetWantData(false, false);
 	}
 #endif
 
@@ -470,8 +503,8 @@ void setup()
 
 	// **** 8- Initialisation Clavier, relais
 #ifdef USE_KEYBOARD
-//	Keyboard_Init(KEYBOARD_ADC_GPIO, 3, ADC_12bits);
-	Keyboard_Initialize(KEYBOARD_ADC_GPIO, 3, interval);
+//	Keyboard_Initialize(3, ADC_12bits);
+	Keyboard_Initialize(3, interval);
 //	IHM_Print0("Test Btn 10s");
 //	Btn_Check_Config();
 #endif
@@ -506,7 +539,6 @@ void setup()
 	TaskList.AddTask(DS18B20_DATA_TASK(DS_Count > 0)); // DS18B20 Task
 #endif
 	TaskList.AddTask(DISPLAY_DATA_TASK);
-//	TaskList.AddTask({true, "Keyboard_Task", 2048, 10, 100, CoreAny, Keyboard_Task_code});
 	TaskList.AddTask(KEYBOARD_DATA_TASK(true));
 	TaskList.Create(USE_IDLE_TASK);
 }
@@ -549,14 +581,21 @@ void OnAfterConnexion(void)
 
 	server.on("/initialisation", HTTP_GET, handleInitialization);
 
-	server.on("/getLastData", HTTP_GET, [](CB_SERVER_PARAM)
-	{
-		pserver->send(200, "text/plain", (String(RTC_Local.the_time) + '#' + UART_Message));
-	});
+//	server.on("/getLastData", HTTP_GET, [](CB_SERVER_PARAM)
+//	{
+//		pserver->send(200, "text/plain", (String(RTC_Local.the_time()) + '#' + UART_Message));
+//	});
+	server.on("/getLastData", HTTP_GET, handleLastData);
 
 	server.on("/operation", HTTP_PUT, handleOperation);
 
 	server.on("/getCirrus", HTTP_PUT, handleCirrus);
+
+	server.on("/error", HTTP_GET, [](CB_SERVER_PARAM)
+	{
+		//pserver->send(200, "text/plain", (""));
+		pserver->send(200, "text/plain", (String(RTC_Local.the_time()) + '#' + UART_Message));
+	});
 }
 
 // ********************************************************************************
@@ -604,6 +643,13 @@ bool UserAnalyseMessage(void)
 	return false;
 }
 
+void handleLastData(CB_SERVER_PARAM)
+{
+	char buffer[255] = {0};
+	strcpy(buffer, RTC_Local.the_time()); // Copie la date
+	pserver->send(200, "text/plain", buffer);
+}
+
 void handleInitialization(CB_SERVER_PARAM)
 {
 	String message = "";
@@ -621,7 +667,10 @@ void handleOperation(CB_SERVER_PARAM)
 #if defined(OLED_DEFINED)
 	if (pserver->hasArg("Toggle_Oled"))
 	{
-		IHM_ToggleDisplay();
+		if (IHM_ToggleDisplay())
+			TaskList.ResumeTask("DISPLAY_Task");
+		else
+			TaskList.SuspendTask("DISPLAY_Task");
 	}
 #endif
 
@@ -636,7 +685,7 @@ void handleOperation(CB_SERVER_PARAM)
 	pserver->send(204, "text/plain", "");
 }
 
-String Handle_Wifi_Request(CS_Common_Request Wifi_Request, char *Request)
+String Handle_Cirrus_Wifi_Request(CS_Common_Request Wifi_Request, char *Request)
 {
 	if (CS_Com.GetNumberCirrus() == 2)
 	{

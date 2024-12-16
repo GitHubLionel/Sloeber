@@ -173,8 +173,8 @@ TeleInfo TI(TI_RX_GPIO, 5000);
 // ********************************************************************************
 
 // CS1 = CS5484
-CIRRUS_Calib_typedef CS1_Calib = {242.00, 53.55, 0x3CC756, 0x40D6B0, 0x7025B9, 0x0, 0x0, 242.00,
-		17.00, 0x3CC756, 0x4303EE, 0x8A6100, 0x0, 0x0};
+CIRRUS_Calib_typedef CS1_Calib = {242.00, 33.15, 0x3C638E, 0x3F94EA, 0x629900, 0x000000, 0x800000,
+		242.00, 33.15, 0x3C2EE9, 0x3F8CDA, 0xEC5B10, 0x000000, 0x800000};
 CIRRUS_Config_typedef CS1_Config = {0xC00000, 0x44E2EB, 0x2AA, 0x731F0, 0x51D67C, 0x0}; // 0x400000
 
 // Config1 = 0x44E2EB : version ZC sur DO0
@@ -184,8 +184,8 @@ CIRRUS_Config_typedef CS1_Config = {0xC00000, 0x44E2EB, 0x2AA, 0x731F0, 0x51D67C
 // Config1 = 0x22E51B : version ZC sur DO0, EPG2 output (P1 avg) sur DO2, P2 négatif sur DO3
 
 // CS2 = 5480
-CIRRUS_Calib_typedef CS2_Calib = {260.00, 16.50, 0x3CC00B, 0x41B8D9, 0x5CF11, 0x9, 0x800009, 224.50,
-		60.00, 0x400000, 0x400000, 0x0, 0x0, 0x0};
+CIRRUS_Calib_typedef CS2_Calib = {242.00, 33.15, 0x3C65AD, 0x3F48B7, 0x5AD0F1, 0x000000, 0x800000,
+		242.00, 33.15, 0x3C65AD, 0x3EE855, 0x2605A4, 0x000000, 0x800000};
 CIRRUS_Config_typedef CS2_Config = {0xC02000, 0x44E2E4, 0x1002AA, 0x931F0, 0x6C77D9, 0x0};
 
 #ifdef CIRRUS_USE_UART
@@ -594,6 +594,7 @@ void setup()
 				init_routeur.ReadIntegerIndex(i, "Relais", "Alarm2_end", -1));
 		Relay.setState(i, init_routeur.ReadBoolIndex(i, "Relais", "State", false));
 	}
+	(Relay.IsOneRelayON()) ? digitalWrite(GPIO_RELAY_FACADE, HIGH) : digitalWrite(GPIO_RELAY_FACADE, LOW);
 	RTC_Local.setMinuteChangeCallback(onRelayMinuteChange_cb);
 #endif
 
@@ -851,15 +852,17 @@ void handleOperation(CB_SERVER_PARAM)
 #ifdef USE_RELAY
 	if (pserver->hasArg("Toggle_Relay"))
 	{
-		Relay.setState(0, !Relay.getState(0));
-		if (Relay.getState(0))
-			digitalWrite(GPIO_RELAY_FACADE, HIGH);
-		else
-			digitalWrite(GPIO_RELAY_FACADE, LOW);
+//		Relay.setState(0, !Relay.getState(0));
+//		if (Relay.getState(0))
+//			digitalWrite(GPIO_RELAY_FACADE, HIGH);
+//		else
+//			digitalWrite(GPIO_RELAY_FACADE, LOW);
 		int id = pserver->arg("Toggle_Relay").toInt();
 		bool state = (pserver->arg("State").toInt() == 1);
 		Relay.setState(id, state);
 		init_routeur.WriteIntegerIndex(id, "Relais", "State", state);
+		(Relay.IsOneRelayON()) ? digitalWrite(GPIO_RELAY_FACADE, HIGH) : digitalWrite(GPIO_RELAY_FACADE, LOW);
+
 	}
 	if (pserver->hasArg("AlarmID"))
 	{
@@ -947,7 +950,7 @@ void handleOperation(CB_SERVER_PARAM)
 	pserver->send(204, "text/plain", "");
 }
 
-String Handle_Wifi_Request(CS_Common_Request Wifi_Request, char *Request)
+String Handle_Cirrus_Wifi_Request(CS_Common_Request Wifi_Request, char *Request)
 {
 	return CS_Com.Handle_Common_Request(Wifi_Request, Request, &CS1_Calib, &CS1_Config);
 }
