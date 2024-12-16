@@ -51,6 +51,7 @@ bool RTCLocal::update()
 		return false;
 
 	uint32_t deltatime;
+	bool minutechange = false;
 
 	// The number of seconds that have passed since boot
 	this->timeNow = millis() / 1000;
@@ -134,12 +135,21 @@ bool RTCLocal::update()
 		else
 		{
 			MinuteOfTheDay = this->hours * 60 + this->minutes;
-			if (_cb_minutechange != NULL)
-				_cb_minutechange(MinuteOfTheDay);
 			if (this->minutes == 59)
 				this->_cb_minute = true;
+			minutechange = true;
 		}
 	}
+
+	// Met à jour la string heure
+	getTime();
+
+	// Gestion des callback
+	if (_cb_secondechange != NULL)
+		_cb_secondechange();
+
+	if (minutechange && (_cb_minutechange != NULL))
+		_cb_minutechange(MinuteOfTheDay);
 
 	// Activation de la callback à partir de minuit moins _cb_delay seconde
 	if (_cb_endday != NULL)
@@ -151,9 +161,6 @@ bool RTCLocal::update()
 			_cb_endday(this->year, this->month, this->day);
 		}
 	}
-
-	// Met à jour la string heure
-	getTime();
 
 	// Sauvegarde automatique de l'heure
 	if (this->_IsTimeUpToDate && this->_AutoSave && (this->seconds_count % this->_SaveDelay == 0))

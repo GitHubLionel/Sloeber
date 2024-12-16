@@ -31,6 +31,9 @@ typedef void (*RTC_daychange_cb)(uint8_t year, uint8_t month, uint8_t day);
 // Callback pour le changement de minute : utile pour les alarmes
 typedef void (*RTC_minutechange_cb)(uint16_t minuteOfTheDay);
 
+// Callback pour une action toutes les secondes
+typedef void (*RTC_secondechange_cb)(void);
+
 // To use RTCLocal in a task
 #ifdef RTC_USE_TASK
 #define RTC_DATA_TASK	{true, "RTC_Task", 4096, ESP_TASK_PRIO_MAX / 2, 10, CoreAny, RTC_Task_code}
@@ -107,6 +110,9 @@ class RTCLocal
 
 		// Définition d'une action si nouvelle minute
 		RTC_minutechange_cb _cb_minutechange = NULL;
+
+		// Définition d'une action si nouvelle seconde
+		RTC_secondechange_cb _cb_secondechange = NULL;
 
 		bool IsLeapYear(int year);
 		void StartTime();
@@ -205,6 +211,11 @@ class RTCLocal
 		void setMinuteChangeCallback(const RTC_minutechange_cb &callback)
 		{
 			_cb_minutechange = callback;
+		}
+
+		void setSecondeChangeCallback(const RTC_secondechange_cb &callback)
+		{
+			_cb_secondechange = callback;
 		}
 };
 
