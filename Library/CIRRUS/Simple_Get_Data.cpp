@@ -24,12 +24,12 @@ extern CIRRUS_Communication CS_Com;
 // Current cirrus initialized in Simple_Set_Cirrus() function
 #if defined(CIRRUS_SIMPLE_IS_CS5490)
 	#if (CIRRUS_SIMPLE_IS_CS5490 == true)
-	CIRRUS_CS5490 Current_Cirrus;
+	CIRRUS_CS5490 *Current_Cirrus = NULL;
 	#define CHANNEL
 	#define CHANNEL2
 	#else
 		#if (CIRRUS_SIMPLE_IS_CS5490 == false)
-		CIRRUS_CS548x Current_Cirrus;
+		CIRRUS_CS548x *Current_Cirrus = NULL;
 		#define CHANNEL	Channel_1
 		#define CHANNEL2	Channel_1,
 		#else
@@ -39,8 +39,6 @@ extern CIRRUS_Communication CS_Com;
 #else
 	#error "You must define CIRRUS_SIMPLE_IS_CS5490 to true or false, or exclude this file to build"
 #endif
-
-bool Cirrus_defined = false;
 
 // Booléen indiquant une acquisition de donnée en cours
 bool Data_acquisition = false;
@@ -77,12 +75,11 @@ void __attribute__((weak)) print_debug(String mess, bool ln = true)
 void Simple_Set_Cirrus(const CIRRUS_Base &cirrus)
 {
 #if (CIRRUS_SIMPLE_IS_CS5490 == true)
-	Current_Cirrus = (CIRRUS_CS5490 &) cirrus;
+	Current_Cirrus = (CIRRUS_CS5490 *) (&cirrus);
 #else
-	Current_Cirrus = (CIRRUS_CS548x &) cirrus;
+	Current_Cirrus = (CIRRUS_CS548x *) (&cirrus);
 #define CHANNEL	Channel_1
 #endif
-	Cirrus_defined = true;
 }
 
 /**
@@ -93,8 +90,11 @@ void Simple_Get_Data(void)
 {
 	static int countmessage = 0;
 
-	if (!Cirrus_defined)
+	if (Current_Cirrus == NULL)
+	{
+		print_debug("ERROR: Current_Cirrus is NULL in Simple_Get_Data\n");
 		return;
+	}
 
 #ifdef LOG_CIRRUS_CONNECT
 	if (Data_acquisition || CS_Com.Is_IHM_Locked())
@@ -110,13 +110,13 @@ void Simple_Get_Data(void)
 	// To know the time required for data acquisition
 //	uint32_t start_time = millis();
 
-	bool log = Current_Cirrus.GetData(CHANNEL); // durée : 256 ms
+	bool log = Current_Cirrus->GetData(CHANNEL); // durée : 256 ms
 #ifdef ESP32
 	vTaskDelay(1);
 #endif
 
 	uint32_t err;
-	if ((err = Current_Cirrus.GetErrorCount()) > 0)
+	if ((err = Current_Cirrus->GetErrorCount()) > 0)
 	{
 		print_debug("*** Cirrus error : " + String(err));
 		Data_acquisition = false;
@@ -124,14 +124,14 @@ void Simple_Get_Data(void)
 	}
 
 	// Fill current data channel 1
-	Simple_Current_Data.Cirrus_ch1.Voltage = Current_Cirrus.GetURMS(CHANNEL);
+	Simple_Current_Data.Cirrus_ch1.Voltage = Current_Cirrus->GetURMS(CHANNEL);
 #ifdef CIRRUS_RMS_FULL
-	Simple_Current_Data.Cirrus_ch1.Current = Current_Cirrus.GetIRMS(CHANNEL);
+	Simple_Current_Data.Cirrus_ch1.Current = Current_Cirrus->GetIRMS(CHANNEL);
 #endif
-	Simple_Current_Data.Cirrus_ch1.ActivePower = Current_Cirrus.GetPRMSSigned(CHANNEL);
-	Simple_Current_Data.Cirrus_PF = Current_Cirrus.GetExtraData(CHANNEL2 exd_PF);
-	Simple_Current_Data.Cirrus_Temp = Current_Cirrus.GetTemperature();
-	Current_Cirrus.GetEnergy(CHANNEL2 &energy_day_conso, &energy_day_surplus);
+	Simple_Current_Data.Cirrus_ch1.ActivePower = Current_Cirrus->GetPRMSSigned(CHANNEL);
+	Simple_Current_Data.Cirrus_PF = Current_Cirrus->GetExtraData(CHANNEL2 exd_PF);
+	Simple_Current_Data.Cirrus_Temp = Current_Cirrus->GetTemperature();
+	Current_Cirrus->GetEnergy(CHANNEL2 &energy_day_conso, &energy_day_surplus);
 
 #ifdef USE_SSR
 	// On choisi le premier channel qui mesure la consommation et le surplus
@@ -147,7 +147,7 @@ void Simple_Get_Data(void)
 	if (log)
 	{
 		double temp;
-		RMS_Data data = Current_Cirrus.GetLog(CHANNEL2 &temp);
+		RMS_Data data = Current_Cirrus->GetLog(CHANNEL2 &temp);
 		log_cumul.Voltage = data.Voltage;
 		log_cumul.Power_ch1 = data.ActivePower;
 		log_cumul.Temp = temp;
