@@ -90,9 +90,9 @@ void CIRRUS_Restart(CIRRUS_Base &Cirrus, CIRRUS_Calib_typedef *CS_Calib,
 
 /**
  * A general response for a Wifi "/getCirrus" request
- * Use Handle_Wifi_Request() that must be defined in the main file.
+ * Use Handle_Cirrus_Wifi_Request() that must be defined in the main file.
  * For example :
- String Handle_Wifi_Request(CS_Common_Request Wifi_Request, char *Request)
+ String Handle_Cirrus_Wifi_Request(CS_Common_Request Wifi_Request, char *Request)
 {
 	return CS_Com.Handle_Common_Request(Wifi_Request, Request, &CS_Calib, &CS_Config);
 }
@@ -185,7 +185,7 @@ void handleCirrus(CB_SERVER_PARAM)
 	String result = "";
 	if (Wifi_Request != csw_NONE)
 	{
-		result = Handle_Wifi_Request(Wifi_Request, Request);
+		result = Handle_Cirrus_Wifi_Request(Wifi_Request, Request);
 	}
 
 	if (result.isEmpty())

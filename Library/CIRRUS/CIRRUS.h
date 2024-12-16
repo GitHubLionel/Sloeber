@@ -1404,7 +1404,7 @@ void CIRRUS_Restart(CIRRUS_Base &Cirrus, CIRRUS_Calib_typedef *CS_Calib,
 /**
  * For the general response for a Wifi "/getCirrus" request
  */
-String Handle_Wifi_Request(CS_Common_Request Wifi_Request, char *Request);
+String Handle_Cirrus_Wifi_Request(CS_Common_Request Wifi_Request, char *Request);
 
 // To create a basic task to check Cirrus data every 100 ms
 #ifdef CIRRUS_USE_TASK

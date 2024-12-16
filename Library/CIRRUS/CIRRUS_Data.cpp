@@ -370,7 +370,7 @@ uint32_t CIRRUS_CS548x::GetErrorCount(void) const
  */
 void __attribute__((weak)) Get_Data(void)
 {
-	static bool Data_acquisition = false;
+	static bool Data_acquisition = false; // Should be defined outside Get_Data()
 
 	// Prevent reentrant acquisition
 	if (Data_acquisition)

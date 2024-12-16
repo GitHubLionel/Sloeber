@@ -888,7 +888,9 @@ bool CIRRUS_Communication::COM_ChangeBaud(uint8_t *Baud, char *response)
 		for (uint8_t i = 0; i < nb; i++)
 		{
 			SelectCirrus(i);
+			CSDelay(1);
 			result &= CurrentCirrus->SetUARTBaud(CirrusNewBaud, (i == nb - 1));
+			CSDelay(1);
 		}
 
 		// Go back to the initial Cirrus selected
