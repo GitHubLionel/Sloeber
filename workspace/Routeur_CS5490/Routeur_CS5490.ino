@@ -682,7 +682,7 @@ void handleOperation(void)
 	server.send(204, "text/plain", "");
 }
 
-String Handle_Wifi_Request(CS_Common_Request Wifi_Request, char *Request)
+String Handle_Cirrus_Wifi_Request(CS_Common_Request Wifi_Request, char *Request)
 {
 	return CS_Com.Handle_Common_Request(Wifi_Request, Request, &CS_Calib, &CS_Config);
 }
