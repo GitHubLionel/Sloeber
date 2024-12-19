@@ -230,7 +230,6 @@ void setup()
 	if (IHM_Initialization(I2C_ADDRESS, false))
 		print_debug(F("Display Ok"));
 	IHM_TimeOut_Display(OLED_TIMEOUT);
-	Display_offset_line = 1;
 
 	// **** 4- initialisation Cirrus ****
 	// Initialisation du Cirrus CS5490
@@ -282,7 +281,7 @@ void loop()
 			// Toutes les secondes on récupère les données du Cirrus
 			Simple_Get_Data();
 
-			Simple_Update_IHM(RTC_Local.the_time, "");
+			Simple_Update_IHM(RTC_Local.the_time(), "");
 		}
 		else
 			UART_Message = "Cirrus failled";
@@ -324,7 +323,7 @@ void OnAfterConnexion(void)
 
 	server.on("/getLastData", HTTP_GET, []()
 	{
-		server.send(200, "text/plain", (String(RTC_Local.the_time) + '#' + UART_Message));
+		server.send(200, "text/plain", (String(RTC_Local.the_time()) + '#' + UART_Message));
 	});
 
 	server.on("/operation", HTTP_PUT, handleOperation);
@@ -375,7 +374,7 @@ void handleOperation(void)
 	server.send(204, "text/plain", "");
 }
 
-String Handle_Wifi_Request(CS_Common_Request Wifi_Request, char *Request)
+String Handle_Cirrus_Wifi_Request(CS_Common_Request Wifi_Request, char *Request)
 {
 	return CS_Com.Handle_Common_Request(Wifi_Request, Request, &CS_Calib, &CS_Config);
 }

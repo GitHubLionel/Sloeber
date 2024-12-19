@@ -170,8 +170,8 @@ void Simple_Get_Data(void)
 #ifdef USE_SSR
 bool CIRRUS_get_rms_data(float *uRMS, float *pRMS)
 {
-	Current_Cirrus.SelectChannel(CHANNEL);
-	return Current_Cirrus.get_rms_data(uRMS, pRMS);
+	Current_Cirrus->SelectChannel(CHANNEL);
+	return Current_Cirrus->get_rms_data(uRMS, pRMS);
 }
 #endif
 

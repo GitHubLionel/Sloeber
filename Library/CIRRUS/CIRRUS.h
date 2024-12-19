@@ -768,7 +768,7 @@ class CIRRUS_Base
 		void CorrectBug(void);
 		void Soft_reset(void);
 
-		void SelectChannel(CIRRUS_Channel channel);
+		void SelectChannel(CIRRUS_Channel channel = Channel_1);
 
 		bool Is_Data_Ready(void);
 		const char* Print_LastError();

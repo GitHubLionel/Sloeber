@@ -1476,6 +1476,10 @@ void CIRRUS_Base::set_filter(CIRRUS_Filter V1, CIRRUS_Filter I1, CIRRUS_Filter V
 // On est sensé vérifier data ready avant l'appel de la fonction
 // ********************************************************************************
 
+/**
+ * Select channel (default Channel_1)
+ * For CS5490, you should never need to call this function
+ */
 void CIRRUS_Base::SelectChannel(CIRRUS_Channel channel)
 {
 	if (currentchannel == channel)

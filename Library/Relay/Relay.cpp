@@ -277,7 +277,7 @@ void Relay_Class::UpdateNextAlarm(void)
 		while (_time[idTime].time < currentTime)
 		{
 			idTime++;
-			if (idTime == _time.size())
+			if (idTime == (int)_time.size())
 				break;
 		}
 	}
@@ -285,7 +285,7 @@ void Relay_Class::UpdateNextAlarm(void)
 
 void Relay_Class::CheckAlarmTime(void)
 {
-	if ((idTime == -1) || (idTime == _time.size()))
+	if ((idTime == -1) || (idTime == (int)_time.size()))
 		return;
 
 	// We can have the same alarm for several relays
@@ -300,7 +300,7 @@ void Relay_Class::CheckAlarmTime(void)
 				setState(relay.idRelay, false);
 		}
 		idTime++;
-		if (idTime == _time.size())
+		if (idTime == (int)_time.size())
 			break;
 	}
 }
