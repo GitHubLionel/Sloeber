@@ -610,6 +610,9 @@ void setup()
 	TaskList.AddTask(KEYBOARD_DATA_TASK(true));
 #endif
 	TaskList.AddTask(LOG_DATA_TASK);  // Save log Task
+#ifdef USE_RELAY
+	TaskList.AddTask(RELAY_DATA_TASK(true));
+#endif
 	TaskList.Create(USE_IDLE_TASK);
 	TaskList.InfoTask();
 #ifdef USE_ADC
