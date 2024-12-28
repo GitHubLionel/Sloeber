@@ -506,6 +506,13 @@ char* RTCLocal::getFormatedDateTime(char *datetime) const
 	return datetime;
 }
 
+void RTCLocal::getDate(uint8_t *day, uint8_t *month, uint8_t *year) const
+{
+	*day = this->day;
+	*month = this->month;
+	*year = this->year;
+}
+
 /**
  * A global instance of RTCLocal
  */

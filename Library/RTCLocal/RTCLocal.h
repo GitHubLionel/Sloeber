@@ -186,6 +186,8 @@ class RTCLocal
 		char* getDateTime(char *datetime, bool millenium, const char sep = ' ') const;
 		char* getFormatedDateTime(char *datetime) const;
 
+		void getDate(uint8_t *day, uint8_t *month, uint8_t *year) const;
+
 		int getMinuteOfTheDay(void) const
 		{
 			return MinuteOfTheDay;
