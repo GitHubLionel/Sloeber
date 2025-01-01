@@ -25,8 +25,14 @@
 // Unix Date time au premier janvier 2020
 #define DT01_01_2020	1577833200UL
 
-// Callback pour le changement de jour : pour minuit et la mise à jour date
-typedef void (*RTC_daychange_cb)(uint8_t year, uint8_t month, uint8_t day);
+// Callback pour le changement de jour : juste avant minuit
+typedef void (*RTC_beforeEndDay_cb)(uint8_t year, uint8_t month, uint8_t day);
+
+// Callback pour le changement de jour : juste après minuit
+typedef void (*RTC_afterBeginDay_cb)(uint8_t year, uint8_t month, uint8_t day);
+
+// Callback pour le changement de jour :  mise à jour date
+typedef void (*RTC_datechange_cb)(uint8_t year, uint8_t month, uint8_t day);
 
 // Callback pour le changement de minute : utile pour les alarmes
 typedef void (*RTC_minutechange_cb)(uint16_t minuteOfTheDay);
@@ -62,6 +68,7 @@ class RTCLocal
 		// Temps Unix initialisé au 1er janvier 2020 (nombre de seconde depuis 1/1/1970 00:00:00 UTC
 		uint32_t UNIX_time = DT01_01_2020;
 
+		// Le nombre de minutes écoulées dans la journée
 		uint32_t MinuteOfTheDay = 0;
 
 		char time[9] = {0};			// L'heure courante au format hh:nn:ss
@@ -100,13 +107,16 @@ class RTCLocal
 		// Délais pour la sauvegarde automatique
 		uint32_t _SaveDelay = 10;
 
-		// Définition d'une action juste avant minuit (par défaut, une seconde avant minuit)
-		RTC_daychange_cb _cb_endday = NULL;		// pointer to the callback function
-		uint8_t _cb_delay = 58;
+		// Définition d'une action juste avant minuit (par défaut, deux secondes avant minuit)
+		RTC_beforeEndDay_cb _cb_beforeEndDay = NULL;		// pointer to the callback function
+		uint8_t _cb_delay = 58;   // Nombre de seconde de la dernière minute avant minuit
 		bool _cb_minute = false;  // Indique qu'on est à 59 minutes
 
+		// Définition d'une action juste après minuit
+		RTC_afterBeginDay_cb _cb_afterBeginDay = NULL;		// pointer to the callback function
+
 		// Définition d'une action si on change de jour (pour les mises à jour de la date)
-		RTC_daychange_cb _cb_daychange = NULL;		// pointer to the callback function
+		RTC_datechange_cb _cb_datechange = NULL;		// pointer to the callback function
 
 		// Définition d'une action si nouvelle minute
 		RTC_minutechange_cb _cb_minutechange = NULL;
@@ -192,6 +202,10 @@ class RTCLocal
 		{
 			return MinuteOfTheDay;
 		}
+		int getSecondOfTheDay(void) const
+		{
+			return MinuteOfTheDay * 60 + seconds;
+		}
 		uint32_t getUNIXDateTime(void) const
 		{
 			return UNIX_time;
@@ -199,15 +213,20 @@ class RTCLocal
 
 		// Définition de la callback à faire à minuit moins cb_delay secondes
 		// Par défaut, 2 secondes avant minuit pour être sûr d'avoir l'évènement
-		void setEndDayCallBack(const RTC_daychange_cb &callback, const uint8_t cb_delay = 2)
+		void setBeforeEndDayCallBack(const RTC_beforeEndDay_cb &callback, const uint8_t cb_delay = 2)
 		{
-			_cb_endday = callback;
+			_cb_beforeEndDay = callback;
 			_cb_delay = 60 - cb_delay;
 		}
 
-		void setDayChangeCallback(const RTC_daychange_cb &callback)
+		void setAfterBeginDayCallBack(const RTC_afterBeginDay_cb &callback)
 		{
-			_cb_daychange = callback;
+			_cb_afterBeginDay = callback;
+		}
+
+		void setDateChangeCallback(const RTC_datechange_cb &callback)
+		{
+			_cb_datechange = callback;
 		}
 
 		void setMinuteChangeCallback(const RTC_minutechange_cb &callback)

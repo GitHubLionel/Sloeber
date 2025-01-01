@@ -52,6 +52,7 @@ bool RTCLocal::update()
 
 	uint32_t deltatime;
 	bool minutechange = false;
+	bool daychange = false;
 
 	// The number of seconds that have passed since boot
 	this->timeNow = millis() / 1000;
@@ -91,6 +92,7 @@ bool RTCLocal::update()
 			if (++this->hours >= 24)
 			{
 				this->hours = 0;
+				daychange = true;
 
 				// End of month
 				if (++this->day > this->month_day[this->month - 1])
@@ -145,21 +147,26 @@ bool RTCLocal::update()
 	getTime();
 
 	// Gestion des callback
-	if (_cb_secondechange != NULL)
+	if (_cb_secondechange != NULL) // Callback seconde
 		_cb_secondechange();
 
-	if (minutechange && (_cb_minutechange != NULL))
+	if (minutechange && (_cb_minutechange != NULL)) // Callback minute
 		_cb_minutechange(MinuteOfTheDay);
 
 	// Activation de la callback à partir de minuit moins _cb_delay seconde
-	if (_cb_endday != NULL)
+	if (_cb_beforeEndDay != NULL)
 	{
 		if (this->_cb_minute && (this->hours == 23) && (this->seconds >= this->_cb_delay))
 		{
 			// Pour éviter un deuxième appel si _cb_delay est grand
 			this->_cb_minute = false;
-			_cb_endday(this->year, this->month, this->day);
+			_cb_beforeEndDay(this->year, this->month, this->day);
 		}
+	}
+
+	if (daychange && (_cb_afterBeginDay != NULL)) // Callback nouveau jour
+	{
+		_cb_afterBeginDay(this->year, this->month, this->day);
 	}
 
 	// Sauvegarde automatique de l'heure
@@ -202,10 +209,10 @@ void RTCLocal::UpdateDateTime(struct tm *t, uint32_t unix_time)
 #endif
 
 	// Activation de la callback si on a changé de jour
-	if (_cb_daychange != NULL)
+	if (_cb_datechange != NULL)
 	{
 		if ((this->day != t->tm_mday) || (this->month != t->tm_mon + 1) || (this->year != t->tm_year - 100))
-			_cb_daychange(this->year, this->month, this->day);
+			_cb_datechange(this->year, this->month, this->day);
 	}
 
 	// Mise à jour de la date
