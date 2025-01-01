@@ -9,7 +9,7 @@
 
 /**
  * Structure contenant les coordonnées GPS : latitude, longitude, altitude
- * 	Latitude positive pour l'hémisphère nord
+ * 	Latitude (parallèle) positive pour l'hémisphère nord : ~45° N
  * 	Longitude positive à l'ouest du méridien de Greenwich
  * L'orientation et l'inclinaison du plan à considérer
  */

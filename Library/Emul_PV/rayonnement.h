@@ -27,20 +27,20 @@
  */
 typedef enum
 {
-  acBleuProfond,
-  acBleuFonce,
-  acBleuPur,
-  acBleu,
-  acBleuDelave,
-  acBleuLaiteux,
-  acBleuVoile,
-  acBleuBlanc
+	acBleuProfond,
+	acBleuFonce,
+	acBleuPur,
+	acBleu,
+	acBleuDelave,
+	acBleuLaiteux,
+	acBleuVoile,
+	acBleuBlanc
 } TAngstromCoeff;
 
-typedef struct 
+typedef struct
 {
-  double Azimut;
-  double Hauteur;
+		double Azimut;
+		double Hauteur;
 } TMaskPoint;
 
 /**
@@ -55,23 +55,24 @@ typedef struct
  */
 typedef struct
 {
-  char Name[20];
-  TGPSPosition GPS;
-  TDateTime MaskMatin;
-  TDateTime MaskSoir;
-  bool UseMask;
-  double Temperature;
-  double HR;
-  TAngstromCoeff Angstrom;
+		char Name[20];
+		TGPSPosition GPS;
+		TDateTime MaskMatin;
+		TDateTime MaskSoir;
+		bool UseMask;
+		double Temperature;
+		double HR;
+		TAngstromCoeff Angstrom;
 } TSite;
 
 double TroubleLinke(TAngstromCoeff aAngstrom, double aTemperature, double aHR);
 double RSDirect(double aESol, double aHauteurSoleil, double aAltitude, TAngstromCoeff aAngstrom,
-             double aTemperature, double aHR);
+		double aTemperature, double aHR);
 double RSDirect_Mer(double aESol, double aHauteurSoleil, TAngstromCoeff aAngstrom,
-             double aTemperature, double aHR);
+		double aTemperature, double aHR);
 double RSDiffus(double aHauteurSoleil, double aInclinaison);
-double Coefficient_Incidence(double aHauteurSoleil, double aAzimut, double aInclinaison, double aOrientation);
+double Coefficient_Incidence(double aHauteurSoleil, double aAzimut, double aInclinaison,
+		double aOrientation);
 double ESol(int aJour);
 
 double Irradiance(TDateTime aDateSun, TSite aSite);
