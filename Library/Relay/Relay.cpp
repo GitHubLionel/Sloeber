@@ -131,6 +131,18 @@ bool Relay_Class::getState(uint8_t idRelay)
 	return _relay[idRelay].state;
 }
 
+String Relay_Class::getAllState(void)
+{
+	String state = "";
+	for (int i = 0; i < _relay.size(); i++)
+	{
+		if (!state.isEmpty())
+			state += ",";
+		(getState(i)) ? state += "ON" : state += "OFF";
+	}
+	return state;
+}
+
 bool Relay_Class::hasAlarm(uint8_t idRelay)
 {
 	if (idRelay >= _relay.size())

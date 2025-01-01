@@ -65,6 +65,8 @@ class Relay_Class
 
 		void setState(uint8_t idRelay, bool state);
 		bool getState(uint8_t idRelay);
+		String getAllState(void);
+
 		/**
 		 * Return true if one relay is ON, false if all relay are OFF
 		 */
