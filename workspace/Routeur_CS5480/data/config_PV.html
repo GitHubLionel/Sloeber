@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="fr-fr">
+<head>
+  <title>Routeur configuration PV</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="Routeur.css">
+  <link rel="shortcut icon" href="favicon.ico">
+
+  <script>
+
+    // ***************************
+    // Configuration PV
+    // ***************************
+    function getField(champ) {
+      var list_field = ['P_CE', 'PV_MaskM', 'PV_MaskS', 'PV_Long', 'PV_Power', 'PV_Lat', 'PV_perte', 'PV_Alt', 'PV_NOCT', 'PV_Ori', 'PV_Max', 'PV_Inc', 'PV_ROnd'];
+      var result = "PV";
+      var field = champ.split(',');
+
+      field.forEach(function(id) {
+        result += "&" + list_field[list_field.indexOf(id)] + "=" + document.getElementById(id).value.trim();
+      });
+    //  result = result.replace(/;/i,"="); 
+
+//      alert(result);
+      return result;
+    }
+
+    function sendField(champ) {
+      if (window.confirm("Confirmation du changement ?")) {
+        document.getElementById('dataPV').value = getField(champ);
+        document.getElementById("PV-form").submit();
+  //      ESP_Request(getField(champ));
+      }
+    }
+    
+    function createXmlHttpObject() {
+      if (window.XMLHttpRequest) {
+        xmlHttp = new XMLHttpRequest();
+      } else {
+        xmlHttp = new ActiveXObject('Microsoft.XMLHTTP');
+      }
+      return xmlHttp;
+    }
+    
+    window.addEventListener("load", (event) => {
+      var xmlHttp = createXmlHttpObject();
+      xmlHttp.open("GET","/init_PVData",true);
+      xmlHttp.onreadystatechange = function() {
+        if (this.status == 200) {
+          var xmlResponse = xmlHttp.responseText;
+          if (xmlResponse === null) return;
+          var values = xmlResponse.split('#');
+
+          if (values.length >= 1)
+          {
+            let i = 0;
+            
+            document.getElementById("PV_Lat").value = values[i++];
+            document.getElementById("PV_Long").value = values[i++];
+            document.getElementById("PV_Alt").value = values[i++];
+            document.getElementById("PV_Ori").value = values[i++];
+            document.getElementById("PV_Inc").value = values[i++];
+            document.getElementById("PV_Power").value = values[i++];
+            document.getElementById("PV_MaskM").value = values[i++];
+            document.getElementById("PV_MaskS").value = values[i++];
+            document.getElementById("PV_perte").value = values[i++];
+            document.getElementById("PV_NOCT").value = values[i++];
+            document.getElementById("PV_Max").value = values[i++];
+            document.getElementById("PV_ROnd").value = values[i++];
+          }
+        }
+      };        
+      xmlHttp.send(null);
+    });
+    
+  </script>
+</head>
+<body>
+
+  <div class="header">
+    <span>Routeur configuration PV</span>
+  </div>
+  <form id="PV-form" method="POST" action="/operation">
+    <input type="hidden" id="dataPV" name="dataPV" value="">
+  <div class="two">
+    <table>
+      <tr>
+        <th scope="col" colspan="4">Paramètres PV</th>
+      </tr>
+      <tr>
+        <th scope="row" colspan="2">Coordonnées GPS</th>
+        <th scope="row" colspan="2">Installation</th>
+      </tr>     
+      <tr>
+        <td>
+          <label class="label_form">Longitude</label>
+        </td>
+        <td>
+          <input class="config" name="PV_Lat" id="PV_Lat" placeholder="Latitude" type="text" value="43.493333" title="Positif au nord de l'équateur">
+        </td>
+        <td>
+          <label class="label_form">Puissance PV (Wc)</label>
+        </td>
+        <td>
+          <input class="config" name="PV_Power" id="PV_Power" placeholder="Puissance" type="text" value="0" title="Puissance totale en watt-crête">
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <label class="label_form">Latitude</label>
+        </td>
+        <td>
+          <input class="config" name="PV_Long" id="PV_Long" placeholder="Longitude" type="text" value="-6.361666" title="Négatif à l'est de Greenwitch">
+        </td>
+        <td>
+          <label class="label_form">Perte en température (%/°C)</label>
+        </td>
+        <td>
+          <input class="config" name="PV_perte" id="PV_perte" placeholder="PV_Perte" type="text" value="-0.41" title="Perte en puissance des modules en pourcentage">
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <label class="label_form">Altitude (m)</label>
+        </td>
+        <td>
+          <input class="config" name="PV_Alt" id="PV_Alt" placeholder="Altitude" type="text" value="209">
+        </td>
+        <td>
+          <label class="label_form">NOCT</label>
+        </td>
+        <td>
+          <input class="config" name="PV_NOCT" id="PV_NOCT" placeholder="NOCT" type="text" value="44" title="">
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <label class="label_form">Orientation (°)</label>
+        </td>
+        <td>
+          <input class="config" name="PV_Ori" id="PV_Ori" placeholder="Orientation" type="text" value="0" title="Sud = 0, est = -90, ouest = 90">
+        </td>
+        <td>
+          <label class="label_form">P max Onduleur (VA)</label>
+        </td>
+        <td>
+          <input class="config" name="PV_Max" id="PV_Max" placeholder="Ond_PMax" type="text" value="0" title="Puissance max de l'onduleur (ou somme des puissance si plusieurs onduleurs)">
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <label class="label_form">Inclinaison (°)</label>
+        </td>
+        <td>
+          <input class="config" name="PV_Inc" id="PV_Inc" placeholder="Inclinaison" type="text" value="5" title="en degré">
+        </td>
+        <td>
+          <label class="label_form">R Onduleur (%)</label>
+        </td>
+        <td>
+          <input class="config" name="PV_ROnd" id="PV_ROnd" placeholder="Ond_Rendement" type="text" value="95.7" title="Rendement de l'onduleur">
+        </td>
+      </tr>
+      <tr>
+        <td colspan="4" style="text-align: center;">
+          <button class="myButton" onclick="sendField('PV_Long,PV_Power,PV_Lat,PV_perte,PV_Alt,PV_NOCT,PV_Ori,PV_Max,PV_Inc,PV_ROnd')">Mettre à jour les données de l'installation</button>
+        </td>
+      </tr>
+
+      <tr>
+        <th scope="inter" colspan="4"></th>
+      </tr>
+      <tr>
+        <th scope="col" colspan="4">Masques</th>
+      </tr>
+
+      <tr>
+        <td>
+          <label class="label_form">Matin</label>
+        </td>
+        <td>
+          <input class="config" name="PV_MaskM" id="PV_MaskM" placeholder="Masque matin" type="text" value="0" title="Masque format hh.mm. 0 si pas de masque.">
+        </td>
+        <td>
+          <label class="label_form">Soir</label>
+        </td>
+        <td>
+          <input class="config" name="PV_MaskS" id="PV_MaskS" placeholder="Masque matin" type="text" value="0" title="Masque format hh.mm. 0 si pas de masque.">
+        </td>
+      </tr>
+
+      <tr>
+        <td colspan="4" style="text-align: center;">
+          <button class="myButton" onclick="sendField('PV_MaskM,PV_MaskS')">Mettre à jour les masques</button>
+        </td>
+      </tr>
+
+    </table>
+  </div>
+  </form>
+</body>
+</html>
