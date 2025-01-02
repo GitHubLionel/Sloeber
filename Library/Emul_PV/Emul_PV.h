@@ -91,6 +91,14 @@ class EmulPV_Class
 
 		float getData(PVData_Enum data);
 		String getData_str(PVData_Enum data);
+		TAngstromCoeff getAngstromCoeff(void) const
+		{
+			return PV_Site.Angstrom;
+		}
+		double getDayTemperature(void) const
+		{
+			return PV_Site.Temperature;
+		}
 
 		double Irradiance(TDateTime aDateSun);
 		double Power(TDateTime aDateSun);

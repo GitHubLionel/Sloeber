@@ -256,8 +256,7 @@ double EmulPV_Class::Irradiance(TDateTime aDateSun)
 	if ((aDateSun < SunRise) || (aDateSun > SunSet))
 		return 0.0;
 
-	Sun_Position_Horizontal(aDateSun, PV_Site.GPS.Latitude, PV_Site.GPS.Longitude, &hauteur,
-			&azimuth);
+	Sun_Position_Horizontal(aDateSun, PV_Site.GPS.Latitude, PV_Site.GPS.Longitude, &hauteur, &azimuth);
 	if (hauteur > 0)
 	{
 		// Calcul du diffus
@@ -275,8 +274,7 @@ double EmulPV_Class::Irradiance(TDateTime aDateSun)
 		}
 		if (!masked)
 		{
-			lRSDirect = RSDirect(ESolarDay, hauteur, PV_Site.GPS.Altitude, PV_Site.Angstrom,
-					PV_Site.Temperature, PV_Site.HR);
+			lRSDirect = RSDirect(ESolarDay, hauteur, PV_Site.GPS.Altitude, PV_Site.Angstrom, PV_Site.Temperature, PV_Site.HR);
 			result += lRSDirect
 					* Coefficient_Incidence(hauteur, azimuth, PV_Site.GPS.Inclinaison,
 							PV_Site.GPS.Orientation);
@@ -323,8 +321,7 @@ double EmulPV_Class::Power(TDateTime aDateSun)
 
 	_Irradiance = Irradiance(aDateSun);
 
-	TempCoeff = 1.0
-			+ PV_TempCoeffPuissance * (ComputeCellTemperature(PV_Site.Temperature, _Irradiance) - 25.0);
+	TempCoeff = 1.0 + PV_TempCoeffPuissance * (ComputeCellTemperature(PV_Site.Temperature, _Irradiance) - 25.0);
 	Puissance = _Irradiance * Rendement * TempCoeff;
 	if (UsePOnduleurACMax && (Puissance > Ond_PuissanceACMax))
 		Puissance = Ond_PuissanceACMax;
