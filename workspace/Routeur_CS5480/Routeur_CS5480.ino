@@ -767,8 +767,10 @@ void handleInitialization(CB_SERVER_PARAM)
 	}
 	message += alarm;
 
-	// Puissance onduleur max
+	// Puissance onduleur max, ciel, température
 	message += '#' + (String) emul_PV.getData(pvOnd_PowerACMax);
+	message += '#' + (String) emul_PV.getAngstromCoeff();
+	message += '#' + (String) emul_PV.getDayTemperature();
 
 	// Soleil
 	message += '#' + (String) emul_PV.SunRise_SunSet();
@@ -818,10 +820,9 @@ void handleLastData(CB_SERVER_PARAM)
 
 	strcpy(buffer, RTC_Local.the_time()); // Copie la date
 	pbuffer = Fast_Pos_Buffer(buffer, "#", Buffer_End, &len); // On se positionne en fin de chaine
-	pbuffer = Fast_Printf(pbuffer, 2, "#", Buffer_End, true,
-			{Current_Data.Cirrus_ch1.ActivePower, Current_Data.Cirrus_ch1.Voltage,
-					Energy, Surplus, Current_Data.Cirrus_ch1.PowerFactor,
-					Current_Data.Cirrus_ch2.ActivePower, Prod});
+	pbuffer = Fast_Printf(pbuffer, 2, "#", Buffer_End, true, {Current_Data.Cirrus_ch1.ActivePower,
+			Current_Data.Cirrus_ch1.Voltage, Energy, Surplus, Current_Data.Cirrus_ch1.PowerFactor,
+			Current_Data.Cirrus_ch2.ActivePower, Prod});
 
 	pbuffer = Fast_Printf(pbuffer, TI_Power, 0, "", "#", Buffer_End, &len);
 	pbuffer = Fast_Printf(pbuffer, TI_Energy, 0, "", "#", Buffer_End, &len);
@@ -832,8 +833,8 @@ void handleLastData(CB_SERVER_PARAM)
 					Current_Data.Cirrus_ch1.ApparentPower});
 
 	// Températures
-	pbuffer = Fast_Printf(pbuffer, 2, "#", Buffer_End, true,
-			{Current_Data.Cirrus_ch1.Temperature, temp1, temp2});
+	pbuffer = Fast_Printf(pbuffer, 2, "#", Buffer_End, true, {Current_Data.Cirrus_ch1.Temperature,
+			temp1, temp2});
 
 	// Etat du SSR
 	pbuffer = Fast_Printf(pbuffer, (int) SSR_Get_State(), 0, "SSR=", "#", Buffer_End, &len);
@@ -987,6 +988,14 @@ void handleOperation(CB_SERVER_PARAM)
 
 		pserver->send_P(200, PSTR("text/html"), "<meta http-equiv=\"refresh\" content=\"0;url=/\">");
 		return;
+	}
+
+	// Couleur du ciel pour la production théorique
+	if (pserver->hasArg("Ciel"))
+	{
+		int ciel = pserver->arg("Ciel").toInt();
+		float temp = pserver->arg("Temp").toFloat();
+		emul_PV.Set_DayParameters((TAngstromCoeff) ciel, temp, 0.75);
 	}
 
 	pserver->send(204, "text/plain", "");

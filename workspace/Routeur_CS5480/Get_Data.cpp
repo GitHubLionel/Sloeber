@@ -27,7 +27,7 @@ extern bool ADC_OK;
 
 // data au format CSV
 const String CSV_Filename = "/data.csv";
-const String Energy_Filename = "/energy_2024.csv";
+const String Energy_Filename = "/energy_2025.csv";
 
 // Data 200 ms
 volatile Data_Struct Current_Data; //{0,{0}};

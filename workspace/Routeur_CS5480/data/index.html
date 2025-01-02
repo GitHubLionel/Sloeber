@@ -19,7 +19,7 @@
     <button class="tablink" onclick="openPage('m_Data', this, 'green')" id="defaultOpen">Données</button>
     <button class="tablink" onclick="openPage('m_Graphe', this, '#FFCB00')">Graphiques</button>
     <button class="tablink" onclick="openPage('m_Energy', this, '#C6410D')">Energie</button>
-    <button class="tablink" onclick="openPage('m_SSR', this, '#0ee6f0')">SSR, Relais</button>
+    <button class="tablink" onclick="openPage('m_SSR', this, '#0ee6f0')">SSR, Relais, PV</button>
     <button class="tablink" onclick="openPage('m_Config', this, '#cd11e8')">Config</button>
 
     <button class="tablink" style="cursor:default" onmouseover="this.style.background='black'" > &nbsp; </button>
@@ -335,6 +335,26 @@
 
     <div class="div_space">
       <button class="myButton" id="config_PV" onclick="location.href = 'config_PV.html';">Configuration PV</button>
+    </div>
+
+    <div class="div_space">
+      <div>
+        <label for="etatCiel">Couleur du ciel : </label>
+        <select name="etatCiel" id="etatCiel" size="1">
+          <option value="0">Ciel Bleu Profond</option>
+          <option value="1">Ciel Bleu Fonce</option>
+          <option value="2">Ciel Bleu Pur</option>
+          <option value="3">Ciel Bleu</option>
+          <option value="4">Ciel Bleu Delave</option>
+          <option value="5">Ciel Bleu Laiteux</option>
+          <option value="6">Ciel Bleu Voile</option>
+          <option value="7">Ciel Bleu Blanc</option>
+        </select>
+        <br>
+        <label for="extTemp">Température extérieure : </label>
+        <input type="text" name="extTemp" id="extTemp" style="width: 50px" value="30">
+        <button class="myButton" onclick="sendMeteo()">Actualiser</button>
+      </div>
     </div>
   </div>
 
