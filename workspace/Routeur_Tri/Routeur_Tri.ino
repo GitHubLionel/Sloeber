@@ -854,15 +854,14 @@ void handleLastData(CB_SERVER_PARAM)
 					Current_Data.Production.ActivePower, P_Theorique, Current_Data.Production.Energy,
 					Current_Data.get_total_power(), Energy, Surplus});
 
-//	pbuffer = Fast_Printf(pbuffer, TI_Energy, 0, "#", "#", Buffer_End, &len);
+	// TI, Talema
+	pbuffer = Fast_Printf(pbuffer, TI_Energy, 0, "", "#", Buffer_End, &len);
+	pbuffer = Fast_Printf(pbuffer, TI_Power, 0, "", "#", Buffer_End, &len);
+	pbuffer = Fast_Printf(pbuffer, ADC_GetTalemaCurrent(), 2, "", "#", Buffer_End, &len);
 
 	// Temperatures
 	pbuffer = Fast_Printf(pbuffer, 2, "#", Buffer_End, true,
 			{Current_Data.Cirrus1_Temp, temp1, temp2});
-
-	// Talema
-//	pbuffer = Fast_Printf(pbuffer, Current_Data.Talema_Power, 2, "", "#", Buffer_End, &len);
-//	pbuffer = Fast_Printf(pbuffer, Current_Data.Talema_Energy, 2, "", "#", Buffer_End, &len);
 
 	// Etat du SSR
 	pbuffer = Fast_Printf(pbuffer, (int) SSR_Get_State(), 0, "SSR=", "#", Buffer_End, &len);

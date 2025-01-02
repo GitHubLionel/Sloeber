@@ -67,7 +67,7 @@
 #define I2C_FREQUENCY	800000 // 100000 or 400000. May try 800000 for speed display.
 #define I2C_SDA_GPIO	GPIO_NUM_21 // ESP32 I2C0
 #define I2C_SCL_GPIO	GPIO_NUM_22 // ESP32 I2C0
-#define OLED_TIMEOUT	600	// 10 minutes
+#define OLED_TIMEOUT	600	// 10 minutes = 600
 
 //#define USE_LCD
 
