@@ -50,6 +50,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Relay}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Task_utils}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/IniFiles}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Emul_PV}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/HTTPUpdateServer/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/WebServer/src}&quot;"/>
 								</option>
@@ -87,6 +88,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Keyboard}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Relay}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Task_utils}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Emul_PV}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/HTTPUpdateServer/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/WebServer/src}&quot;"/>
 								</option>
@@ -124,6 +126,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Keyboard}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Relay}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Task_utils}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Emul_PV}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/HTTPUpdateServer/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/WebServer/src}&quot;"/>
 								</option>

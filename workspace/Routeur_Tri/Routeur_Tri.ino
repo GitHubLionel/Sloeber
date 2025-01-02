@@ -21,6 +21,7 @@
 #include "iniFiles.h"
 #include "ADC_utils.h"
 #include "Fast_Printf.h"
+#include "Emul_PV.h"
 
 /**
  * Define de debug
@@ -244,15 +245,27 @@ bool Test_Zero = false;
 IniFiles init_routeur = IniFiles("Conf.ini");
 
 // ********************************************************************************
+// Définition installation PV
+// ********************************************************************************
+
+EmulPV_Class emul_PV = EmulPV_Class();
+
+// ********************************************************************************
 // Functions prototype
 // ********************************************************************************
 
 // UART message
 bool UserAnalyseMessage(void);
 void handleInitialization(CB_SERVER_PARAM);
+void handleInitPVData(CB_SERVER_PARAM);
 void handleLastData(CB_SERVER_PARAM);
 void handleOperation(CB_SERVER_PARAM);
-extern void handleCirrus(CB_SERVER_PARAM);
+void handleCirrus(CB_SERVER_PARAM);
+void onNewDaychange(uint8_t year, uint8_t month, uint8_t day)
+{
+	// Mise à jour des données pour le nouveau jour
+	emul_PV.setDateTime();
+}
 
 // ********************************************************************************
 // Task functions
@@ -474,8 +487,9 @@ void setup()
 	// Essaye de récupérer la dernière heure, utile pour un reboot
 	// Paramètres éventuellement à adapter : AutoSave et SaveDelay (par défaut toutes les 10 s)
 	RTC_Local.setupDateTime();
-	RTC_Local.setEndDayCallBack(onDaychange); // Action à faire juste avant minuit
-	RTC_Local.setDayChangeCallback(onDaychange); // Action à faire si on change de jour (mise à jour)
+	RTC_Local.setBeforeEndDayCallBack(onDaychange); // Action à faire juste avant minuit
+	RTC_Local.setDateChangeCallback(onDaychange);   // Action à faire si on change de jour (mise à jour)
+	RTC_Local.setAfterBeginDayCallBack(onNewDaychange);
 
 	// **** 3- Initialisation du display
 	if (IHM_Initialization(I2C_ADDRESS, false))
@@ -598,6 +612,11 @@ void setup()
 	RTC_Local.setMinuteChangeCallback(onRelayMinuteChange_cb);
 #endif
 
+	// **** 9- Initialisation installation PV
+	emul_PV.Init_From_IniData(init_routeur);
+	emul_PV.Set_DayParameters(acBleuProfond, 35, 0.75);
+	emul_PV.setDateTime();
+
 	// **** FIN- Attente connexion réseau
 	IHM_Print0("Connexion .....");
 	print_debug(F("==> Wait for network <=="));
@@ -637,6 +656,9 @@ void setup()
 	TaskList.AddTask(KEYBOARD_DATA_TASK(true));
 #endif
 	TaskList.AddTask(LOG_DATA_TASK);  // Save log Task
+#ifdef USE_RELAY
+	TaskList.AddTask(RELAY_DATA_TASK(true));
+#endif
 	TaskList.Create(USE_IDLE_TASK);
 	TaskList.InfoTask();
 #ifdef USE_ADC
@@ -684,10 +706,12 @@ void OnAfterConnexion(void)
 	});
 
 	server.on("/initialisation", HTTP_GET, handleInitialization);
+	server.on("/init_PVData", HTTP_GET, handleInitPVData);
 
 	server.on("/getLastData", HTTP_GET, handleLastData);
 
 	server.on("/operation", HTTP_PUT, handleOperation);
+	server.on("/operation", HTTP_POST, handleOperation);
 
 	server.on("/getCirrus", HTTP_PUT, handleCirrus);
 }
@@ -770,6 +794,26 @@ void handleInitialization(CB_SERVER_PARAM)
 	}
 	message += alarm;
 
+	// Puissance onduleur max, ciel, température
+	message += '#' + (String) emul_PV.getData(pvOnd_PowerACMax);
+	message += '#' + (String) emul_PV.getAngstromCoeff();
+	message += '#' + (String) emul_PV.getDayTemperature();
+
+	// Soleil
+	message += '#' + (String) emul_PV.SunRise_SunSet();
+
+//	print_debug(message);
+
+	pserver->send(200, "text/plain", message);
+}
+
+void handleInitPVData(CB_SERVER_PARAM)
+{
+	String message = "";
+
+	for (int i = 0; i < pvMAXDATA; i++)
+		message += emul_PV.getData_str((PVData_Enum) i) + '#';
+
 	pserver->send(200, "text/plain", message);
 }
 
@@ -784,8 +828,9 @@ void handleLastData(CB_SERVER_PARAM)
 	uint16_t len;
 	float Energy, Surplus, Prod;
 	float temp1 = 0.0, temp2 = 0.0;
-
-	uint32_t TI_Energy;
+	uint32_t TI_Energy = 0;
+	uint32_t TI_Power = 0;
+	float P_Theorique = emul_PV.Compute_Power_TH(RTC_Local.getSecondOfTheDay(), false);
 
 	if (DS_Count > 0)
 	{
@@ -795,7 +840,10 @@ void handleLastData(CB_SERVER_PARAM)
 	bool graphe = Get_Last_Data(&Energy, &Surplus, &Prod);
 
 	if (TI_OK)
+	{
 		TI_Energy = (TI.getIndexWh() - TI_Counter);
+		TI_Power = TI.getPowerVA();
+	}
 
 	strcpy(buffer, RTC_Local.the_time()); // Copie la date
 	pbuffer = Fast_Pos_Buffer(buffer, "#", Buffer_End, &len); // On se positionne en fin de chaine
@@ -803,7 +851,8 @@ void handleLastData(CB_SERVER_PARAM)
 			{Current_Data.Phase1.Voltage, Current_Data.Phase1.ActivePower, Current_Data.Phase1.Energy,
 					Current_Data.Phase2.Voltage, Current_Data.Phase2.ActivePower, Current_Data.Phase2.Energy,
 					Current_Data.Phase3.Voltage, Current_Data.Phase3.ActivePower, Current_Data.Phase3.Energy,
-					Current_Data.Production.ActivePower, Current_Data.Production.Energy, Surplus});
+					Current_Data.Production.ActivePower, P_Theorique, Current_Data.Production.Energy,
+					Current_Data.get_total_power(), Energy, Surplus});
 
 //	pbuffer = Fast_Printf(pbuffer, TI_Energy, 0, "#", "#", Buffer_End, &len);
 
@@ -816,7 +865,10 @@ void handleLastData(CB_SERVER_PARAM)
 //	pbuffer = Fast_Printf(pbuffer, Current_Data.Talema_Energy, 2, "", "#", Buffer_End, &len);
 
 	// Etat du SSR
-	pbuffer = Fast_Printf(pbuffer, (int) SSR_Get_State(), 0, "SSR=", "", Buffer_End, &len);
+	pbuffer = Fast_Printf(pbuffer, (int) SSR_Get_State(), 0, "SSR=", "#", Buffer_End, &len);
+
+	// Etat des relais
+	pbuffer = Fast_Pos_Buffer(buffer, Relay.getAllState().c_str(), Buffer_End, &len);
 
 	// On a de nouvelles données pour le graphe
 	if (graphe)
@@ -828,6 +880,9 @@ void handleLastData(CB_SERVER_PARAM)
 				log_cumul.Power_prod, log_cumul.Temp, temp1, temp2, Energy, Surplus, Prod});
 		Fast_Set_Decimal_Separator(',');
 	}
+
+//	print_debug(buffer);
+
 	pserver->send(200, "text/plain", buffer);
 }
 
@@ -946,6 +1001,47 @@ void handleOperation(CB_SERVER_PARAM)
 		init_routeur.WriteBool("SSR", "StateOFF", (SSR_Get_State() == SSR_OFF));
 	}
 #endif
+
+	// Configuration PV
+	if (pserver->hasArg("dataPV"))
+	{
+		PVSite_Struct dataPV;
+
+		dataPV.latitude = pserver->arg("PV_Lat").toFloat();
+		dataPV.longitude = pserver->arg("PV_Long").toFloat();
+		dataPV.altitude = pserver->arg("PV_Alt").toFloat();
+
+		// Installation
+		dataPV.orientation = pserver->arg("PV_Ori").toFloat();
+		dataPV.inclinaison = pserver->arg("PV_Inc").toFloat();
+		dataPV.PV_puissance = pserver->arg("PV_Power").toFloat();
+
+		// Masques
+		dataPV.Mask_Matin = pserver->arg("PV_MaskM").toFloat();
+		dataPV.Mask_Soir = pserver->arg("PV_MaskS").toFloat();
+
+		// Module
+		dataPV.PV_Coeff_Puissance = pserver->arg("PV_perte").toFloat();
+		dataPV.PV_Noct = pserver->arg("PV_NOCT").toFloat();
+
+		// Onduleur
+		dataPV.Ond_PowerACMax = pserver->arg("PV_Max").toFloat();
+		dataPV.Ond_Rendement = pserver->arg("PV_ROnd").toFloat();
+
+		emul_PV.Init_From_Array(dataPV);
+		emul_PV.Save_To_File(init_routeur);
+
+		pserver->send_P(200, PSTR("text/html"), "<meta http-equiv=\"refresh\" content=\"0;url=/\">");
+		return;
+	}
+
+	// Couleur du ciel pour la production théorique
+	if (pserver->hasArg("Ciel"))
+	{
+		int ciel = pserver->arg("Ciel").toInt();
+		float temp = pserver->arg("Temp").toFloat();
+		emul_PV.Set_DayParameters((TAngstromCoeff) ciel, temp, 0.75);
+	}
 
 	pserver->send(204, "text/plain", "");
 }

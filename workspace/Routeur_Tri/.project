@@ -132,6 +132,11 @@
 			<locationURI>USER_LIB/Debug_utils</locationURI>
 		</link>
 		<link>
+			<name>user_lib/Emul_PV</name>
+			<type>2</type>
+			<locationURI>USER_LIB/Emul_PV</locationURI>
+		</link>
+		<link>
 			<name>user_lib/Fonts</name>
 			<type>2</type>
 			<locationURI>USER_LIB/Fonts</locationURI>

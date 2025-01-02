@@ -7,16 +7,7 @@
   <meta charset="utf-8">
   <link rel="stylesheet" href="Routeur.css">
   <link rel="shortcut icon" href="favicon.ico">
-  <script type='text/javascript' src="FileSaver.min.js"></script>
-
-  <script type='text/javascript' src="chart.js"></script>
-  <script type='text/javascript' src="luxon.js"></script>
-  <script type='text/javascript' src="luxon_adapter.js"></script>
-  <script type='text/javascript' src="chartjs-zoom.min.js"></script>
-  <script type='text/javascript' src='resizilla.umd.js'></script>
-  
-  <script type='text/javascript' src="graphe.js"></script>
-  <script type='text/javascript' src="Routeur.js"></script>
+  <script type='text/javascript' src="FileSaver.min.js"></script> 
 </head>
 <body>
 
@@ -29,7 +20,7 @@
     <button class="tablink" onclick="openPage('m_Graphe', this, '#FFCB00')">Graphiques</button>
     <button class="tablink" onclick="openPage('m_VoltageTemp', this, '#1FCB00')">Tension, Temp.</button>
     <button class="tablink" onclick="openPage('m_Energy', this, '#C6410D')">Energie</button>
-    <button class="tablink" onclick="openPage('m_SSR', this, '#0ee6f0')">SSR, Relais</button>
+    <button class="tablink" onclick="openPage('m_SSR', this, '#0ee6f0')">SSR, Relais, PV</button>
     <button class="tablink" onclick="openPage('m_Config', this, '#cd11e8')">Config</button>
 
     <button class="tablink" style="cursor:default" onmouseover="this.style.background='black'" > &nbsp; </button>
@@ -49,34 +40,78 @@
 
       <div class="col-1 col-s-1 menu">
         <ul>
-          <li><span>Facteur de puissance : </span><span id="_cosphi">1.0</span><span id="_SSR" class="right" style="color: red; display: none;">SSR</span></li>
+          <li><span>Facteur de puissance : </span><span id="_cosphi">1.0</span></li>
         </ul>
       </div>
 
-      <div class="col-3 col-s-3 menu">
+      <div class="col-4 col-s-3 menu">
       <p> Phase 1 (tore 1) </p>
         <ul>
           <li><span>Tension :</span><span id="_U_Ph1" class="right">0.0 V</span></li>
-          <li><span>Puissance :</span><span id="_P_Ph1" class="right">0.0 W</span></li>
+          <li>
+            <div class="progress_container">
+              <span class="progress_label">Puissance :</span>
+                <div class="progress_bar" id="_P_Ph1_label" data-label="0.0 W">
+                  <span class="value p_conso" id="_P_Ph1" style="width:0%"></span>
+                </div>
+            </div>
+          </li>
           <li><span>Energie :</span><span id="_E_Ph1" class="right">0.0 Wh</span></li>
         </ul>
       </div>
 
-      <div class="col-3 col-s-3 menu">
+      <div class="col-4 col-s-3 menu">
       <p> Phase 2 (tore 2) </p>
         <ul>
           <li><span>Tension :</span><span id="_U_Ph2" class="right">0.0 V</span></li>
-          <li><span>Puissance :</span><span id="_P_Ph2" class="right">0.0 W</span></li>
+          <li>
+            <div class="progress_container">
+              <span class="progress_label">Puissance :</span>
+                <div class="progress_bar" id="_P_Ph2_label" data-label="0.0 W">
+                  <span class="value p_conso" id="_P_Ph2" style="width:0%"></span>
+                </div>
+            </div>
+          </li>
           <li><span>Energie :</span><span id="_E_Ph2" class="right">0.0 Wh</span></li>
         </ul>
       </div>
 
-      <div class="col-3 col-s-3 menu">
+      <div class="col-4 col-s-3 menu">
       <p> Phase 3 (tore 3) </p>
         <ul>
           <li><span>Tension :</span><span id="_U_Ph3" class="right">0.0 V</span></li>
-          <li><span>Puissance :</span><span id="_P_Ph3" class="right">0.0 W</span></li>
+          <li>
+            <div class="progress_container">
+              <span class="progress_label">Puissance :</span>
+                <div class="progress_bar" id="_P_Ph3_label" data-label="0.0 W">
+                  <span class="value p_conso" id="_P_Ph3" style="width:0%"></span>
+                </div>
+            </div>
+          </li>
           <li><span>Energie :</span><span id="_E_Ph3" class="right">0.0 Wh</span></li>
+        </ul>
+      </div>
+
+      <div class="col-4 col-s-3 menu">
+      <p> Production (tore 4) </p>
+        <ul>
+          <li>
+            <div class="progress_container">
+              <span class="progress_label">Puissance :</span>
+                <div class="progress_bar" id="_P_Prod_label" data-label="0.0 W">
+                  <span class="value p_conso" id="_P_Prod" style="width:0%"></span>
+                </div>
+            </div>
+          </li>
+          <li>
+            <div class="progress_container">
+              <span class="progress_label">P théorique :</span>
+                <div class="progress_bar" id="_P_TH_Power_label" data-label="0.0 W">
+                  <span class="value p_prodTH" id="_P_TH_Power" style="width:0%"></span>
+                </div>
+            </div>
+          </li>
+          <li><span>Energie :</span><span id="_E_Prod" class="right">0.0 Wh</span></li>
         </ul>
       </div>
 
@@ -84,25 +119,46 @@
           <span>Production / compteur EDF</span>
       </div>
 
-      <div class="col-3 col-s-3 menu">
-      <p> Production (tore 4) </p>
+      <div class="col-4 col-s-3 menu">
+      <p> Total </p>
         <ul>
-          <li><span>Puissance :</span><span id="_P_Prod" class="right">0.0 W</span></li>
-          <li><span>Energie :</span><span id="_E_Prod" class="right">0.0 Wh</span></li>
+          <li>
+            <div class="progress_container">
+              <span class="progress_label">Puissance :</span>
+                <div class="progress_bar" id="_P_Total_label" data-label="0.0 W">
+                  <span class="value p_conso" id="_P_Total" style="width:0%"></span>
+                </div>
+            </div>
+          </li>
+          <li><span>Energie :</span><span id="_E_Total" class="right">0.0 Wh</span></li>
           <li><span>Energie surplus :</span><span id="_E_Surplus" class="right">0.0 Wh</span></li>
         </ul>
       </div>
 
-      <div class="col-3 col-s-3 menu">
+      <div class="col-4 col-s-3 menu">
       <p> Compteur EDF </p>
         <ul>
           <li><span>Index :</span><span id="_TI_E" class="right">0</span></li>
-          <li><span>Puissance :</span><span id="_TI_P" class="right">0.0 VA</span></li>
-          <li><span>Puissance Cirrus :</span><span id="_Cirrus_PA" class="right">0.0 VA</span></li>
+          <li>
+            <div class="progress_container">
+              <span class="progress_label">Puissance :</span>
+                <div class="progress_bar" id="_TI_P_label" data-label="0.0 VA">
+                  <span class="value p_consoTI" id="_TI_P" style="width:0%"></span>
+                </div>
+            </div>
+          </li>
+          <li>
+            <div class="progress_container">
+              <span class="progress_label">P Cirrus :</span>
+                <div class="progress_bar" id="_Cirrus_PA_label" data-label="0.0 VA">
+                  <span class="value p_consoA" id="_Cirrus_PA" style="width:0%"></span>
+                </div>
+            </div>
+          </li>
         </ul>
       </div>
 
-      <div class="col-3 col-s-3 menu">
+      <div class="col-4 col-s-3 menu">
       <p> Température </p>
         <ul>
           <li><span>Cirrus :</span><span id="_T_CS" class="right">25°C</span></li>
@@ -111,6 +167,28 @@
         </ul>
       </div>
 
+      <div class="col-4 col-s-3 menu">
+      <p> Divers </p>
+        <ul>
+          <li><span>Etat SSR :</span><span id="_SSR" class="right" style="color: red; display: none;">SSR ON</span></li>
+          <li>
+            <div class="led-container">
+              <span class="led-label">Etat Relais :</span>
+              <div class="led-box">
+                <div class="led-green" id="led_R0" title="Relais 0"></div>
+              </div>
+              <div class="led-box">
+                <div class="led-green" id="led_R1" title="Relais 1"></div>
+              </div>
+              <div class="led-box">
+                <div class="led-green" id="led_R2" title="Relais 2"></div>
+              </div>
+            </div>
+
+          </li>
+          <li><span>Soleil :</span><span id="_Sun" class="right"></span></li>
+        </ul>
+      </div>
     </div>
 
     <div class="footer">
@@ -304,6 +382,30 @@
         </div>
       </fieldset>
     </div>
+
+    <div class="div_space">
+      <button class="myButton" id="config_PV" onclick="location.href = 'config_PV.html';">Configuration PV</button>
+    </div>
+
+    <div class="div_space">
+      <div>
+        <label for="etatCiel">Couleur du ciel : </label>
+        <select name="etatCiel" id="etatCiel" size="1">
+          <option value="0">Ciel Bleu Profond</option>
+          <option value="1">Ciel Bleu Fonce</option>
+          <option value="2">Ciel Bleu Pur</option>
+          <option value="3">Ciel Bleu</option>
+          <option value="4">Ciel Bleu Delave</option>
+          <option value="5">Ciel Bleu Laiteux</option>
+          <option value="6">Ciel Bleu Voile</option>
+          <option value="7">Ciel Bleu Blanc</option>
+        </select>
+        <br>
+        <label for="extTemp">Température extérieure : </label>
+        <input type="text" name="extTemp" id="extTemp" style="width: 50px" value="30">
+        <button class="myButton" onclick="sendMeteo()">Actualiser</button>
+      </div>
+    </div>
   </div>
 
   <div id="m_Config" class="tabcontent">
@@ -371,5 +473,16 @@
 <!-- autre alternative pour l'attente
       <div class="loader_txt" id="loading">Chargement ...</div>
 -->
+
+  <script type='text/javascript' src="chart.js"></script>
+  <script type='text/javascript' src="chartjs-zoom.min.js"></script>
+  <script type='text/javascript' src='resizilla.umd.js'></script>
+
+  <script type='text/javascript' src="date-fns.adapter.js"></script>
+
+  <!-- Mettre en dernier -->
+  <script type='text/javascript' src="graphe.js"></script>
+  <script type='text/javascript' src="Routeur.js"></script>
+
 </body>
 </html>
