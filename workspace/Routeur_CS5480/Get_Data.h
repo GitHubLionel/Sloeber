@@ -40,6 +40,19 @@ typedef struct
 		float Talema_Current = 0.0;
 		float Talema_Power = 0.0;
 		float Talema_Energy = 0.0;
+
+		float energy_day_conso = 0.0;
+		float energy_day_surplus = 0.0;
+		float energy_day_prod = 0.0;
+
+		// Extra data
+		float DS18B20_Int = 0.0;
+		float DS18B20_Ext = 0.0;
+		float Prod_Th = 0.0;
+
+		uint32_t TI_Counter = 0;
+		uint32_t TI_Energy = 0;
+		uint32_t TI_Power = 0;
 } Data_Struct;
 
 // Task to save log every 10 s

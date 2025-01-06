@@ -22,6 +22,7 @@
 #include "ADC_utils.h"
 #include "Fast_Printf.h"
 #include "Emul_PV.h"
+#include "Affichage.h"
 
 /**
  * Define de debug
@@ -166,7 +167,6 @@ DS18B20 DS(DS18B20_GPIO);
 // ********************************************************************************
 
 bool TI_OK = false;
-uint32_t TI_Counter = 0;
 TeleInfo TI(TI_RX_GPIO, 5000);
 
 // ********************************************************************************
@@ -245,7 +245,7 @@ uint16_t interval[] = {1250, 950, 650, 250};
 #endif
 
 bool ADC_OK = false;
-bool Test_Zero = false;
+bool ADC_Test_Zero = false;
 
 // ********************************************************************************
 // Définition Fichier ini
@@ -274,144 +274,6 @@ void onNewDaychange(uint8_t year, uint8_t month, uint8_t day)
 {
 	// Mise à jour des données pour le nouveau jour
 	emul_PV.setDateTime();
-}
-
-// ********************************************************************************
-// Task functions
-// ********************************************************************************
-
-void Display_Task_code(void *parameter)
-{
-	BEGIN_TASK_CODE("DISPLAY_Task");
-	uint8_t line = 0;
-	for (EVER)
-	{
-#ifdef CIRRUS_CALIBRATION
-		if (Calibration)
-		{
-			END_TASK_CODE(false);
-			continue;
-		}
-#endif
-
-		Temp_str = "";
-		// Cirrus message
-		if (Cirrus_OK)
-		{
-			line = Update_IHM(RTC_Local.the_time(), "", false);
-		}
-		else
-		{
-			line = 0;
-			IHM_Clear();
-			IHM_Print(line++, RTC_Local.the_time());
-			UART_Message = "Cirrus failled";
-		}
-
-		// DS18B20 message
-		if ((DS_Count > 0) && (Extra_str == ""))
-		{
-			Temp_str = "DS: " + DS.get_Temperature_Str(0) + "` " + DS.get_Temperature_Str(1) + "` ";
-			IHM_Print(line++, (const char*) Temp_str.c_str());
-		}
-
-//		// TI message
-//		if (TI_OK)
-//		{
-//			Temp_str = "TI: " + String(TI.getIndexWh());
-//			IHM_Print(line++, (const char*) Temp_str.c_str());
-//		}
-
-		// Keyboard info message
-		if (count_Extra_Display != 0)
-		{
-			IHM_Print(line++, Extra_str.c_str());
-			count_Extra_Display = count_Extra_Display - 1;
-			if (count_Extra_Display == 0)
-				Extra_str = "";
-		}
-
-		// Idle counter
-#if USE_IDLE_TASK == true
-		IHM_Print(line++, (const char*) TaskList.GetIdleStr().c_str());
-#endif
-
-		// Refresh display
-		IHM_Display();
-
-		// Test extinction de l'écran
-		IHM_CheckTurnOff();
-
-		// End task
-		END_TASK_CODE(IHM_IsDisplayOff());
-	}
-}
-#define DISPLAY_DATA_TASK	{true, "DISPLAY_Task", 4096, 4, 1000, Core0, Display_Task_code}
-
-void UserKeyboardAction(Btn_Action Btn_Clicked, uint32_t count)
-{
-//	if (Btn_Clicked != Btn_NOP)
-//		Serial.println(Btn_Texte[Btn_Clicked]);
-
-	switch (Btn_Clicked)
-	{
-		case Btn_K1: // Bouton du bas : Affiche IP et reset
-		{
-			if (count == 1)
-			{
-				IHM_DisplayOn();
-				TaskList.ResumeTask("DISPLAY_Task");
-				Extra_str = myServer.IPaddress();
-				count_Extra_Display = EXTRA_TIMEOUT;
-			}
-
-			// On a appuyé plus de 5 secondes sur le bouton
-			if (count == SECOND_TO_DEBOUNCING(5))
-			{
-				Extra_str = "SSID reset";
-				count_Extra_Display = EXTRA_TIMEOUT;
-				// Delete SSID file
-				DeleteSSID();
-			}
-			break;
-		}
-
-		case Btn_K2: // Bouton du milieu : toggle relais
-		{
-			if (count == 1)
-			{
-				IHM_DisplayOn();
-				TaskList.ResumeTask("DISPLAY_Task");
-				Relay.setState(0, !Relay.getState(0));
-				if (Relay.getState(0))
-					Extra_str = "Relais ON";
-				else
-					Extra_str = "Relais OFF";
-				count_Extra_Display = EXTRA_TIMEOUT;
-			}
-			break;
-		}
-
-		case Btn_K3: // Bouton du haut : toggle display
-		{
-			if (count == 1)
-			{
-				if (IHM_ToggleDisplay())
-					TaskList.ResumeTask("DISPLAY_Task");
-				else
-					TaskList.SuspendTask("DISPLAY_Task");
-			}
-			break;
-		}
-
-		case Btn_NOP:
-		{
-			break;
-		}
-
-		default:
-			;
-	}
 }
 
 // ********************************************************************************
@@ -496,7 +358,7 @@ void setup()
 		print_debug(F("Configuration TeleInfo OK"));
 		TI.PrintAllToSerial();
 		TI_OK = true;
-		TI_Counter = TI.getIndexWh();
+		Current_Data.TI_Counter = TI.getIndexWh();
 	}
 	else
 		print_debug(F("Configuration TeleInfo ERROR"));
@@ -520,6 +382,7 @@ void setup()
 		CS5480.GetRMSData(Channel_1)->SetWantData(exd_PF | exd_PApparent);
 		// Pour le channel 2, on ne veut pas la temprérature, ni le PF ni la fréquence
 		CS5480.GetRMSData(Channel_2)->SetTemperature(false); // Normalement déjà false
+		CS5480.GetRMSData(Channel_2)->SetWantData(exd_PF);
 	}
 
 	// **** 7- Initialisation SSR avec Zero-Cross ****
@@ -547,7 +410,7 @@ void setup()
 
 	// **** 8- Initialisation Clavier, relais, ADC
 #ifdef USE_ADC
-	if ((ADC_OK = ADC_Initialize_OneShot({KEYBOARD_ADC_GPIO, GPIO_NUM_39}, Test_Zero)) == true) // @suppress("Invalid arguments")
+	if ((ADC_OK = ADC_Initialize_OneShot({KEYBOARD_ADC_GPIO, GPIO_NUM_39}, ADC_Test_Zero)) == true) // @suppress("Invalid arguments")
 	{
 		print_debug(F("ADC OK"));
 //		ADC_Begin();
@@ -578,7 +441,6 @@ void setup()
 	// **** 9- Initialisation installation PV
 	emul_PV.Init_From_IniData(init_routeur);
 	emul_PV.Set_DayParameters(acBleuProfond, 35, 0.75);
-	emul_PV.setDateTime();
 
 	// **** FIN- Attente connexion réseau
 	IHM_Print0("Connexion .....");
@@ -637,9 +499,11 @@ void setup()
 #ifdef USE_ADC
 	if (ADC_OK)
 	{
-		ADC_Begin();
+		ADC_Begin(1892);
 	}
 #endif
+	// Actualise la date
+	emul_PV.setDateTime();
 }
 
 // The loop function is called in an endless loop
@@ -652,7 +516,7 @@ void loop()
 	server.handleClient();
 #else
 	// Temporisation à adapter
-	vTaskDelay(10);
+//	vTaskDelay(10);
 #endif
 }
 
@@ -800,23 +664,7 @@ void handleLastData(CB_SERVER_PARAM)
 	char *pbuffer = &buffer[0];
 	uint16_t len;
 	float Energy, Surplus, Prod;
-	float temp1 = 0.0, temp2 = 0.0;
-	uint32_t TI_Energy = 0;
-	uint32_t TI_Power = 0;
-	float P_Theorique = emul_PV.Compute_Power_TH(RTC_Local.getSecondOfTheDay(), false);
-
-	if (DS_Count > 0)
-	{
-		temp1 = DS.get_Temperature(0);
-		temp2 = DS.get_Temperature(1);
-	}
 	bool graphe = Get_Last_Data(&Energy, &Surplus, &Prod);
-
-	if (TI_OK)
-	{
-		TI_Energy = (TI.getIndexWh() - TI_Counter);
-		TI_Power = TI.getPowerVA();
-	}
 
 	strcpy(buffer, RTC_Local.the_time()); // Copie la date
 	pbuffer = Fast_Pos_Buffer(buffer, "#", Buffer_End, &len); // On se positionne en fin de chaine
@@ -824,17 +672,17 @@ void handleLastData(CB_SERVER_PARAM)
 			Current_Data.Cirrus_ch1.Voltage, Energy, Surplus, Current_Data.Cirrus_ch1.PowerFactor,
 			Current_Data.Cirrus_ch2.ActivePower, Prod});
 
-	pbuffer = Fast_Printf(pbuffer, TI_Power, 0, "", "#", Buffer_End, &len);
-	pbuffer = Fast_Printf(pbuffer, TI_Energy, 0, "", "#", Buffer_End, &len);
+	pbuffer = Fast_Printf(pbuffer, Current_Data.TI_Power, 0, "", "#", Buffer_End, &len);
+	pbuffer = Fast_Printf(pbuffer, Current_Data.TI_Energy, 0, "", "#", Buffer_End, &len);
 
 	// Talema, Prod théorique, Cirrus puissance apparente
 	pbuffer = Fast_Printf(pbuffer, 2, "#", Buffer_End, true,
-			{Current_Data.Talema_Power, Current_Data.Talema_Energy, P_Theorique,
+			{Current_Data.Talema_Power, Current_Data.Talema_Energy, Current_Data.Prod_Th,
 					Current_Data.Cirrus_ch1.ApparentPower});
 
 	// Températures
 	pbuffer = Fast_Printf(pbuffer, 2, "#", Buffer_End, true, {Current_Data.Cirrus_ch1.Temperature,
-			temp1, temp2});
+			Current_Data.DS18B20_Int, Current_Data.DS18B20_Ext});
 
 	// Etat du SSR
 	pbuffer = Fast_Printf(pbuffer, (int) SSR_Get_State(), 0, "SSR=", "#", Buffer_End, &len);
