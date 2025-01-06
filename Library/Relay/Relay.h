@@ -65,6 +65,7 @@ class Relay_Class
 
 		void setState(uint8_t idRelay, bool state);
 		bool getState(uint8_t idRelay);
+		void toggleState(uint8_t idRelay);
 		String getAllState(void);
 
 		/**

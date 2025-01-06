@@ -121,6 +121,16 @@ void Relay_Class::setState(uint8_t idRelay, bool state)
 }
 
 /**
+ * Toggle the state of the relay: ON <-> OFF
+ */
+void Relay_Class::toggleState(uint8_t idRelay)
+{
+	if (idRelay >= _relay.size())
+		return;
+	setState(idRelay, !getState(idRelay));
+}
+
+/**
  * Get the state of the relay. Return true if ON.
  */
 bool Relay_Class::getState(uint8_t idRelay)
