@@ -133,10 +133,10 @@ void IHM_Print(uint8_t line, const char *text, bool update_screen)
   if (TurnOff)
   	return;
 #ifdef USE_LCD
-  LCD_I2C_Str(line+1, 1 ,text, true);
+  LCD_I2C_Str(line+1, 1, text, true);
 #endif
 #ifdef OLED_SSD1306
-  SSD1306_GotoXY(0,10*line);
+  SSD1306_GotoXY(0, 10*line);
   SSD1306_PutString(text, Font_7x10, SSD1306_COLOR_WHITE);
   if (update_screen)
   	SSD1306_UpdateScreen();
@@ -148,6 +148,42 @@ void IHM_Print(uint8_t line, const char *text, bool update_screen)
 #endif
 #ifdef OLED_SH1107
 	SH1107_WriteString(0, 0, line, (char*) text, FONT_SMALL, 0, 0);
+  if (update_screen)
+  	SH1107_DumpBuffer();
+#endif
+}
+
+/**
+ * Transfer the text to the device. For some devices (Oled, TFT), you need to refresh it
+ * with de Display_IHM function or set update_screen to true (default false).
+ */
+void IHM_Print(uint8_t line, uint8_t col, const char *text, bool update_screen)
+{
+#ifdef DEFAULT_OUTPUT
+  // Par défaut envoie dans la console
+  PrintTerminal(text);
+  (void) line;
+  (void) update_screen;
+#endif
+  // Si l'écran est éteint, on ne fait rien
+  if (TurnOff)
+  	return;
+#ifdef USE_LCD
+  LCD_I2C_Str(line+1, col, text, true);
+#endif
+#ifdef OLED_SSD1306
+  SSD1306_GotoXY(7*col, 10*line);
+  SSD1306_PutString(text, Font_7x10, SSD1306_COLOR_WHITE);
+  if (update_screen)
+  	SSD1306_UpdateScreen();
+#endif
+#ifdef OLED_SSD1327
+  SSD1327_String(TPoint(7*col, 12*line), text, &Font12, FONT_BACKGROUND, SSD1327_WHITE);
+  if (update_screen)
+  	SSD1327_Display();
+#endif
+#ifdef OLED_SH1107
+	SH1107_WriteString(0, col, line, (char*) text, FONT_SMALL, 0, 0);
   if (update_screen)
   	SH1107_DumpBuffer();
 #endif
@@ -209,18 +245,19 @@ void IHM_TimeOut_Display(uint32_t time)
  */
 bool IHM_ToggleDisplay(void)
 {
-	// Re-init timeout
-	IHM_TimeOut_Display(Oled_timeout);
-
 #ifdef OLED_SSD1306
-	return SSD1306_ToggleOnOff();
+	TurnOff = !SSD1306_ToggleOnOff();
 #endif
 #ifdef OLED_SSD1327
-	return SSD1327_ToggleOnOff();
+	TurnOff = !SSD1327_ToggleOnOff();
 #endif
 #ifdef OLED_SH1107
-	return SH1107_ToggleOnOff();
+	TurnOff = !SH1107_ToggleOnOff();
 #endif
+	// Re-init timeout
+	if (!TurnOff)
+		IHM_TimeOut_Display(Oled_timeout);
+	return !TurnOff;
 }
 
 /**

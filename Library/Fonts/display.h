@@ -63,6 +63,7 @@ bool IHM_Initialization(uint8_t address, bool test);
 bool IHM_IsDisplayOff(void);
 void IHM_Print0(const char *text);
 void IHM_Print(uint8_t line, const char *text, bool update_screen = false);
+void IHM_Print(uint8_t line, uint8_t col, const char *text, bool update_screen = false);
 void IHM_Display(void);
 void IHM_Clear(bool refresh = false);
 void IHM_TimeOut_Display(uint32_t time);
