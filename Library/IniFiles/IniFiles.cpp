@@ -152,7 +152,7 @@ void IniFiles::AllocateRecord(TSection *aSection)
 
 	if ((aSection->Capacity - aSection->NbRecord) <= 0)
 	{
-		aSection->Capacity += CAPACITY_STEP;
+		aSection->Capacity += INI_CAPACITY_STEP;
 		lRecord = (TRecord*) malloc(aSection->Capacity * sizeof(TRecord));
 		// Transfert des records existant
 		if (aSection->Record != NULL)
@@ -210,7 +210,7 @@ bool IniFiles::ReadFile(void)
 	uint16_t lRecordID = 0;
 	bool lSectionOpen = false;
 	TRecord *lRecord;
-	char line[MAX_LINESIZE];
+	char line[INI_MAX_LINESIZE];
 
 	if (FFileName == NULL)
 		return false;
@@ -223,7 +223,7 @@ bool IniFiles::ReadFile(void)
 
 	while (stream.available())
 	{
-		stream.readStringUntil('\n').toCharArray(line, MAX_LINESIZE);
+		stream.readStringUntil('\n').toCharArray(line, INI_MAX_LINESIZE);
 		while (line[strlen(line) - 1] == lCarry[0])
 			line[strlen(line) - 1] = '\0';
 #ifdef LINUX
@@ -300,7 +300,7 @@ bool IniFiles::WriteFile(const char *aFileName)
 {
 	uint16_t i, j;
 	TRecord *lRecord;
-	char line[MAX_LINESIZE];
+	char line[INI_MAX_LINESIZE];
 
 	if (strlen(aFileName) != 0)
 	{

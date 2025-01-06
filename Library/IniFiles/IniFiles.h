@@ -8,9 +8,9 @@
 #include <stdbool.h>
 #include <cstddef>
 
-#define MAX_LINESIZE  1024    // Longueur max d'une ligne lue dans le fichier
-#define MAX_SECTION   50      // Nombre de section max
-#define CAPACITY_STEP 10      // Taux d'accroissement pour le nombre d'enregistrement par section
+#define INI_MAX_LINESIZE  1024    // Longueur max d'une ligne lue dans le fichier
+#define INI_MAX_SECTION   50      // Nombre de section max
+#define INI_CAPACITY_STEP 10      // Taux d'accroissement pour le nombre d'enregistrement par section
 
 typedef struct
 {
@@ -93,7 +93,7 @@ class IniFiles
 		char FFloatFormat[10];
 		char *FFileName = NULL;
 		uint16_t FNbSection = 0;
-		TSection FSections[MAX_SECTION];
+		TSection FSections[INI_MAX_SECTION];
 		bool FSaved = true;
 		bool FAutoSave = false;
 
