@@ -8,14 +8,14 @@
 #include <stdint.h>
 #include <initializer_list>
 
-// The adc value of the zero of the sin wave
-#define ADC_ZERO	1900  // 1889		// 1898
+// The adc value of the zero of the sin wave for rms current on channel 2
+#define ADC_ZERO	1900  // typical value
 
 bool ADC_Initialize_OneShot(std::initializer_list<uint8_t> gpios, bool action_zero = false);
 bool ADC_Initialize_Continuous(std::initializer_list<uint8_t> gpios, bool action_zero = false);
-void ADC_Begin(uint16_t zero = ADC_ZERO);
+void ADC_Begin(int zero = ADC_ZERO);
 uint16_t ADC_Read0(void);
 
 // Get Talema rms current
-double ADC_GetTalemaCurrent(void);
-double ADC_GetZero(uint32_t *count);
+float ADC_GetTalemaCurrent(void);
+float ADC_GetZero(uint32_t *count);

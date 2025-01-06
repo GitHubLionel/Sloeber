@@ -46,7 +46,7 @@ uint32_t Timer_Read_Delay = 100;	// 0.1 ms
 #endif
 
 // The zero of the ADC for mean wave
-uint16_t ADC_zero = ADC_ZERO;
+int ADC_zero = ADC_ZERO;
 
 // Two channel used
 volatile bool Use_Two_Channel = false;
@@ -176,6 +176,7 @@ bool ADC_INTO_IRAM ADC_Read_OneShot(int *result_ch0, int *result_ch1)
 /**
  * Initialize ADC in OnseShot mode
  * The first gpio is used in the ADC_Read0 function. This raw value, no treatment.
+ * Set action_zero to true when you want to determine the zero for the second channel
  */
 bool ADC_Initialize_OneShot(std::initializer_list<uint8_t> gpios, bool action_zero)
 {
@@ -258,6 +259,7 @@ bool ADC_INTO_IRAM ADC_Read_Continuous(int *result_ch0, int *result_ch1)
 /**
  * Initialize ADC in continuous mode
  * The first gpio is used in the ADC_Read0 function. This raw value, no treatment.
+ * Set action_zero to true when you want to determine the zero  for the second channel
  */
 bool ADC_Initialize_Continuous(std::initializer_list<uint8_t> gpios, bool action_zero)
 {
@@ -288,8 +290,9 @@ bool ADC_Initialize_Continuous(std::initializer_list<uint8_t> gpios, bool action
 
 /**
  * Start ADC reading
+ * The zero parameter is used for the second channel to compute rms current
  */
-void ADC_Begin(uint16_t zero)
+void ADC_Begin(int zero)
 {
 	ADC_zero = zero;
 
@@ -397,9 +400,9 @@ void ADC_INTO_IRAM Compute_Mean_Wave(void)
 }
 #endif
 
-double ADC_GetTalemaCurrent(void)
+float ADC_GetTalemaCurrent(void)
 {
-	double raw;
+	int raw;
 	portENTER_CRITICAL(&ADC_Tore_Mux);
 #if MEAN_WAVE_CUMUL == true
 	if (raw_current_count != 0)
@@ -411,7 +414,7 @@ double ADC_GetTalemaCurrent(void)
 #endif
 	portEXIT_CRITICAL(&ADC_Tore_Mux);
 
-	double Talema_current;
+	float Talema_current;
 #if MEAN_WAVE_CUMUL == true
 	Talema_current = 0.0125 * sqrt(raw) - 0.008;
 #else
@@ -421,12 +424,12 @@ double ADC_GetTalemaCurrent(void)
 	return Talema_current;
 }
 
-double ADC_GetZero(uint32_t *count)
+float ADC_GetZero(uint32_t *count)
 {
-	double zero = 0;
+	float zero = 0;
 	portENTER_CRITICAL(&ADC_Tore_Mux);
 	if (ADC_cumul_count != 0)
-		zero = (double) ADC_cumul / ADC_cumul_count;
+		zero = (float) ADC_cumul / ADC_cumul_count;
 	*count = ADC_cumul_count;
 	ADC_cumul = 0;
 	ADC_cumul_count = 0;
