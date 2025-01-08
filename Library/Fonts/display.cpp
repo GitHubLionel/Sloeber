@@ -183,7 +183,7 @@ void IHM_Print(uint8_t line, uint8_t col, const char *text, bool update_screen)
   	SSD1327_Display();
 #endif
 #ifdef OLED_SH1107
-	SH1107_WriteString(0, col, line, (char*) text, FONT_SMALL, 0, 0);
+	SH1107_WriteString(0, 6*col, line, (char*) text, FONT_SMALL, 0, 0);
   if (update_screen)
   	SH1107_DumpBuffer();
 #endif
