@@ -22,6 +22,7 @@
 #include "ADC_utils.h"
 #include "Fast_Printf.h"
 #include "Emul_PV.h"
+#include "Affichage.h"
 
 /**
  * Define de debug
@@ -166,7 +167,6 @@ DS18B20 DS(DS18B20_GPIO);
 // ********************************************************************************
 
 bool TI_OK = false;
-uint32_t TI_Counter = 0;
 TeleInfo TI(TI_RX_GPIO, 5000);
 
 // ********************************************************************************
@@ -174,8 +174,9 @@ TeleInfo TI(TI_RX_GPIO, 5000);
 // ********************************************************************************
 
 // CS1 = CS5484
-CIRRUS_Calib_typedef CS1_Calib = {242.00, 33.15, 0x3C638E, 0x3F94EA, 0x629900, 0x000000, 0x800000,
-		242.00, 33.15, 0x3C2EE9, 0x3F8CDA, 0xEC5B10, 0x000000, 0x800000};
+CIRRUS_Calib_typedef CS1_Calib;
+//CIRRUS_Calib_typedef CS1_Calib = {242.00, 33.15, 0x3C638E, 0x3F94EA, 0x629900, 0x000000, 0x800000,
+//		242.00, 33.15, 0x3C2EE9, 0x3F8CDA, 0xEC5B10, 0x000000, 0x800000};
 CIRRUS_Config_typedef CS1_Config = {0xC00000, 0x44E2EB, 0x2AA, 0x731F0, 0x51D67C, 0x0}; // 0x400000
 
 // Config1 = 0x44E2EB : version ZC sur DO0
@@ -185,8 +186,9 @@ CIRRUS_Config_typedef CS1_Config = {0xC00000, 0x44E2EB, 0x2AA, 0x731F0, 0x51D67C
 // Config1 = 0x22E51B : version ZC sur DO0, EPG2 output (P1 avg) sur DO2, P2 négatif sur DO3
 
 // CS2 = 5480
-CIRRUS_Calib_typedef CS2_Calib = {242.00, 33.15, 0x3C65AD, 0x3F48B7, 0x5AD0F1, 0x000000, 0x800000,
-		242.00, 33.15, 0x3C65AD, 0x3EE855, 0x2605A4, 0x000000, 0x800000};
+CIRRUS_Calib_typedef CS2_Calib;
+//CIRRUS_Calib_typedef CS2_Calib = {242.00, 33.15, 0x3C65AD, 0x3F48B7, 0x5AD0F1, 0x000000, 0x800000,
+//		242.00, 33.15, 0x3C65AD, 0x3EE855, 0x2605A4, 0x000000, 0x800000};
 CIRRUS_Config_typedef CS2_Config = {0xC02000, 0x44E2E4, 0x1002AA, 0x931F0, 0x6C77D9, 0x0};
 
 #ifdef CIRRUS_USE_UART
@@ -220,8 +222,13 @@ extern void onCirrusZC(void);
 
 #ifdef USE_RELAY
 // Pin commande du relais
-Relay_Class Relay( {GPIO_NUM_26, GPIO_NUM_25, GPIO_NUM_33}); // @suppress("Invalid arguments")
+Relay_Class Relay({GPIO_NUM_26, GPIO_NUM_25, GPIO_NUM_33}); // @suppress("Invalid arguments")
 #define  GPIO_RELAY_FACADE	GPIO_NUM_15
+
+void UpdateLedRelayFacade(void)
+{
+	(Relay.IsOneRelayON()) ? digitalWrite(GPIO_RELAY_FACADE, HIGH) : digitalWrite(GPIO_RELAY_FACADE, LOW);
+}
 
 // callback to update relay every minutes
 void onRelayMinuteChange_cb(uint16_t minuteOfTheDay)
@@ -236,7 +243,7 @@ uint16_t interval[] = {3600, 2500, 1140, 240};
 #endif
 
 bool ADC_OK = false;
-bool Test_Zero = false;
+bool ADC_Test_Zero = false;
 
 // ********************************************************************************
 // Définition Fichier ini
@@ -265,167 +272,6 @@ void onNewDaychange(uint8_t year, uint8_t month, uint8_t day)
 {
 	// Mise à jour des données pour le nouveau jour
 	emul_PV.setDateTime();
-}
-
-// ********************************************************************************
-// Task functions
-// ********************************************************************************
-
-void Display_Task_code(void *parameter)
-{
-	BEGIN_TASK_CODE("DISPLAY_Task");
-	uint8_t line = 0;
-	for (EVER)
-	{
-#ifdef CIRRUS_CALIBRATION
-		if (Calibration)
-		{
-			END_TASK_CODE(false);
-			continue;
-		}
-#endif
-
-		Temp_str = "";
-		// Cirrus message
-		if (Cirrus_OK)
-		{
-			line = Update_IHM(RTC_Local.the_time(), "", false);
-		}
-		else
-		{
-			line = 0;
-			IHM_Clear();
-			IHM_Print(line++, RTC_Local.the_time());
-//			UART_Message = "Cirrus failled";
-		}
-
-		// DS18B20 message
-		if (DS_Count > 0)
-		{
-			Temp_str = "DS: " + DS.get_Temperature_Str(0) + "` " + DS.get_Temperature_Str(1) + "` ";
-			IHM_Print(line++, (const char*) Temp_str.c_str());
-		}
-
-		// TI message
-		if (TI_OK)
-		{
-			Temp_str = "TI: " + String(TI.getIndexWh());
-			IHM_Print(line++, (const char*) Temp_str.c_str());
-		}
-
-		if (ADC_OK)
-		{
-			if (Test_Zero)
-			{
-				uint32_t count;
-				Temp_str = "Zero: " + String(ADC_GetZero(&count));
-				IHM_Print(line++, (const char*) Temp_str.c_str());
-				Temp_str = "Count: " + String(count);
-				IHM_Print(line++, (const char*) Temp_str.c_str());
-			}
-			else
-			{
-				Temp_str = "Talema: " + String(ADC_GetTalemaCurrent());
-				IHM_Print(line++, (const char*) Temp_str.c_str());
-			}
-		}
-
-		// Keyboard info message
-		if (count_Extra_Display != 0)
-		{
-			IHM_Print(line++, Extra_str.c_str());
-			count_Extra_Display = count_Extra_Display - 1;
-			if (count_Extra_Display == 0)
-				Extra_str = "";
-		}
-
-		// Idle counter
-#if USE_IDLE_TASK == true
-		IHM_Print(line++, (const char*) TaskList.GetIdleStr().c_str());
-#endif
-
-		// Refresh display
-		IHM_Display();
-
-		// Test extinction de l'écran
-		IHM_CheckTurnOff();
-
-		// End task
-		END_TASK_CODE(IHM_IsDisplayOff());
-	}
-}
-#define DISPLAY_DATA_TASK	{true, "DISPLAY_Task", 4096, 4, 1000, Core0, Display_Task_code}
-
-void UserKeyboardAction(Btn_Action Btn_Clicked, uint32_t count)
-{
-//	if (Btn_Clicked != Btn_NOP)
-//		Serial.println(Btn_Texte[Btn_Clicked]);
-
-	switch (Btn_Clicked)
-	{
-		case Btn_K1: // Bouton du bas : Affiche IP et reset
-		{
-			if (count == 1)
-			{
-				IHM_DisplayOn();
-				TaskList.ResumeTask("DISPLAY_Task");
-				Extra_str = myServer.IPaddress();
-				count_Extra_Display = EXTRA_TIMEOUT;
-			}
-
-			// On a appuyé plus de 5 secondes sur le bouton
-			if (count == SECOND_TO_DEBOUNCING(5))
-			{
-				Extra_str = "SSID reset";
-				count_Extra_Display = EXTRA_TIMEOUT;
-				// Delete SSID file
-				DeleteSSID();
-			}
-			break;
-		}
-
-		case Btn_K2: // Bouton du milieu : toggle relais
-		{
-			if (count == 1)
-			{
-				IHM_DisplayOn();
-				TaskList.ResumeTask("DISPLAY_Task");
-				Relay.setState(0, !Relay.getState(0));
-				if (Relay.getState(0))
-				{
-					digitalWrite(GPIO_RELAY_FACADE, HIGH);
-					Extra_str = "Relais ON";
-				}
-				else
-				{
-					digitalWrite(GPIO_RELAY_FACADE, LOW);
-					Extra_str = "Relais OFF";
-				}
-				count_Extra_Display = EXTRA_TIMEOUT;
-			}
-			break;
-		}
-
-		case Btn_K3: // Bouton du haut : toggle display
-		{
-			if (count == 1)
-			{
-				if (IHM_ToggleDisplay())
-					TaskList.ResumeTask("DISPLAY_Task");
-				else
-					TaskList.SuspendTask("DISPLAY_Task");
-			}
-			break;
-		}
-
-		case Btn_NOP:
-		{
-			break;
-		}
-
-		default:
-			;
-	}
 }
 
 // ********************************************************************************
@@ -510,7 +356,7 @@ void setup()
 		print_debug(F("Configuration TeleInfo OK"));
 		TI.PrintAllToSerial();
 		TI_OK = true;
-		TI_Counter = TI.getIndexWh();
+		Current_Data.TI_Counter = TI.getIndexWh();
 	}
 	else
 		print_debug(F("Configuration TeleInfo ERROR"));
@@ -542,14 +388,14 @@ void setup()
 
 	// Initialisation CS5484 : phase 1, phase 2
 	if (Cirrus_OK)
-		Cirrus_OK = CIRRUS_Generic_Initialization(CS5484, &CS1_Calib, &CS1_Config, false, false, '1');
+		Cirrus_OK = CIRRUS_Generic_Initialization(CS5484, &CS1_Calib, &CS1_Config, false, true, '1');
 
 	// Configure second Cirrus : CS5480
 	CS_Com.SelectCirrus(1);
 
 	// Initialisation CS5484 : phase 3, production
 	if (Cirrus_OK)
-		Cirrus_OK = CIRRUS_Generic_Initialization(CS5480, &CS2_Calib, &CS2_Config, false, false, '2');
+		Cirrus_OK = CIRRUS_Generic_Initialization(CS5480, &CS2_Calib, &CS2_Config, false, true, '2');
 
 	// On revient sur le premier Cirrus : CS5484
 	CS_Com.SelectCirrus(0);
@@ -581,7 +427,7 @@ void setup()
 
 	// **** 8- Initialisation Clavier, relais, ADC
 #ifdef USE_ADC
-	if ((ADC_OK = ADC_Initialize_OneShot({KEYBOARD_ADC_GPIO, GPIO_NUM_39}, Test_Zero)) == true) // @suppress("Invalid arguments")
+	if ((ADC_OK = ADC_Initialize_OneShot({KEYBOARD_ADC_GPIO, GPIO_NUM_39}, ADC_Test_Zero)) == true) // @suppress("Invalid arguments")
 	{
 		print_debug(F("ADC OK"));
 //		ADC_Begin();
@@ -608,14 +454,13 @@ void setup()
 				init_routeur.ReadIntegerIndex(i, "Relais", "Alarm2_end", -1));
 		Relay.setState(i, init_routeur.ReadBoolIndex(i, "Relais", "State", false));
 	}
-	(Relay.IsOneRelayON()) ? digitalWrite(GPIO_RELAY_FACADE, HIGH) : digitalWrite(GPIO_RELAY_FACADE, LOW);
+	UpdateLedRelayFacade();
 	RTC_Local.setMinuteChangeCallback(onRelayMinuteChange_cb);
 #endif
 
 	// **** 9- Initialisation installation PV
 	emul_PV.Init_From_IniData(init_routeur);
 	emul_PV.Set_DayParameters(acBleuProfond, 35, 0.75);
-	emul_PV.setDateTime();
 
 	// **** FIN- Attente connexion réseau
 	IHM_Print0("Connexion .....");
@@ -667,6 +512,8 @@ void setup()
 		ADC_Begin(1796);
 	}
 #endif
+	// Actualise la date
+	emul_PV.setDateTime();
 }
 
 // The loop function is called in an endless loop
@@ -827,23 +674,7 @@ void handleLastData(CB_SERVER_PARAM)
 	char *pbuffer = &buffer[0];
 	uint16_t len;
 	float Energy, Surplus, Prod;
-	float temp1 = 0.0, temp2 = 0.0;
-	uint32_t TI_Energy = 0;
-	uint32_t TI_Power = 0;
-	float P_Theorique = emul_PV.Compute_Power_TH(RTC_Local.getSecondOfTheDay(), false);
-
-	if (DS_Count > 0)
-	{
-		temp1 = DS.get_Temperature(0);
-		temp2 = DS.get_Temperature(1);
-	}
 	bool graphe = Get_Last_Data(&Energy, &Surplus, &Prod);
-
-	if (TI_OK)
-	{
-		TI_Energy = (TI.getIndexWh() - TI_Counter);
-		TI_Power = TI.getPowerVA();
-	}
 
 	strcpy(buffer, RTC_Local.the_time()); // Copie la date
 	pbuffer = Fast_Pos_Buffer(buffer, "#", Buffer_End, &len); // On se positionne en fin de chaine
@@ -851,17 +682,17 @@ void handleLastData(CB_SERVER_PARAM)
 			{Current_Data.Phase1.Voltage, Current_Data.Phase1.ActivePower, Current_Data.Phase1.Energy,
 					Current_Data.Phase2.Voltage, Current_Data.Phase2.ActivePower, Current_Data.Phase2.Energy,
 					Current_Data.Phase3.Voltage, Current_Data.Phase3.ActivePower, Current_Data.Phase3.Energy,
-					Current_Data.Production.ActivePower, P_Theorique, Current_Data.Production.Energy,
+					Current_Data.Production.ActivePower, Current_Data.Prod_Th, Current_Data.Production.Energy,
 					Current_Data.get_total_power(), Energy, Surplus});
 
 	// TI, Talema
-	pbuffer = Fast_Printf(pbuffer, TI_Energy, 0, "", "#", Buffer_End, &len);
-	pbuffer = Fast_Printf(pbuffer, TI_Power, 0, "", "#", Buffer_End, &len);
-	pbuffer = Fast_Printf(pbuffer, ADC_GetTalemaCurrent(), 2, "", "#", Buffer_End, &len);
+	pbuffer = Fast_Printf(pbuffer, Current_Data.TI_Energy, 0, "", "#", Buffer_End, &len);
+	pbuffer = Fast_Printf(pbuffer, Current_Data.TI_Power, 0, "", "#", Buffer_End, &len);
+	pbuffer = Fast_Printf(pbuffer, Current_Data.Talema_Power, 2, "", "#", Buffer_End, &len);
 
 	// Temperatures
 	pbuffer = Fast_Printf(pbuffer, 2, "#", Buffer_End, true,
-			{Current_Data.Cirrus1_Temp, temp1, temp2});
+			{Current_Data.Cirrus1_Temp, Current_Data.DS18B20_Int, Current_Data.DS18B20_Ext});
 
 	// Etat du SSR
 	pbuffer = Fast_Printf(pbuffer, (int) SSR_Get_State(), 0, "SSR=", "#", Buffer_End, &len);
@@ -876,7 +707,7 @@ void handleLastData(CB_SERVER_PARAM)
 		pbuffer = Fast_Pos_Buffer(pbuffer, "#", Buffer_End, &len); // On se positionne en fin de chaine
 		pbuffer = Fast_Printf(pbuffer, 2, "#", Buffer_End, false, {log_cumul.Voltage_ph1, log_cumul.Power_ph1,
 				log_cumul.Voltage_ph2, log_cumul.Power_ph2, log_cumul.Voltage_ph3, log_cumul.Power_ph3,
-				log_cumul.Power_prod, log_cumul.Temp, temp1, temp2, Energy, Surplus, Prod});
+				log_cumul.Power_prod, log_cumul.Temp, Current_Data.DS18B20_Int, Current_Data.DS18B20_Ext, Energy, Surplus, Prod});
 		Fast_Set_Decimal_Separator(',');
 	}
 
@@ -906,18 +737,13 @@ void handleOperation(CB_SERVER_PARAM)
 #ifdef USE_RELAY
 	if (pserver->hasArg("Toggle_Relay"))
 	{
-//		Relay.setState(0, !Relay.getState(0));
-//		if (Relay.getState(0))
-//			digitalWrite(GPIO_RELAY_FACADE, HIGH);
-//		else
-//			digitalWrite(GPIO_RELAY_FACADE, LOW);
 		int id = pserver->arg("Toggle_Relay").toInt();
 		bool state = (pserver->arg("State").toInt() == 1);
 		Relay.setState(id, state);
 		init_routeur.WriteIntegerIndex(id, "Relais", "State", state);
-		(Relay.IsOneRelayON()) ? digitalWrite(GPIO_RELAY_FACADE, HIGH) : digitalWrite(GPIO_RELAY_FACADE, LOW);
-
+		UpdateLedRelayFacade();
 	}
+
 	if (pserver->hasArg("AlarmID"))
 	{
 		int id = pserver->arg("AlarmID").toInt();

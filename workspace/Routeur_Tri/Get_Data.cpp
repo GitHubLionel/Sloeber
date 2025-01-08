@@ -7,7 +7,10 @@
 #include "RTCLocal.h"					// A pseudo RTC software library
 #include "Partition_utils.h"	// Some utils functions for LittleFS/SPIFFS/FatFS
 #include "DS18B20.h"
+#include "TeleInfo.h"
+#include "ADC_Utils.h"
 #include "Fast_Printf.h"
+#include "Emul_PV.h"
 
 #ifdef CIRRUS_USE_TASK
 #include "Tasks_utils.h"
@@ -16,6 +19,19 @@
 // Use DS18B20
 extern uint8_t DS_Count;
 extern DS18B20 DS;
+
+// Use TI
+extern bool TI_OK;
+extern TeleInfo TI;
+
+// Use ADC
+extern bool ADC_OK;
+
+// Data PV
+extern EmulPV_Class emul_PV;
+
+// Calcul des extra data : TI, ADC, PV
+int ExtraDataCount = 1;
 
 // data au format CSV
 const String CSV_Filename = "/data.csv";
@@ -38,7 +54,9 @@ extern CIRRUS_CS548x CS5484;
 // Booléen indiquant une acquisition de donnée en cours
 bool Data_acquisition = false;
 
-uint32_t last_time = millis();
+// Gestion énergie
+uint32_t Cumul_time = millis();
+uint32_t Talema_time = millis();
 
 // Gestion log pour le graphique
 volatile Graphe_Data log_cumul;
@@ -55,6 +73,7 @@ float *VoltageForCE = &Current_Data.Phase1.Voltage;
 // Functions prototype
 // ********************************************************************************
 
+void GetExtraData(void);
 void append_data(void);
 void append_energy(void);
 
@@ -75,10 +94,17 @@ void Set_PhaseCE(Phase_ID phase)
 	Phase_CE = phase;
 	switch (Phase_CE)
 	{
-		case Phase1: VoltageForCE = &Current_Data.Phase1.Voltage; break;
-		case Phase2: VoltageForCE = &Current_Data.Phase2.Voltage; break;
-		case Phase3: VoltageForCE = &Current_Data.Phase3.Voltage; break;
-		default: ;
+		case Phase1:
+			VoltageForCE = &Current_Data.Phase1.Voltage;
+			break;
+		case Phase2:
+			VoltageForCE = &Current_Data.Phase2.Voltage;
+			break;
+		case Phase3:
+			VoltageForCE = &Current_Data.Phase3.Voltage;
+			break;
+		default:
+			;
 	}
 }
 
@@ -96,9 +122,12 @@ Phase_ID Get_PhaseCE(void)
  */
 void Get_Data(void)
 {
-	static int countmessage = 0;
+	// To know the time required for the data acquisition
+//	uint32_t start_time = millis();
+//	static int countmessage = 0;
 	bool log1 = false;
 	bool log2 = false;
+	uint32_t err;
 
 #ifdef LOG_CIRRUS_CONNECT
 	if (Data_acquisition || CS_Com.Is_IHM_Locked())
@@ -112,16 +141,17 @@ void Get_Data(void)
 	CIRRUS_CS548x *CurrentCirrus;
 	Data_acquisition = true;
 
-	// To know the time required for the setup
-//	uint32_t start_time = millis();
-
 	// Sélection du premier cirrus : CS5484, phase 1 et 2
 	CurrentCirrus = (CIRRUS_CS548x*) CS_Com.SelectCirrus(0, Channel_1);
-	log1 = CurrentCirrus->GetData(Channel_all); // durée : 256 ms
+	log1 = CurrentCirrus->GetData(Channel_all);
 	taskYIELD();
 
-	if (CurrentCirrus->GetErrorCount() > 0)
-		print_debug("*** Cirrus1 error : " + String(CurrentCirrus->GetErrorCount()));
+	if ((err = CurrentCirrus->GetErrorCount()) > 0)
+	{
+		print_debug("*** Cirrus1 error : " + String(err));
+		Data_acquisition = false;
+		return;
+	}
 
 	float power_cumul = 0.0;
 
@@ -146,8 +176,12 @@ void Get_Data(void)
 	log2 = CurrentCirrus->GetData(Channel_all);
 	taskYIELD();
 
-	if (CurrentCirrus->GetErrorCount() > 0)
-		print_debug("*** Cirrus2 error : " + String(CurrentCirrus->GetErrorCount()));
+	if ((err = CurrentCirrus->GetErrorCount()) > 0)
+	{
+		print_debug("*** Cirrus2 error : " + String(err));
+		Data_acquisition = false;
+		return;
+	}
 
 	// Fill current data
 	Current_Data.Phase3.Voltage = CurrentCirrus->GetURMS(Channel_1);
@@ -157,12 +191,12 @@ void Get_Data(void)
 
 	// Now we can compute the total energy of the 3 phases
 	uint32_t ref_time = millis();
-	float Energy = power_cumul * ((ref_time - last_time) / 1000.0) / 3600.0;
+	float Energy = power_cumul * ((ref_time - Cumul_time) / 1000.0) / 3600.0;
 	if (Energy > 0.0)
 		Current_Data.energy_day_conso += Energy;
 	else
 		Current_Data.energy_day_surplus += fabs(Energy);
-	last_time = ref_time;
+	Cumul_time = ref_time;
 
 	// Production
 	Current_Data.Production.Voltage = CurrentCirrus->GetURMS(Channel_2);
@@ -175,6 +209,10 @@ void Get_Data(void)
 	// On revient sur le premier cirrus
 	CS_Com.SelectCirrus(0, Channel_1);
 
+	// Temps d'acquisition des données
+//	if (countmessage++ < 40)
+//		print_debug("*** Data time : " + String(millis() - start_time) + " ms ***"); // 129 ~ 194 max 230 ms
+
 #ifdef USE_SSR
 	if (Gestion_SSR_CallBack != NULL)
 	{
@@ -183,6 +221,18 @@ void Get_Data(void)
 		Gestion_SSR_CallBack(*VoltageForCE, Current_Data.get_total_power());
 	}
 #endif
+
+	// Talema
+	if (ADC_OK)
+	{
+		ref_time = millis();
+		Current_Data.Talema_Current = ADC_GetTalemaCurrent();
+		Current_Data.Talema_Power = Current_Data.Talema_Current * Current_Data.Phase1.Voltage
+				* Current_Data.Phase1.PowerFactor; // A sélectionner la bonne phase
+		Current_Data.Talema_Energy = Current_Data.Talema_Energy
+				+ Current_Data.Talema_Power * ((ref_time - Talema_time) / 1000.0) / 3600.0;
+		Talema_time = ref_time;
+	}
 
 	// Log
 	if (log1 && log2)
@@ -210,13 +260,11 @@ void Get_Data(void)
 		// Sauvegarde des données, à faire dans une task
 //		append_data();
 		if (logSemaphore != NULL)
-		  xSemaphoreGive(logSemaphore);
+			xSemaphoreGive(logSemaphore);
 	}
 
-//	if (countmessage < 20)
-//		print_debug("*** Data time : " + String(millis() - start_time) + " ms ***"); // ~390 ms
-
-	countmessage++;
+	// Get extra data
+	GetExtraData();
 
 	Data_acquisition = false;
 }
@@ -228,6 +276,24 @@ bool CIRRUS_get_rms_data(float *uRMS, float *pRMS)
 	return CS5480.get_rms_data(uRMS, pRMS);
 }
 #endif
+
+void GetExtraData(void)
+{
+	if (ExtraDataCount > 0)
+	{
+		if (DS_Count > 0)
+		{
+			Current_Data.DS18B20_Int = DS.get_Temperature(0);
+			Current_Data.DS18B20_Ext = DS.get_Temperature(1);
+		}
+		Current_Data.Prod_Th = emul_PV.Compute_Power_TH(RTC_Local.getSecondOfTheDay(), false);
+		if (TI_OK)
+		{
+			Current_Data.TI_Energy = (TI.getIndexWh() - Current_Data.TI_Counter);
+			Current_Data.TI_Power = TI.getPowerVA();
+		}
+	}
+}
 
 // ********************************************************************************
 // Affichage des données
@@ -319,12 +385,6 @@ void append_data(void)
 	char buffer[255] = {0};
 	char *pbuffer = &buffer[0];
 	uint16_t len;
-	float temp1 = 0.0, temp2 = 0.0;
-	if (DS_Count > 0)
-	{
-		temp1 = DS.get_Temperature(0);
-		temp2 = DS.get_Temperature(1);
-	}
 
 	// Ouvre le fichier en append, le crée s'il n'existe pas
 	Lock_File = true;
@@ -335,20 +395,17 @@ void append_data(void)
 		Fast_Set_Decimal_Separator('.');
 		pbuffer = Fast_Pos_Buffer(buffer, "\t", Buffer_End, &len); // On se positionne en fin de chaine
 		pbuffer = Fast_Printf(pbuffer, 2, "\t", Buffer_End, true,
-				{log_cumul.Voltage_ph1, log_cumul.Power_ph1,
-						log_cumul.Voltage_ph2, log_cumul.Power_ph2,
-						log_cumul.Voltage_ph3, log_cumul.Power_ph3,
-						log_cumul.Power_prod});
+				{log_cumul.Voltage_ph1, log_cumul.Power_ph1, log_cumul.Voltage_ph2, log_cumul.Power_ph2, log_cumul.Voltage_ph3,
+						log_cumul.Power_ph3, log_cumul.Power_prod});
 
 		// Temperatures, Energy
 		pbuffer = Fast_Printf(pbuffer, 2, "\t", Buffer_End, false,
-				{log_cumul.Temp, temp1, temp2,
-						Current_Data.energy_day_conso, Current_Data.energy_day_surplus, *Current_Data.energy_day_prod});
+				{log_cumul.Temp, Current_Data.DS18B20_Int, Current_Data.DS18B20_Ext, Current_Data.energy_day_conso,
+						Current_Data.energy_day_surplus, *Current_Data.energy_day_prod});
 
 		// End line
 		Fast_Add_EndLine(pbuffer, Buffer_End);
 		Fast_Set_Decimal_Separator(',');
-
 		temp.print(buffer);
 		temp.close();
 	}
@@ -358,7 +415,8 @@ void append_data(void)
 
 void reboot_energy(void)
 {
-#define MAX_LINESIZE	255
+	const int MAX_LINESIZE = 255;
+
 	// On vérifie qu'on n'est pas en train de l'uploader
 	if (Lock_File)
 		return;

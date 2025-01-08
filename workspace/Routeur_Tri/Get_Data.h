@@ -68,6 +68,19 @@ typedef struct
 		// Températures
 		float Cirrus1_Temp;
 
+		float Talema_Current = 0.0;
+		float Talema_Power = 0.0;
+		float Talema_Energy = 0.0;
+
+		// Extra data
+		float DS18B20_Int = 0.0;
+		float DS18B20_Ext = 0.0;
+		float Prod_Th = 0.0;
+
+		uint32_t TI_Counter = 0;
+		uint32_t TI_Energy = 0;
+		uint32_t TI_Power = 0;
+
 		// Somme des puissances des 3 phases pour avoir le surplus
 		float get_total_power(void)
 		{
