@@ -68,12 +68,10 @@ bool Use_EEPROM = false;
 Preferences *credential = NULL;
 
 static const char SSIDResponse[] PROGMEM
-		=
-		"<META http-equiv=\"content-type\" content=\"text/html; charset=UTF-8\">SSID enregistré, redémarrez sur la nouvelle IP ...";
+		= "<META http-equiv=\"content-type\" content=\"text/html; charset=UTF-8\">SSID enregistré, redémarrez sur la nouvelle IP ...";
 
 static const char SSIDReset[] PROGMEM
-		=
-		"<META http-equiv=\"content-type\" content=\"text/html; charset=UTF-8\">SSID effacé. Redémarrage sur IP locale ...";
+		= "<META http-equiv=\"content-type\" content=\"text/html; charset=UTF-8\">SSID effacé. Redémarrage sur IP locale ...";
 
 // ********************************************************************************
 // ServerConnexion class section
@@ -169,8 +167,7 @@ void DeleteSSID(void)
 String macToString(const unsigned char *mac)
 {
 	char buf[20];
-	snprintf(buf, sizeof(buf), "%02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3],
-			mac[4], mac[5]);
+	snprintf(buf, sizeof(buf), "%02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 	return String(buf);
 }
 
@@ -332,7 +329,6 @@ bool ServerConnexion::Connexion(bool toUART)
 #else
 		if ((!_ip.toString().equals("0.0.0.0")) && (!_gateway.toString().equals("0.0.0.0")))
 			WiFi.config(_ip, _gateway, subnet);
-		WiFi.onEvent(WiFiEvent);
 #endif
 		WiFi.begin(_SSID, _PWD);
 		delay(100);  // small delay
@@ -363,9 +359,14 @@ bool ServerConnexion::Connexion(bool toUART)
 			}
 			return false;
 		}
+#ifdef ESP32
+		// If we want message
+		WiFi.onEvent(WiFiEvent);
+#endif
 		_IPaddress = "IP=" + WiFi.localIP().toString();
 	}
 
+	// Now, we are connected
 	// Print local IP address
 	print_debug(F("WiFi connected in "), false);
 	print_debug(String(millis() - time), false);
@@ -390,7 +391,34 @@ bool ServerConnexion::Connexion(bool toUART)
 	if (toUART)
 		printf_message_to_UART(_IPaddress);
 
-	// Now, we are connected
+	// Callback that define server events
+	if (_onAfterConnexion != NULL)
+		_onAfterConnexion();
+
+	// Start the server
+	server.begin();
+#ifdef USE_MDNS
+		MDNS.addService("http", "tcp", SERVER_PORT);
+#endif
+
+	// Get Epoch time via NTP
+#if defined(USE_NTP_SERVER) && defined(USE_RTCLocal)
+	if (!_IsSoftAP)
+	{
+		print_debug(F("Get EpochTime"));
+		if (RTC_Local.setEpochTime(USE_NTP_SERVER))
+			print_debug(F("Get EpochTime ended"));
+		else
+		{
+			print_debug(F("Get EpochTime, second try"));
+			if (RTC_Local.setEpochTime(USE_NTP_SERVER))
+				print_debug(F("Get EpochTime ended"));
+			else
+				print_debug(F("Get EpochTime failed"));
+		}
+	}
+#endif
+
 	return true;
 }
 
@@ -406,12 +434,17 @@ bool ServerConnexion::WifiConnected(void)
 /**
  * Keep alive connexion
  * This function should be called regularly in a loop or a task
+ * We stop the debug message in log file to avoid filling it completely
  */
 void ServerConnexion::KeepAlive(void)
 {
+	// Try to reconnect if we are disconnected
 	if (!WifiConnected())
 	{
+		WiFi.removeEvent(WiFiEvent);
+		GLOBAL_PRINT_DEBUG = false;
 		Connexion(false);
+		GLOBAL_PRINT_DEBUG = true;
 	}
 }
 
@@ -511,37 +544,6 @@ bool ServerConnexion::WaitForConnexion(Conn_typedef connexion, bool toUART)
 		httpUpdater.setup(&server, update_path, update_username, update_password);
 #endif
 
-		// We are connected
-		if (!WaitForNetWork)
-		{
-			// Callback that define server events
-			if (_onAfterConnexion != NULL)
-				_onAfterConnexion();
-
-			// Start the server
-			server.begin();
-#ifdef USE_MDNS
-			MDNS.addService("http", "tcp", SERVER_PORT);
-#endif
-
-			// Get Epoch time via NTP
-#if defined(USE_NTP_SERVER) && defined(USE_RTCLocal)
-			if (!_IsSoftAP)
-			{
-				print_debug(F("Get EpochTime"));
-				if (RTC_Local.setEpochTime(USE_NTP_SERVER))
-					print_debug(F("Get EpochTime ended"));
-				else
-				{
-					print_debug(F("Get EpochTime, second try"));
-					if (RTC_Local.setEpochTime(USE_NTP_SERVER))
-						print_debug(F("Get EpochTime ended"));
-					else
-						print_debug(F("Get EpochTime failed"));
-				}
-			}
-#endif
-		}
 	}
 	return WaitForNetWork;
 }
@@ -610,7 +612,7 @@ String GetIPaddress(void)
 		return "IP=" + WiFi.localIP().toString();
 #else
 	if (WiFi.getMode() == WIFI_MODE_AP)
-	  return "IP=" + WiFi.softAPIP().toString();
+		return "IP=" + WiFi.softAPIP().toString();
 	else
 		return "IP=" + WiFi.localIP().toString();
 #endif
