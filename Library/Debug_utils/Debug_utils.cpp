@@ -30,6 +30,9 @@
 // data Log dans un fichier
 const String LOG_Filename = "/log.txt";
 
+// Global boolean to stop the debug print
+bool GLOBAL_PRINT_DEBUG = true;
+
 #ifdef USE_SAVE_CRASH
 #ifdef ESP8266
 EspSaveCrash SaveCrash(0x0010, 0x0800);
@@ -150,7 +153,8 @@ void print_debug(String mess, bool ln)
 		mess += "\r\n";
 
 #ifdef LOG_DEBUG
-	if (!Lock_File)
+	// print message to log file
+	if (!Lock_File && GLOBAL_PRINT_DEBUG)
 	{
 		File temp = FS_Partition->open(LOG_Filename, "a");
 		if (temp)
@@ -164,7 +168,8 @@ void print_debug(String mess, bool ln)
 	Serial.print(mess);
 	Serial.flush();
 #endif
-#else
+
+#else  // DEBUG
 	// Juste pour éviter le warning du compilateur
 	(void) mess;
 	(void) ln;
