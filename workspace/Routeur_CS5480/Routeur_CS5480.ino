@@ -436,6 +436,8 @@ void setup()
 		Relay.setState(i, init_routeur.ReadBoolIndex(i, "Relais", "State", false));
 	}
 	RTC_Local.setMinuteChangeCallback(onRelayMinuteChange_cb);
+	// Delais pour le démarrage des charges sur les relais
+	delay(2000);
 #endif
 
 	// **** 9- Initialisation installation PV

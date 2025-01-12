@@ -54,7 +54,7 @@ extern CIRRUS_CS548x CS5480;
 bool Data_acquisition = false;
 
 // Gestion énergie
-uint32_t last_time = millis();
+uint32_t Talema_time = millis();
 
 // Gestion log pour le graphique
 volatile Graphe_Data log_cumul;
@@ -90,6 +90,7 @@ void Get_Data(void)
 {
 	static int countmessage = 0;
 	bool log = false;
+	uint32_t err;
 
 #ifdef LOG_CIRRUS_CONNECT
 	if (Data_acquisition || CS_Com.Is_IHM_Locked())
@@ -103,12 +104,11 @@ void Get_Data(void)
 	Data_acquisition = true;
 
 	// To know the time required for data acquisition
-	uint32_t start_time = millis();
+//	uint32_t start_time = millis();
 
 	log = CS5480.GetData(Channel_all); // durée : 256 ms
 	taskYIELD();
 
-	uint32_t err;
 	if ((err = CS5480.GetErrorCount()) > 0)
 	{
 		print_debug("*** Cirrus error : " + String(err));
@@ -133,6 +133,10 @@ void Get_Data(void)
 	CS5480.GetEnergy(Channel_2, &Current_Data.energy_day_prod, NULL);
 	Current_Data.Cirrus_ch2.ActivePower = CS5480.GetPRMSSigned(Channel_2);
 
+	// Temps d'acquisition des données
+//	if (countmessage < 20)
+//		print_debug("*** Data time : " + String(millis() - start_time) + " ms ***"); // 67 - 133 ms
+
 #ifdef USE_SSR
 	// On choisi le premier channel qui mesure la consommation et le surplus
 	if (Gestion_SSR_CallBack != NULL)
@@ -142,12 +146,13 @@ void Get_Data(void)
 	// Talema
 	if (ADC_OK)
 	{
+		uint32_t ref_time = millis();
 		Current_Data.Talema_Current = ADC_GetTalemaCurrent();
 		Current_Data.Talema_Power = Current_Data.Talema_Current * Current_Data.Cirrus_ch1.Voltage
 				* Current_Data.Cirrus_ch1.PowerFactor; // Ou le channel 2
 		Current_Data.Talema_Energy = Current_Data.Talema_Energy
-				+ Current_Data.Talema_Power * ((start_time - last_time) / 1000.0) / 3600.0;
-		last_time = start_time;
+				+ Current_Data.Talema_Power * ((ref_time - Talema_time) / 1000.0) / 3600.0;
+		Talema_time = ref_time;
 	}
 
 //	uint32_t err = CS5480.GetErrorCount();
@@ -177,9 +182,6 @@ void Get_Data(void)
 
 	// Get extra data
 	GetExtraData();
-
-//	if (countmessage < 20)
-//		print_debug("*** Data time : " + String(millis() - start_time) + " ms ***"); // 67 - 133 ms
 
 	countmessage++;
 
