@@ -111,7 +111,7 @@ void Get_Data(void)
 
 	if ((err = CS5480.GetErrorCount()) > 0)
 	{
-		print_debug("*** Cirrus error : " + String(err));
+		print_debug("*** Cirrus error : " + String(CS5480.Print_LastError()));
 		Data_acquisition = false;
 		return;
 	}
