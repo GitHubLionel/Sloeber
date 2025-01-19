@@ -609,6 +609,7 @@ void SSR_Disable(void)
 	Is_SSR_enabled_Mux = Is_SSR_enabled;
 	Top_CS_ZC_Mux = false;
 	TIMERMUX_EXIT();
+	P_100 = 0;
 	delay(10);
 	SSR_Stop_Timer();
 	// Etre sûr qu'il est low
