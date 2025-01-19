@@ -18,6 +18,7 @@
   <div style="margin-bottom: 44px;">
     <button class="tablink" onclick="openPage('m_Data', this, 'green')" id="defaultOpen">Données</button>
     <button class="tablink" onclick="openPage('m_Graphe', this, '#FFCB00')">Graphiques</button>
+    <button class="tablink" onclick="openPage('m_Temperatue', this, '#1FCB00')">Température</button>
     <button class="tablink" onclick="openPage('m_Energy', this, '#C6410D')">Energie</button>
     <button class="tablink" onclick="openPage('m_SSR', this, '#0ee6f0')">SSR, Relais, PV</button>
     <button class="tablink" onclick="openPage('m_Config', this, '#cd11e8')">Config</button>
@@ -187,9 +188,22 @@
         </div>          
       </div>
     </div>
-
   </div>
+  
+  <div id="m_Temperatue" class="tabcontent">
+    <div class="divSplitter">
+      <div class="divDown">
 
+        <div class="padCanvas">
+          <canvas id="can_mean_temperature"></canvas>
+          <div class="btnZoom">
+            <button class="myButton" onclick="undoZoom('can_mean_temperature')">Dézoomer</button>
+          </div>         
+        </div>          
+      </div>
+    </div>
+  </div>
+  
   <div id="m_Energy" class="tabcontent">
     <div class="divSplitter">
       <div class="divUp">
