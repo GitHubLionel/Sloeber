@@ -101,7 +101,9 @@ void __attribute__((weak)) print_debug(const char *mess, bool ln = true)
 void Compute_Mean_Wave(void);
 
 // ********************************************************************************
-// Initialization functions in Oneshot mode
+// Get raw ADC values
+// do_Code: get raw value for first channel and compute mean wave (sigma) for second channel if exist
+// do_Code_Zero: get raw value for first channel and compute mean for second channel if exist
 // ********************************************************************************
 
 void ADC_INTO_IRAM do_Code(void)
@@ -154,6 +156,10 @@ void task_function(void*)
 }
 
 #endif
+
+// ********************************************************************************
+// Initialization functions in Oneshot mode
+// ********************************************************************************
 
 /**
  * Read function of all channels in OneShot mode
