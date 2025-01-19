@@ -227,6 +227,7 @@ class ServerConnexion
 		int8_t _Wifi_Signal = 0;
 		// Boolean to wait for network
 		bool WaitForNetWork = true;
+		bool FirstConnexion = true;
 		String SSID_File = SSID_FILE;
 		onConnexionEvent _onBeforeConnexion = NULL;
 		onConnexionEvent _onAfterConnexion = NULL;

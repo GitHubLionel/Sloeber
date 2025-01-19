@@ -293,6 +293,11 @@ ServerConnexion::~ServerConnexion()
 bool ServerConnexion::Connexion(bool toUART)
 {
 	uint32_t time = millis();
+
+	// To avoid to many debug messages in log file
+	if (!FirstConnexion)
+		GLOBAL_PRINT_DEBUG = false;
+
 	// Connect to Wi-Fi network with _SSID and password
 	print_debug(F("\r\nConnecting to "), false);
 	print_debug(_SSID);
@@ -315,7 +320,10 @@ bool ServerConnexion::Connexion(bool toUART)
 			WiFi.softAPConfig(_ip, _gateway, subnet);
 #endif
 		if (!WiFi.softAP(_SSID, _PWD))
+		{
+			GLOBAL_PRINT_DEBUG = true;
 			return false;
+		}
 		_IPaddress = "IP=" + WiFi.softAPIP().toString();
 	}
 	else
@@ -357,6 +365,7 @@ bool ServerConnexion::Connexion(bool toUART)
 				default:
 					break;
 			}
+			GLOBAL_PRINT_DEBUG = true;
 			return false;
 		}
 #ifdef ESP32
@@ -367,6 +376,9 @@ bool ServerConnexion::Connexion(bool toUART)
 	}
 
 	// Now, we are connected
+	FirstConnexion = false;
+	GLOBAL_PRINT_DEBUG = true;
+
 	// Print local IP address
 	print_debug(F("WiFi connected in "), false);
 	print_debug(String(millis() - time), false);
@@ -442,14 +454,13 @@ void ServerConnexion::KeepAlive(void)
 	if (!WifiConnected())
 	{
 		WiFi.removeEvent(WiFiEvent);
-		GLOBAL_PRINT_DEBUG = false;
 		Connexion(false);
-		GLOBAL_PRINT_DEBUG = true;
 	}
 }
 
 /**
  * Wait for the connexion
+ * Initialize the parameters (SSID, pwd) and try to connect.
  * If toUART = true then send IP to UART after connexion (default false)
  * return true while connexion is not established
  */
