@@ -847,15 +847,15 @@ void Server_CommonEvent(uint16_t event)
 	// download file
 	if ((event & Ev_GetFile) == Ev_GetFile)
 	{
-		server.on("/getfile", HTTP_GET, handleGetFile);
-		server.on("/getfile", HTTP_POST, handleGetFile);
+		server.on("/getFile", HTTP_GET, handleGetFile);
+		server.on("/getFile", HTTP_POST, handleGetFile);
 	}
 
 	// delete file
 	if ((event & Ev_DeleteFile) == Ev_DeleteFile)
 	{
-		server.on("/delfile", HTTP_GET, handleDeleteFile);
-		server.on("/delfile", HTTP_POST, handleDeleteFile);
+		server.on("/delFile", HTTP_GET, handleDeleteFile);
+		server.on("/delFile", HTTP_POST, handleDeleteFile);
 	}
 
 	// upload file
@@ -1067,20 +1067,20 @@ bool handleReadFile(CB_SERVER_PARAM)
  * Handle the basic delete file with GET or POST method :
  * With xmlHttp :
  * JavaScript side :
- * 	xmlHttp.open("POST","/delfile",true);
+ * 	xmlHttp.open("POST","/delFile",true);
  * 	xmlHttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
  * 	xmlHttp.send("FILE=" + filename);
  * Server side :
- * 	server.on("/delfile", HTTP_POST, handleDeleteFile);
+ * 	server.on("/delFile", HTTP_POST, handleDeleteFile);
  * With form :
  * HTML side :
- <form method="GET" action="/delfile">
- <label for="delfile">File to delete : </label>
- <input type="text" name="delfile">
+ <form method="GET" action="/delFile">
+ <label for="delFile">File to delete : </label>
+ <input type="text" name="delFile">
  <input type="submit" value="Delete">
  </form>
  * Server side :
- * 	server.on("/delfile", HTTP_GET, handleDeleteFile);
+ * 	server.on("/delFile", HTTP_GET, handleDeleteFile);
  */
 void handleDeleteFile(CB_SERVER_PARAM)
 {
@@ -1117,11 +1117,11 @@ void handleDeleteFile(CB_SERVER_PARAM)
 /**
  * Handle the basic get file with GET or POST method :
  * JavaScript side :
- * 	xmlHttp.open("POST","/getfile",true);
+ * 	xmlHttp.open("POST","/getFile",true);
  * 	xmlHttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
  * 	xmlHttp.send("FILE=" + filename); //  + "&DATA_PART=1" to get file from data partition
  * Server side :
- * 	server.on("/getfile", HTTP_POST, handleGetFile);
+ * 	server.on("/getFile", HTTP_POST, handleGetFile);
  */
 void handleGetFile(CB_SERVER_PARAM)
 {
