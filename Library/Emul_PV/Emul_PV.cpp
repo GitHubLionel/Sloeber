@@ -3,6 +3,7 @@
 #include <math.h>
 #include "rayonnement.h"
 #include "RTCLocal.h"
+#include "Debug_utils.h"
 
 EmulPV_Class::EmulPV_Class()
 {
@@ -253,7 +254,7 @@ double EmulPV_Class::Irradiance(TDateTime aDateSun)
 	double lMaskTime;
 	double result = 0.0;
 
-	if ((aDateSun < SunRise) || (aDateSun > SunSet))
+	if ((aDateSun <= SunRise) || (aDateSun >= SunSet))
 		return 0.0;
 
 	Sun_Position_Horizontal(aDateSun, PV_Site.GPS.Latitude, PV_Site.GPS.Longitude, &hauteur, &azimuth);
@@ -320,6 +321,8 @@ double EmulPV_Class::Power(TDateTime aDateSun)
 	double _Irradiance, TempCoeff, Puissance;
 
 	_Irradiance = Irradiance(aDateSun);
+	if (_Irradiance == 0.0)
+		return 0.0;
 
 	TempCoeff = 1.0 + PV_TempCoeffPuissance * (ComputeCellTemperature(PV_Site.Temperature, _Irradiance) - 25.0);
 	Puissance = _Irradiance * Rendement * TempCoeff;
@@ -337,7 +340,7 @@ double EmulPV_Class::Compute_Power_TH(uint32_t daytime_s, bool summer_hour)
 	TDateTime dt;
 	int32_t time_s = daytime_s;
 
-	// Décalage heure solaire
+	// Décalage heure solaire d'été
 	if (summer_hour)
 		time_s -= 7200;
 	else

@@ -104,6 +104,8 @@ class EmulPV_Class
 		double Power(TDateTime aDateSun);
 		double Compute_Power_TH(uint32_t daytime_s, bool summer_hour);
 
+		template <typename T> void Fill_Power_Day(uint32_t daytime_minute, uint32_t nb_data, T *data);
+
 	private:
 		TGPSPosition PV_GPS;
 		TSite PV_Site;
@@ -132,5 +134,21 @@ class EmulPV_Class
 		double ComputeCellTemperature(double aTAmbiante, double aIrradiance);
 };
 
+/**
+ * Calcul de la puissance théorique sur une période de temps,
+ * de minuit à une heure donnée (en minute) du jour courant sur un nombre de point
+ * - daytime_minute: l'heure final
+ * - nb_data: nombre de valeur
+ * - data: tableau des puissances. Utiliser le type <int> ou <double>
+ */
+template<typename T>
+void EmulPV_Class::Fill_Power_Day(uint32_t daytime_minute, uint32_t nb_data, T *data)
+{
+	for (uint32_t i = 0; i < nb_data; i++)
+	{
+		uint32_t step = (daytime_minute * i) / nb_data;
+		data[i] = (T) Compute_Power_TH(step * 60, false);
+	}
+}
 
 #endif /* __PV_DATA_H */
