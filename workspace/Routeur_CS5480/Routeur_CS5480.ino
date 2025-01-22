@@ -270,6 +270,7 @@ void handleInitPVData(CB_SERVER_PARAM);
 void handleLastData(CB_SERVER_PARAM);
 void handleOperation(CB_SERVER_PARAM);
 void handleCirrus(CB_SERVER_PARAM);
+void handleFillTheoric(CB_SERVER_PARAM);
 void onNewDaychange(uint8_t year, uint8_t month, uint8_t day)
 {
 	// Mise à jour des données pour le nouveau jour
@@ -554,6 +555,8 @@ void OnAfterConnexion(void)
 	server.on("/operation", HTTP_POST, handleOperation);
 
 	server.on("/getCirrus", HTTP_PUT, handleCirrus);
+
+	server.on("/getTheoric", HTTP_POST, handleFillTheoric);
 }
 
 // ********************************************************************************
@@ -705,6 +708,32 @@ void handleLastData(CB_SERVER_PARAM)
 //	print_debug(buffer);
 
 	pserver->send(200, "text/plain", buffer);
+}
+
+void handleFillTheoric(CB_SERVER_PARAM)
+{
+	// Default
+	RETURN_BAD_ARGUMENT();
+
+	int nb = pserver->arg("DATA_NB").toInt();
+	int last_date = pserver->arg("DATA_DATE").toInt();
+
+//	print_debug("DATA_NB: " + pserver->arg("DATA_NB") + ",  last_date=" + pserver->arg("DATA_DATE"));
+
+	int *data = NULL;
+	data = (int *) malloc((nb) * sizeof(int));
+
+	emul_PV.Fill_Power_Day(last_date, nb, data);
+
+	String message = (String) data[0];
+
+	for (int i = 1; i < nb; i++)
+	{
+		message += "\t" + (String) data[i];
+	}
+	free(data);
+
+	pserver->send(200, "text/plain", message);
 }
 
 void handleOperation(CB_SERVER_PARAM)

@@ -148,8 +148,13 @@ void Get_Data(void)
 	{
 		uint32_t ref_time = millis();
 		Current_Data.Talema_Current = ADC_GetTalemaCurrent();
+#ifdef USE_SSR_POWERFACTOR
+		Current_Data.Talema_Power = Current_Data.Talema_Current * Current_Data.Cirrus_ch1.Voltage
+				* SSR_Get_Current_Percent() / 100;
+#else
 		Current_Data.Talema_Power = Current_Data.Talema_Current * Current_Data.Cirrus_ch1.Voltage
 				* Current_Data.Cirrus_ch1.PowerFactor; // Ou le channel 2
+#endif
 		Current_Data.Talema_Energy = Current_Data.Talema_Energy
 				+ Current_Data.Talema_Power * ((ref_time - Talema_time) / 1000.0) / 3600.0;
 		Talema_time = ref_time;
@@ -158,6 +163,9 @@ void Get_Data(void)
 //	uint32_t err = CS5480.GetErrorCount();
 //	if (err > 0)
 //		print_debug("erreur = " + (String)err);
+
+	// Get extra data
+	GetExtraData();
 
 	// Log
 	if (log)
@@ -179,9 +187,6 @@ void Get_Data(void)
 		if (logSemaphore != NULL)
 		  xSemaphoreGive(logSemaphore);
 	}
-
-	// Get extra data
-	GetExtraData();
 
 	countmessage++;
 
@@ -323,17 +328,17 @@ void append_data(void)
 	File temp = Data_Partition->open(CSV_Filename, "a");
 	if (temp)
 	{
-		// Time, Pconso_rms, Pprod_rms, U_rms, Tcs
+		// Time, Pconso_rms, Pprod_rms, PTalema, Pth, U_rms, Tcs
 		sprintf(buffer, "%ld", RTC_Local.getUNIXDateTime()); // Copie la date
 		Fast_Set_Decimal_Separator('.');
 		pbuffer = Fast_Pos_Buffer(buffer, "\t", Buffer_End, &len); // On se positionne en fin de chaine
 		pbuffer = Fast_Printf(pbuffer, 2, "\t", Buffer_End, true,
-				{log_cumul.Power_ch1, log_cumul.Power_ch2, log_cumul.Voltage});
+				{log_cumul.Power_ch1, log_cumul.Power_ch2, Current_Data.Talema_Power,	log_cumul.Voltage});
 
 		// Temperatures, Energy
 		pbuffer = Fast_Printf(pbuffer, 2, "\t", Buffer_End, false,
 				{log_cumul.Temp, Current_Data.DS18B20_Int, Current_Data.DS18B20_Ext,
-						Current_Data.energy_day_conso, Current_Data.energy_day_surplus, Current_Data.energy_day_prod});
+						Current_Data.energy_day_conso, Current_Data.energy_day_surplus, Current_Data.energy_day_prod, Current_Data.Talema_Energy});
 
 		// End line
 		Fast_Add_EndLine(pbuffer, Buffer_End);
@@ -386,13 +391,14 @@ void reboot_energy(void)
 					i++;
 				}
 			}
-			// The last 3 data is energy
+			// The last 4 data is energy
 			if (i > 3)
 			{
 				// energy_day_conso, energy_day_surplus
-				CS5480.RestartEnergy(Channel_1, data[i - 3], data[i - 2]);
+				CS5480.RestartEnergy(Channel_1, data[i - 4], data[i - 3]);
 				// energy_day_prod
-				CS5480.RestartEnergy(Channel_2, data[i - 1]);
+				CS5480.RestartEnergy(Channel_2, data[i - 2]);
+				Current_Data.Talema_Energy = data[i - 1];
 			}
 		}
 	}
@@ -415,12 +421,12 @@ void append_energy(void)
 	File temp = Data_Partition->open(Energy_Filename, "a");
 	if (temp)
 	{
-		// Time, Econso, Esurplus, Eprod
+		// Time, Econso, Esurplus, Eprod, ETalema
 		RTC_Local.getShortDate(buffer); // Copie la date
 		Fast_Set_Decimal_Separator('.');
 		pbuffer = Fast_Pos_Buffer(buffer, "\t", Buffer_End, &len); // On se positionne en fin de chaine
 		pbuffer = Fast_Printf(pbuffer, 2, "\t", Buffer_End, false,
-				{Current_Data.energy_day_conso, Current_Data.energy_day_surplus, Current_Data.energy_day_prod});
+				{Current_Data.energy_day_conso, Current_Data.energy_day_surplus, Current_Data.energy_day_prod, Current_Data.Talema_Energy});
 
 		// End line
 		Fast_Add_EndLine(pbuffer, Buffer_End);
