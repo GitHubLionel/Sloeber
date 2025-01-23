@@ -339,6 +339,7 @@ bool ServerConnexion::Connexion(bool toUART)
 			WiFi.config(_ip, _gateway, subnet);
 #endif
 		WiFi.begin(_SSID, _PWD);
+		WiFi.setSleep(false);
 		delay(100);  // small delay
 		while ((WiFi.status() != WL_CONNECTED) && (++count < TRY_COUNT))
 		{
