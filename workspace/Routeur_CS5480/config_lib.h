@@ -133,7 +133,6 @@
 //#define ZERO_CROSS_TOP_Xms	20	// Allow to have a top 200 ms created by the zero cross (10 * X ms)
 #define SSR_COMMAND_GPIO	GPIO_NUM_12
 #define SSR_LED_GPIO	GPIO_NUM_13
-//#define USE_SSR_POWERFACTOR
 
 //#define SIMPLE_ZC_TEST
 

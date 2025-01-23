@@ -35,7 +35,8 @@ int ExtraDataCount = 1;
 
 // data au format CSV
 const String CSV_Filename = "/data.csv";
-const String Energy_Filename = "/energy_2025.csv";
+String Energy_Filename = "/energy_2025.csv";
+String Energy_Heading = "Date\tE_Conso\tE_Surplus\tE_Prod\tE_Talema\r\n";
 
 // Data 200 ms
 Data_Struct Current_Data; //{0,{0}};
@@ -55,6 +56,7 @@ bool Data_acquisition = false;
 
 // Gestion énergie
 uint32_t Talema_time = millis();
+Talema_Factor_Enum TalemaFactor = tfChannel1;
 
 // Gestion log pour le graphique
 volatile Graphe_Data log_cumul;
@@ -68,6 +70,7 @@ volatile SemaphoreHandle_t logSemaphore = NULL;
 // ********************************************************************************
 
 void GetExtraData(void);
+double GetTalemaFactor(void);
 void append_data(void);
 void append_energy(void);
 
@@ -148,15 +151,8 @@ void Get_Data(void)
 	{
 		uint32_t ref_time = millis();
 		Current_Data.Talema_Current = ADC_GetTalemaCurrent();
-#ifdef USE_SSR_POWERFACTOR
-		Current_Data.Talema_Power = Current_Data.Talema_Current * Current_Data.Cirrus_ch1.Voltage
-				* SSR_Get_Current_Percent() / 100;
-#else
-		Current_Data.Talema_Power = Current_Data.Talema_Current * Current_Data.Cirrus_ch1.Voltage
-				* Current_Data.Cirrus_ch1.PowerFactor; // Ou le channel 2
-#endif
-		Current_Data.Talema_Energy = Current_Data.Talema_Energy
-				+ Current_Data.Talema_Power * ((ref_time - Talema_time) / 1000.0) / 3600.0;
+		Current_Data.Talema_Power = Current_Data.Talema_Current * Current_Data.Cirrus_ch1.Voltage * GetTalemaFactor();
+		Current_Data.Talema_Energy += Current_Data.Talema_Power * ((ref_time - Talema_time) / 1000.0) / 3600.0;
 		Talema_time = ref_time;
 	}
 
@@ -185,7 +181,7 @@ void Get_Data(void)
 		// Sauvegarde des données, à faire dans une task
 //		append_data();
 		if (logSemaphore != NULL)
-		  xSemaphoreGive(logSemaphore);
+			xSemaphoreGive(logSemaphore);
 	}
 
 	countmessage++;
@@ -217,6 +213,28 @@ void GetExtraData(void)
 			Current_Data.TI_Power = TI.getPowerVA();
 		}
 	}
+}
+void SetTalemaFactor(Talema_Factor_Enum factor)
+{
+	TalemaFactor = factor;
+}
+
+double GetTalemaFactor(void)
+{
+	double factor = 0.0;
+	switch (TalemaFactor)
+	{
+		case tfSSR:
+			factor = SSR_Get_Current_Percent() / 100;
+			break;
+		case tfChannel1:
+			factor = Current_Data.Cirrus_ch1.PowerFactor;
+			break;
+		case tfChannel2:
+			factor = Current_Data.Cirrus_ch2.PowerFactor;
+			break;
+	}
+	return factor;
 }
 
 // ********************************************************************************
@@ -333,12 +351,12 @@ void append_data(void)
 		Fast_Set_Decimal_Separator('.');
 		pbuffer = Fast_Pos_Buffer(buffer, "\t", Buffer_End, &len); // On se positionne en fin de chaine
 		pbuffer = Fast_Printf(pbuffer, 2, "\t", Buffer_End, true,
-				{log_cumul.Power_ch1, log_cumul.Power_ch2, Current_Data.Talema_Power,	log_cumul.Voltage});
+				{log_cumul.Power_ch1, log_cumul.Power_ch2, Current_Data.Talema_Power, log_cumul.Voltage});
 
 		// Temperatures, Energy
 		pbuffer = Fast_Printf(pbuffer, 2, "\t", Buffer_End, false,
-				{log_cumul.Temp, Current_Data.DS18B20_Int, Current_Data.DS18B20_Ext,
-						Current_Data.energy_day_conso, Current_Data.energy_day_surplus, Current_Data.energy_day_prod, Current_Data.Talema_Energy});
+				{log_cumul.Temp, Current_Data.DS18B20_Int, Current_Data.DS18B20_Ext, Current_Data.energy_day_conso,
+						Current_Data.energy_day_surplus, Current_Data.energy_day_prod, Current_Data.Talema_Energy});
 
 		// End line
 		Fast_Add_EndLine(pbuffer, Buffer_End);
@@ -418,15 +436,21 @@ void append_energy(void)
 
 	// Ouvre le fichier en append, le crée s'il n'existe pas
 	Lock_File = true;
+	bool Exist = Data_Partition->exists(Energy_Filename);
 	File temp = Data_Partition->open(Energy_Filename, "a");
 	if (temp)
 	{
+		// Le fichier n'existait pas (nouvelle année), on ajoute la première ligne
+		if (!Exist)
+			temp.print(Energy_Heading);
+
 		// Time, Econso, Esurplus, Eprod, ETalema
 		RTC_Local.getShortDate(buffer); // Copie la date
 		Fast_Set_Decimal_Separator('.');
 		pbuffer = Fast_Pos_Buffer(buffer, "\t", Buffer_End, &len); // On se positionne en fin de chaine
 		pbuffer = Fast_Printf(pbuffer, 2, "\t", Buffer_End, false,
-				{Current_Data.energy_day_conso, Current_Data.energy_day_surplus, Current_Data.energy_day_prod, Current_Data.Talema_Energy});
+				{Current_Data.energy_day_conso, Current_Data.energy_day_surplus, Current_Data.energy_day_prod,
+						Current_Data.Talema_Energy});
 
 		// End line
 		Fast_Add_EndLine(pbuffer, Buffer_End);
@@ -442,6 +466,7 @@ void onDaychange(uint8_t year, uint8_t month, uint8_t day)
 {
 	print_debug(F("Callback day change"));
 	// On ajoute les énergies au fichier
+	Energy_Filename = "/energy_20" + (String) year + ".csv";
 	append_energy();
 	Current_Data.energy_day_conso = 0.0;
 	Current_Data.energy_day_surplus = 0.0;

@@ -55,9 +55,17 @@ typedef struct
 		uint32_t TI_Power = 0;
 } Data_Struct;
 
+typedef enum {
+	tfSSR = 0,
+	tfChannel1,
+	tfChannel2
+} Talema_Factor_Enum;
+
 // Task to save log every 10 s
 #define LOG_DATA_TASK	{true, "LOG_DATA_Task", 4096, 3, 10000, Core1, Log_Data_Task_code}
 void Log_Data_Task_code(void *parameter);
+
+void SetTalemaFactor(Talema_Factor_Enum factor);
 
 void Get_Data(void);
 uint8_t Update_IHM(const char *first_text, const char *last_text, bool display = true);

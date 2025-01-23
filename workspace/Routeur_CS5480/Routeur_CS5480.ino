@@ -246,6 +246,7 @@ uint16_t interval[] = {1250, 950, 650, 250};
 
 bool ADC_OK = false;
 bool ADC_Test_Zero = false;
+int TalemaFactor_int = 1;
 
 // ********************************************************************************
 // Définition Fichier ini
@@ -418,6 +419,10 @@ void setup()
 	}
 	else
 		print_debug(F("ADC Failed"));
+
+	// Talema
+	TalemaFactor_int = init_routeur.ReadInteger("TALEMA", "Factor", 1);
+	SetTalemaFactor((Talema_Factor_Enum) TalemaFactor_int);
 #endif
 
 #ifdef USE_KEYBOARD
@@ -623,6 +628,9 @@ void handleInitialization(CB_SERVER_PARAM)
 	else
 		message += "ON#";
 
+	// Talema factor
+	message += (String) TalemaFactor_int + '#';
+
 	// Relay part
 	String alarm = "";
 	String start = "", end = "";
@@ -726,7 +734,6 @@ void handleFillTheoric(CB_SERVER_PARAM)
 	emul_PV.Fill_Power_Day(last_date, nb, data);
 
 	String message = (String) data[0];
-
 	for (int i = 1; i < nb; i++)
 	{
 		message += "\t" + (String) data[i];
@@ -778,6 +785,13 @@ void handleOperation(CB_SERVER_PARAM)
 		init_routeur.WriteIntegerIndex(id, "Relais", "Alarm2_end", end);
 	}
 #endif
+
+	if (pserver->hasArg("TalemaFactor_int"))
+	{
+		TalemaFactor_int = pserver->arg("TalemaFactor_int").toInt();
+		SetTalemaFactor((Talema_Factor_Enum) TalemaFactor_int);
+		init_routeur.WriteInteger("TALEMA", "Factor", TalemaFactor_int, "SSR=0, Channel1=1, Channel2=2");
+	}
 
 #ifdef USE_ZC_SSR
 	// Change le mode d'action Pourcent/Zéro

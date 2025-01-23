@@ -283,13 +283,28 @@
     <div class="div_space">
       <fieldset>
       <div>
-        <input type="radio" id="Relay0" name="RelayAction" value="Relay0"  onchange="doRelayAction(0)" checked>
+        <span>Talema Facteur :</span>
+        <input type="radio" id="TFactor0" name="TFactorAction" value="0" title="Si Talema est branché sur la ligne CE après le SSR">
+        <label for="TFactor0">SSR</label>
+        <input type="radio" id="TFactor1" name="TFactorAction" value="1" title="Si Talema est branché sur la ligne conso" checked>
+        <label for="TFactor1">Channel 1</label>
+        <input type="radio" id="TFactor2" name="TFactorAction" value="2" title="Si Talema est branché sur la ligne prod">
+        <label for="TFactor2">Channel 2</label>
+        <button class="myButton" onclick="setTalemaFactor()">Actualiser</button>
+      </div>
+      </fieldset>
+    </div>
+
+    <div class="div_space">
+      <fieldset>
+      <div>
+        <input type="radio" id="Relay0" name="RelayAction" value="Relay0" onchange="doRelayAction(0)" checked>
         <label for="Relay0">Relais 0</label>
-        <input type="radio" id="Relay1" name="RelayAction" value="Relay1"  onchange="doRelayAction(1)">
+        <input type="radio" id="Relay1" name="RelayAction" value="Relay1" onchange="doRelayAction(1)">
         <label for="Relay1">Relais 1</label>
-        <input type="radio" id="Relay2" name="RelayAction" value="Relay2"  onchange="doRelayAction(2)">
+        <input type="radio" id="Relay2" name="RelayAction" value="Relay2" onchange="doRelayAction(2)">
         <label for="Relay2">Relais 2</label>
-        <input type="radio" id="Relay3" name="RelayAction" value="Relay3"  onchange="doRelayAction(3)">
+        <input type="radio" id="Relay3" name="RelayAction" value="Relay3" onchange="doRelayAction(3)">
         <label for="Relay3">Relais 3</label>
       </div>
         <div style="display: inline-block;">
