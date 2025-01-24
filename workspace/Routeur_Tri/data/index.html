@@ -217,7 +217,6 @@
         </div>          
       </div>
     </div>
-
   </div>
   
   <div id="m_VoltageTemp" class="tabcontent">
@@ -232,7 +231,6 @@
         </div>          
       </div>
     </div>
-
   </div>
   
   <div id="m_Energy" class="tabcontent">
@@ -320,11 +318,11 @@
     <div class="div_space">
       <fieldset>
       <div>
-        <input type="radio" id="Relay0" name="RelayAction" value="Relay0"  onchange="doRelayAction(0)" checked>
+        <input type="radio" id="Relay0" name="RelayAction" value="Relay0" onchange="doRelayAction(0)" checked>
         <label for="Relay0">Relais 0</label>
-        <input type="radio" id="Relay1" name="RelayAction" value="Relay1"  onchange="doRelayAction(1)">
+        <input type="radio" id="Relay1" name="RelayAction" value="Relay1" onchange="doRelayAction(1)">
         <label for="Relay1">Relais 1</label>
-        <input type="radio" id="Relay2" name="RelayAction" value="Relay2"  onchange="doRelayAction(2)">
+        <input type="radio" id="Relay2" name="RelayAction" value="Relay2" onchange="doRelayAction(2)">
         <label for="Relay2">Relais 2</label>
       </div>
         <div style="display: inline-block;">
@@ -419,9 +417,9 @@
     </div>
 
     <div class="div_space">
-      <form method="GET" action="/delfile">
-        <label for="delfile">Fichier à supprimer : </label>
-        <input type="text" name="delfile" id="delfile">
+      <form method="GET" action="/delFile">
+        <label for="delFile">Fichier à supprimer : </label>
+        <input type="text" name="delFile" id="delFile">
         <input class="myButton" type="submit" value="Supprimer">
       </form>
     </div>
