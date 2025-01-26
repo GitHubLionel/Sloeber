@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="fr-fr">
+<head>
+  <title>Default ESP32</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8">
+  <link rel="shortcut icon" href="favicon.ico">
+  <script src="FileSaver.min.js"></script>
+  <script>
+    var xmlHttp = createXmlHttpObject();
+    var loadingdiv = null;        // le div d'attente pour l'upload
+    var get_time = true;
+    var request_busy = false;
+    var pending_request = null;
+
+    // web events
+    function createXmlHttpObject() {
+      if (window.XMLHttpRequest) {
+        xmlHttp = new XMLHttpRequest();
+      } else {
+        xmlHttp = new ActiveXObject('Microsoft.XMLHTTP');
+      }
+      xmlHttp.onerror = onError;
+      return xmlHttp;
+    }
+
+    function onError(event) {
+      console.error("Une erreur " + event.target.status + " s'est produite au cours de la réception du document.");
+      // On annule la requete et on poursuit
+      if (event.target.status != 0)
+      {
+        request_busy = false;
+        xmlHttp.onreadystatechange = null;
+        process();
+      }
+    }
+
+    // Test if the server can accept a new request
+    function serverIsReady(server) {
+      return ((!request_busy) && (server.readyState == 0 || server.readyState == 4));
+    }
+
+    // Test if we have received the response
+    function requestIsOK(server) {
+    //  console.log('readyState: ', request.readyState);
+    //  console.log('status: ', request.status);
+    //  console.log('****');
+      return (server.readyState == 4 && server.status == 200);
+    }
+
+    function ESP_Request(send_request, params = null) {
+      // Le server n'est pas prêt, on met la requête en attente
+      if (!serverIsReady(xmlHttp)) {
+        pending_request = {"request": send_request, "params": params};
+        return;
+      }
+
+      request_busy = true;
+      if (send_request === "getFile")
+      {
+        xmlHttp.open("POST", "/getFile", true);
+        xmlHttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+        xmlHttp.onreadystatechange = function() {
+          if (requestIsOK(this)) {
+
+            var blob = new Blob([this.responseText],
+                      { type: "text/plain; charset=utf-8" });
+
+            // Save the file with FileSaver.js
+            saveAs(blob, params[1]);
+          }
+          wait_Upload(false);
+          request_busy = false;
+        }
+        xmlHttp.send("FILE=" + params[0]);
+        wait_Upload(true);
+        return;
+      }
+
+      if (send_request === "delFile")
+      {
+        xmlHttp.open("POST", "/delFile", true);
+        xmlHttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+        xmlHttp.onreadystatechange = function() {
+          if (this.status == 204) {
+            document.getElementById("delFile").value = "";
+          }
+    //          else alert("Not found");
+          request_busy = false;
+        }
+        xmlHttp.send("FILE=" + params[0]);
+        return;
+      }
+
+      if (send_request === "listfile")
+      {
+        xmlHttp.open("GET","/listfile?DIR=" + params[0],true);
+        xmlHttp.onreadystatechange = function() {
+          if (requestIsOK(this)) {
+            var xmlResponse = xmlHttp.responseText;
+            if (xmlResponse === null) return;
+            document.getElementById("data_json").innerHTML = xmlResponse;
+          }
+          request_busy = false;
+        }
+        xmlHttp.send(null);
+        return;
+      }
+
+      if (send_request === "resetESP")
+      {
+        xmlHttp.open("PUT","/resetESP",true);
+        xmlHttp.onreadystatechange = null;
+        xmlHttp.send(null);
+        request_busy = false;
+        return;
+      }
+
+      if (send_request === "setTime")
+      {
+        xmlHttp.open("PUT","/setTime",true);
+        xmlHttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+        xmlHttp.onreadystatechange = null;
+        xmlHttp.send(params[0] + "&UART=1");  //  + "&UART=1" to send to UART
+        request_busy = false;
+        return;
+      }
+      else
+        {
+      // Opération par défaut : send_request is the param like PARAM=VALUE
+      //    alert(send_request);
+          xmlHttp.open("PUT","/operation",true);
+          xmlHttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+          xmlHttp.onreadystatechange = null;
+          xmlHttp.send(send_request);
+          request_busy = false;
+        }
+    }
+
+    function process() {
+      if (!serverIsReady(xmlHttp))
+      {
+        setTimeout('process()', 1000);
+        return;
+      }
+
+      // On a une requête en attente
+      if (pending_request != null)
+      {
+        ESP_Request(pending_request.request, pending_request.params);
+        pending_request = null;
+        setTimeout('process()', 1000);
+        return;
+      }
+
+      // Les opérations de base qu'on doit répéter
+      request_busy = true;
+    /*
+      // On demande l'heure une fois sur deux
+      if (get_time)
+      {
+        xmlHttp.open("GET","/getTime",true);
+        xmlHttp.onreadystatechange = handleServer_getTime;
+        xmlHttp.send(null);
+        get_time = false;
+      }
+      else
+      // On demande les dernières données UART
+      {
+        xmlHttp.open("GET","/getUARTData",true);
+        xmlHttp.onreadystatechange = handleServer_getUARTData;
+        xmlHttp.send(null);
+        get_time = true;
+      }
+    */
+      // On demande toutes les dernières données
+      xmlHttp.open("GET","/getLastData",true);
+      xmlHttp.onreadystatechange = handleServerResponse;
+      xmlHttp.send(null);
+
+      setTimeout('process()', 1000);
+    }
+
+    function handleServer_getTime() {
+      if (requestIsOK(xmlHttp))
+      {
+        var xmlResponse = xmlHttp.responseText;
+        request_busy = false;
+
+        if (xmlResponse === null) return;
+
+        document.getElementById("time").innerHTML = xmlResponse;
+      }
+    }
+
+    function handleServer_getUARTData() {
+      if (requestIsOK(xmlHttp))
+      {
+        var xmlResponse = xmlHttp.responseText;
+        request_busy = false;
+
+        if (xmlResponse === null) return;
+
+        document.getElementById("data_uart").innerHTML = xmlResponse;
+      }
+    }
+
+    function handleServerResponse() {
+      if (requestIsOK(xmlHttp))
+      {
+        var xmlResponse = xmlHttp.responseText;
+        request_busy = false;
+
+        if (xmlResponse === null) return;
+
+    //    console.log(xmlResponse);
+
+        // On suppose que les infos sont séparées par #
+        var values = xmlResponse.split('#');
+
+        if (values.length >= 1)
+        {
+          document.getElementById("time").innerHTML = values[0];
+          if (values.length == 2)
+            document.getElementById("data_uart").innerHTML = values[1];
+        }
+      }
+    }
+
+    function wait_Upload(visible) {
+      if (visible === true)
+        loadingdiv.style.visibility = "visible";
+      else
+        loadingdiv.style.visibility = "hidden";
+      return true;
+    }
+
+    // ***************************
+    // Time function
+    // ***************************
+    function createDateTime() {
+      var date = new Date();
+
+      var day = date.getDate();
+      var month = date.getMonth() + 1;
+      var year = date.getFullYear()-2000;  //   getYear
+      var hours = date.getHours();
+      var minutes = date.getMinutes();
+      var seconds = date.getSeconds();
+      var unix = Math.round(date.getTime()/1000) - date.getTimezoneOffset() * 60; // UTC time soit GMT+00:00
+
+      if (day < 10) day = "0" + day;
+      if (month < 10) month = "0" + month;
+      if (hours < 10) hours = "0" + hours;
+      if (minutes < 10) minutes = "0" + minutes;
+      if (seconds < 10) seconds = "0" + seconds;
+
+      var today = "TIME=" + [day, month, year].join('-') + "H" + [hours, minutes, seconds].join('-')+ "U" + unix;
+
+    //  alert(today);
+
+      return today;
+    }
+
+    function sendDateTime() {
+      if (window.confirm("Etes-vous sûr de vouloir changer l'heure ?")) {
+        ESP_Request("setTime", [createDateTime()]);
+      }
+    }
+
+    // ***************************
+    // Get the data from ESP
+    // ***************************
+
+    function loadLOG() {
+      ESP_Request("getFile", ["/log.txt", "log.txt"]);
+    }
+
+    function deleteLOG() {
+      if (window.confirm("Etes-vous sûr de vouloir supprimer le fichier log ?")) {
+        ESP_Request("delFile", ["log.txt"]);
+      }
+    }
+
+    // ***************************
+    // Divers
+    // ***************************
+
+    function listDir() {
+      ESP_Request("listfile", ["/"]);
+    }
+
+    function resetESP() {
+      if (window.confirm("Etes-vous sûr de vouloir faire un RESET ?")) {
+        ESP_Request("resetESP");
+      }
+    }
+
+    function toggleOled() {
+      ESP_Request("Toggle_Oled=1");
+    }
+
+    // ***************************
+    // Window onload event
+    // ***************************
+    function openPage(pageName, elmnt, color) {
+      var i, tabcontent, tablinks;
+      // Hide all the pages
+      tabcontent = document.getElementsByClassName("tabcontent");
+      for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+      }
+      // remove tab color
+      tablinks = document.getElementsByClassName("tablink");
+      for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].style.backgroundColor = "";
+        tablinks[i].style.cursor = 'pointer';
+      }
+      // Display the new page
+      let CurrentPage = document.getElementById(pageName);
+      CurrentPage.style.display = "block";
+      elmnt.style.backgroundColor = color;
+      elmnt.style.cursor = 'default';
+    }
+
+    window.addEventListener("load", (event) => {
+      loadingdiv = document.getElementById("loading");
+
+      // Get the element with id="defaultOpen" and click on it
+      document.getElementById("defaultOpen").click();
+
+      setTimeout('process()', 2000);
+    });
+
+    /*
+    // Autre solution à la place de addEventListener
+    window.onload = function() {
+      loadingdiv = document.getElementById("loading");
+
+      // Get the element with id="defaultOpen" and click on it
+      document.getElementById("defaultOpen").click();
+
+      setTimeout('process()', 2000);
+    }
+    */
+  </script>
+  <style>
+    /* Change the percent in the tablink css  */
+    /* General */
+    * {box-sizing: border-box}
+
+    html {
+      font-family: "Times New Roman", Times, serif; 
+      font-size: 1.2em;
+    }
+
+    hr { 
+      padding: 15px;
+      border-width: 0px;
+    } 
+
+    /* For waiting during upload */
+    .loader_gif {
+      position: fixed;
+      z-index: 9999;
+      background: url('loader.gif') 50% 50% no-repeat;
+      top: 0px;
+      left: 0px;
+      height: 100%;
+      width : 100%;
+      cursor: wait;
+      visibility: hidden;
+    }
+
+    .loader_txt {
+      border: solid 1px black;
+      position: fixed;
+      z-index: 100;  
+      left: 50%;
+      top: 50%;
+      background-color: #cccccc;
+      width: 400px;
+      margin-left: -200px;
+      text-align: center;
+      cursor: wait;
+      visibility: hidden;  
+    }
+
+    /* Header div */
+    .header {
+      background-color: #1325ed;
+      color: #ffffff;
+      font-size: 1.6em;
+      font-weight: bold;
+      padding: 1px 5px 1px 5px;
+    /*  margin-bottom: 10px;*/
+    }
+
+    .right {
+      float: right;
+    }
+
+    .left {
+      float: left;
+    }
+
+    .div_space {
+      margin-bottom: 10px;
+    }
+
+    .odd {
+      background-color: #e2dff7;
+    }
+
+    /**
+     Menu
+     Change the percent width to add menu
+    */
+    .tablink {
+      background-color: black;
+      color: white;
+      float: left;
+      border: none;
+      outline: none;
+      cursor: pointer;
+      padding: 10px 3px 10px 3px;
+      width: 50%;   /* percent is function of the number of page */
+    }
+
+    .tablink:hover {
+      background-color: #777;
+    }
+
+    .tabcontent {
+      display: none;
+      text-align: center;
+      height: 100%;
+    }
+
+    /* special button */
+    button {
+      font-family: "Times New Roman", Times, serif;
+      font-size: 1.0625rem;
+      font-weight: 700;
+      letter-spacing: .02em;
+      outline: none;
+    }
+
+    .myButton {
+      box-shadow:inset 0px 1px 0px 0px #e184f3;
+      background:linear-gradient(to bottom, #c123de 5%, #a20dbd 100%);
+      border-radius:6px;
+      border:1px solid #a511c0;
+      display:inline-block;
+      cursor:pointer;
+      color:#ffffff;
+      font-size:16px;
+      font-weight:bold;
+      padding:6px 24px;
+    }
+
+    .myButton:hover {
+      background:linear-gradient(to bottom, #a20dbd 5%, #c123de 100%);
+      background-color:#a20dbd;
+    }
+
+    .myButton:active {
+      position:relative;
+      top:1px;
+    }
+
+    .flash {
+      background-color: gold;
+      width: 300px;
+      margin: 0 auto;
+      padding-top: 5px;
+      padding-bottom: 5px;
+      text-align: center;
+    }
+
+    #m_Config {background-color: white;}
+
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <span>Default ESP32</span>
+    <span id="time" class="right">12:00:00</span>
+  </div>
+  <div style="margin-bottom: 54px;">
+    <button class="tablink" onclick="openPage('m_Config', this, '#cd11e8')" id="defaultOpen">Config</button>
+    <button class="tablink" style="cursor:default" onmouseover="this.style.background='black'" > &nbsp; </button>
+  </div>
+
+  <noscript>
+    <strong>JavaScript est nécessaire ...</strong>
+  </noscript>
+
+  <div id="m_Config" class="tabcontent">
+    <div class="div_space">
+      <button class="myButton" onclick="sendDateTime()">Mettre l'heure à jour</button>
+    </div>
+
+    <div class="div_space odd">
+      <button class="myButton" onclick="loadLOG()">Télécharger fichier log</button>
+      <button class="myButton" onclick="deleteLOG()">Supprimer fichier log</button>
+    </div>
+
+    <div class="div_space">
+      <form method="GET" action="/delFile">
+        <label for="delFile">Fichier à supprimer : </label>
+        <input type="text" name="delFile" id="delFile">
+        <input class="myButton" type="submit" value="Supprimer">
+      </form>
+    </div>
+
+    <div class="div_space odd">
+      <button class="myButton" onclick="resetESP()">RESET ESP</button>
+    </div>
+
+    <div class="div_space">
+      <fieldset>
+        <form method="POST" enctype="multipart/form-data" action="/upload">
+          <span>ATTENTION : pas d'espace, pas d'accent !</span>
+          <br>
+          <label for="dir">Dir : </label>
+          <input type="text" name="dir" size="30" placeholder="Répertoire destination, vide = /"><br>
+          <input type="checkbox" name="reload" checked>
+          <label for="reload">Reload page</label>
+          <input type="file" name="the_filename">
+          <input type="submit" value="Téléverser">
+        </form>
+        <br>
+        <form class="flash" method="GET" enctype="multipart/form-data" action="/firmware">
+          <input class="myButton" type="submit" value="Flash ESP">
+        </form>
+      </fieldset>
+    </div>
+
+    <div class="div_space odd">
+      <button class="myButton" onclick="listDir()">List dir</button>
+      <br>
+      <span id="data_json"></span>
+    </div>
+
+    <div class="div_space">
+      <span>Données reçues de UART : </span>
+      <span id="data_uart"></span>
+    </div>
+
+    <div class="div_space odd">
+      <button class="myButton" onclick="toggleOled()">Toggle Oled</button>
+    </div>
+
+  </div>
+
+  <!-- Message d'attente -->
+  <div class="loader_gif" id="loading"> </div>
+<!-- autre alternative pour l'attente
+      <div class="loader_txt" id="loading">Chargement ...</div>
+-->
+</body>
+</html>
