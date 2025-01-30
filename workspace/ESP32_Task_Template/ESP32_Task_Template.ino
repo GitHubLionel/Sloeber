@@ -132,7 +132,7 @@ void Display_Task_code(void *parameter)
 	BEGIN_TASK_CODE("Display_Task");
 	for (EVER)
 	{
-		IHM_Print0(RTC_Local.the_time);
+		IHM_Print0(RTC_Local.the_time());
 
 		// Afficher Idle
 #if USE_IDLE_TASK == true
@@ -141,7 +141,7 @@ void Display_Task_code(void *parameter)
 
 		// Test extinction de l'écran
 		IHM_CheckTurnOff();
-		END_TASK_CODE();
+		END_TASK_CODE(IHM_IsDisplayOff());
 	}
 }
 #define DISPLAY_DATA_TASK	{true, "Display_Task", 4096, 4, 1000, CoreAny, Display_Task_code}
@@ -273,7 +273,7 @@ void OnAfterConnexion(void)
 
 	server.on("/getLastData", HTTP_GET, [](CB_SERVER_PARAM)
 	{
-		pserver->send(200, "text/plain", (String(RTC_Local.the_time) + '#' + UART_Message));
+		pserver->send(200, "text/plain", (String(RTC_Local.the_time()) + '#' + UART_Message));
 	});
 
 	server.on("/operation", HTTP_PUT, handleOperation);

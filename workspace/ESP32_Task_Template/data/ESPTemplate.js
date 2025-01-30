@@ -5,8 +5,8 @@ var loadingdiv = null;        // le div d'attente pour l'upload
 var get_time = true;
 var request_busy = false;
 var pending_request = null;
-var CurrentPage = null;       // The current page
 
+// web events
 function createXmlHttpObject() {
   if (window.XMLHttpRequest) {
     xmlHttp = new XMLHttpRequest();
@@ -42,15 +42,16 @@ function requestIsOK(server) {
 }
 
 function ESP_Request(send_request, params = null) {
+  // Le server n'est pas prêt, on met la requête en attente
   if (!serverIsReady(xmlHttp)) {
     pending_request = {"request": send_request, "params": params};
     return;
   }
 
   request_busy = true;
-  if (send_request === "getfile")
+  if (send_request === "getFile")
   {
-    xmlHttp.open("POST", "/getfile", true);
+    xmlHttp.open("POST", "/getFile", true);
     xmlHttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
     xmlHttp.onreadystatechange = function() {
       if (requestIsOK(this)) {
@@ -69,13 +70,13 @@ function ESP_Request(send_request, params = null) {
     return;
   }
 
-  if (send_request === "delfile")
+  if (send_request === "delFile")
   {
-    xmlHttp.open("POST", "/delfile", true);
+    xmlHttp.open("POST", "/delFile", true);
     xmlHttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
     xmlHttp.onreadystatechange = function() {
       if (this.status == 204) {
-        document.getElementById("delfile").value = "";
+        document.getElementById("delFile").value = "";
       }
 //          else alert("Not found");
       request_busy = false;
@@ -205,6 +206,8 @@ function handleServerResponse() {
 
     if (xmlResponse === null) return;
 
+//    console.log(xmlResponse);
+
     // On suppose que les infos sont séparées par #
     var values = xmlResponse.split('#');
 
@@ -237,7 +240,7 @@ function createDateTime() {
   var hours = date.getHours();
   var minutes = date.getMinutes();
   var seconds = date.getSeconds();
-  var unix = Math.round(date.getTime()/1000); // UTC time soit GMT+00:00
+  var unix = Math.round(date.getTime()/1000) - date.getTimezoneOffset() * 60; // UTC time soit GMT+00:00
 
   if (day < 10) day = "0" + day;
   if (month < 10) month = "0" + month;
@@ -263,12 +266,12 @@ function sendDateTime() {
 // ***************************
 
 function loadLOG() {
-  ESP_Request("getfile", ["/log.txt", "log.txt"]);
+  ESP_Request("getFile", ["/log.txt", "log.txt"]);
 }
 
 function deleteLOG() {
   if (window.confirm("Etes-vous sûr de vouloir supprimer le fichier log ?")) {
-    ESP_Request("delfile", ["log.txt"]);
+    ESP_Request("delFile", ["log.txt"]);
   }
 }
 
@@ -307,12 +310,23 @@ function openPage(pageName, elmnt, color) {
     tablinks[i].style.cursor = 'pointer';
   }
   // Display the new page
-  CurrentPage = document.getElementById(pageName);
+  let CurrentPage = document.getElementById(pageName);
   CurrentPage.style.display = "block";
   elmnt.style.backgroundColor = color;
   elmnt.style.cursor = 'default';
 }
 
+window.addEventListener("load", (event) => {
+  loadingdiv = document.getElementById("loading");
+
+  // Get the element with id="defaultOpen" and click on it
+  document.getElementById("defaultOpen").click();
+
+  setTimeout('process()', 2000);
+});
+
+/*
+// Autre solution à la place de addEventListener
 window.onload = function() {
   loadingdiv = document.getElementById("loading");
 
@@ -321,3 +335,4 @@ window.onload = function() {
 
   setTimeout('process()', 2000);
 }
+*/
