@@ -159,7 +159,6 @@
           <li><span>Soleil :</span><span id="_Sun" class="right"></span></li>
         </ul>
       </div>
-      
     </div>
 
     <div class="footer">
@@ -183,8 +182,9 @@
           <canvas id="can_mean_power"></canvas>
           <div class="btnZoom">
             <button class="myButton" onclick="undoZoom('can_mean_power')">Dézoomer</button>
-            <button class="myButton" onclick="downloadCSV('can_mean_power')">Exporter</button>
             <button class="myButton" onclick="fillTheoric()">Théorique</button>
+            <button class="myButton" title="Exporter dans un fichier texte CSV" onclick="exportCSV('can_mean_power')">==> CSV</button>
+            <button class="myButton" title="Exporter dans une image PNG" onclick="exportPNG('can_mean_power', 'puissance.png')">==> PNG</button>
           </div>         
         </div>          
       </div>
@@ -199,6 +199,7 @@
           <canvas id="can_mean_temperature"></canvas>
           <div class="btnZoom">
             <button class="myButton" onclick="undoZoom('can_mean_temperature')">Dézoomer</button>
+            <button class="myButton" title="Exporter dans une image PNG" onclick="exportPNG('can_mean_temperature', 'température.png')">==> PNG</button>
           </div>         
         </div>          
       </div>
@@ -212,6 +213,7 @@
           <canvas id="can_mean_energy"></canvas>
           <div class="btnZoom">
             <button class="myButton" onclick="undoZoom('can_mean_energy')">Dézoomer</button>
+            <button class="myButton" title="Exporter dans une image PNG" onclick="exportPNG('can_mean_energy', 'energie_jour.png')">==> PNG</button>
           </div>          
         </div>          
       </div>
@@ -239,6 +241,7 @@
             </select>     
 
             <button class="myButton" onclick="getEnergy()">Afficher</button>
+            <button class="myButton" title="Exporter dans une image PNG" onclick="exportPNG('can_histo_energy', 'energie.png')">==> PNG</button>
           </div>
         </div>     
       </div>
@@ -279,7 +282,6 @@
       <button class="myButton" id="toggle_SSR" onclick="doToggle('SSR')">Toggle SSR</button>
       <label id="label_SSR" for="toggle_SSR">SSR OFF</label>
     </div>
-
     <div class="div_space">
       <fieldset>
       <div>
