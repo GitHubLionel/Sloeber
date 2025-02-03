@@ -146,16 +146,22 @@ DS18B20 DS(DS18B20_GPIO);
 // ********************************************************************************
 
 // Pour la version tri, sinon version mono
-#define TWO_CIRRUS	true
+#define TWO_CIRRUS	false
 
 //CIRRUS_Calib_typedef CS1_Calib = CS_CALIB0;
 //CIRRUS_Config_typedef CS1_Config = CS_CONFIG0;
 //CIRRUS_Calib_typedef CS2_Calib = CS_CALIB0;
 //CIRRUS_Config_typedef CS2_Config = CS_CONFIG0;
 
+#if TWO_CIRRUS == true
 // Cirrus1 (CS5484 pour le tri)
-CIRRUS_Calib_typedef CS1_Calib = {242.00, 33.15, 0x3C638E, 0x3F94EA, 0x629900, 0x000000, 0x800000,
-		242.00, 33.15, 0x3C2EE9, 0x3F8CDA, 0xEC5B10, 0x000000, 0x800000};
+CIRRUS_Calib_typedef CS1_Calib = {242.00, 33.15, 0x3CC966, 0x405450, 0xAC12A1, 0x000000, 0x800000,
+		242.00, 33.15, 0x3C9481, 0x3FC850, 0x247199, 0x000000, 0x800000};
+#else
+// Cirrus 1 : CS5480
+CIRRUS_Calib_typedef CS1_Calib = {242.00, 33.15, 0x3C638E, 0x3F94EA, 0x629900, 0x000030, 0x800000,
+		242.00, 33.15, 0x3C2EE9, 0x3F8CDA, 0xEC5B10, 0x000030, 0x800000};
+#endif
 
 //CIRRUS_Calib_typedef CS1_Calib = {242.00, 33.15, 0x3D4A81, 0x3FB28B, 0x7025B9, 0x000000, 0x000000,
 //			242.00, 33.15, 0x3D15C6, 0x3F67DA, 0x8A6100, 0x000000, 0x000000};
@@ -165,7 +171,14 @@ CIRRUS_Calib_typedef CS1_Calib = {242.00, 33.15, 0x3C638E, 0x3F94EA, 0x629900, 0
 
 //CIRRUS_Calib_typedef CS1_Calib = {242.00, 33.15, 0x3C5C3B, 0x401665, 0x532144, 0x0, 0x0,
 //		242.00, 33.15, 0x3C5C3B, 0x3FE51B, 0x81EF04, 0x0, 0x0};
-CIRRUS_Config_typedef CS1_Config = {0xC00000, 0x44E2EB, 0x2AA, 0x731F0, 0x51D67C, 0x0}; // 0x400000
+
+#if TWO_CIRRUS == true
+// config0 = 0x400000 pour le CS5484
+CIRRUS_Config_typedef CS1_Config = {0x400000, 0x44E2EB, 0x0602AA, 0x731F0, 0x51D67C, 0x0};
+#else
+// config0 = 0xC02000 pour le CS5480
+CIRRUS_Config_typedef CS1_Config = {0xC02000, 0x44E25B, 0x0002AA, 0x731F0, 0x51D67C, 0x0};
+#endif
 
 // Config1 = 0x44E2EB : version ZC sur DO0
 // Config1 = 0x00E4EB : version ZC sur DO0, P1 négatif sur DO3
@@ -174,8 +187,11 @@ CIRRUS_Config_typedef CS1_Config = {0xC00000, 0x44E2EB, 0x2AA, 0x731F0, 0x51D67C
 // Config1 = 0x22E51B : version ZC sur DO0, EPG2 output (P1 avg) sur DO2, P2 négatif sur DO3
 
 // Cirrus2 (5480 pour le tri)
-CIRRUS_Calib_typedef CS2_Calib = {242.00, 33.15, 0x3C65AD, 0x3F48B7, 0x5AD0F1, 0x000000, 0x800000,
-		242.00, 33.15, 0x3C65AD, 0x3EE855, 0x2605A4, 0x000000, 0x800000};
+CIRRUS_Calib_typedef CS2_Calib = {242.00, 33.15, 0x3C7286, 0x3F193C, 0x716F10, 0x000000, 0x800000,
+		242.00, 33.15, 0x3C7286, 0x3F897F, 0x5300A4, 0x000000, 0x800000};
+
+//CIRRUS_Calib_typedef CS2_Calib = {242.00, 33.15, 0x3C65AD, 0x3F48B7, 0x5AD0F1, 0x000000, 0x800000,
+//		242.00, 33.15, 0x3C65AD, 0x3EE855, 0x2605A4, 0x000000, 0x800000};
 
 //CIRRUS_Calib_typedef CS2_Calib = {242.00, 33.15, 0x3C5375, 0x3E8464, 0x05CF11, 0x000009, 0x800009,
 //		242.00, 33.15, 0x3C5375, 0x3E1C67, 0x000000, 0x000000, 0x000000};
@@ -184,7 +200,7 @@ CIRRUS_Calib_typedef CS2_Calib = {242.00, 33.15, 0x3C65AD, 0x3F48B7, 0x5AD0F1, 0
 
 //CIRRUS_Calib_typedef CS2_Calib = {242.00, 33.15, 0x3BEEE2, 0x3FE47F, 0x8FC5F9, 0x0, 0x0,
 //		242.00, 33.15, 0x3BEEE2, 0x3FB374, 0x278251, 0x0, 0x0};
-CIRRUS_Config_typedef CS2_Config = {0xC02000, 0x44E2E4, 0x1002AA, 0x931F0, 0x6C77D9, 0x0};
+CIRRUS_Config_typedef CS2_Config = {0xC02000, 0x44E2E4, 0x0002AA, 0x931F0, 0x6C77D9, 0x0};
 
 #ifdef CIRRUS_USE_UART
 #if CIRRUS_UART_HARD == 1

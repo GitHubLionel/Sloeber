@@ -75,12 +75,12 @@
 //#define SSD1306_RAM_128
 //#define SSD1306_RAM_132
 
-//#define OLED_SSD1327 // SSD1327
-#define OLED_SH1107 // SH1107
+#define OLED_SSD1327 // SSD1327
+//#define OLED_SH1107 // SH1107
 //#define OLED_TOP_DOWN
-#define OLED_LEFT_RIGHT
+//#define OLED_LEFT_RIGHT
 //#define OLED_DOWN_TOP
-//#define OLED_RIGHT_LEFT
+#define OLED_RIGHT_LEFT
 
 /**********************************************************
  * Dallas DS18B20 define
@@ -114,7 +114,7 @@
 
 #define CIRRUS_USE_UART // If not defined then SPI is used
 #ifdef CIRRUS_USE_UART
-#define CIRRUS_UART_BAUD	512000
+#define CIRRUS_UART_BAUD	256000
 #endif
 #define CIRRUS_FLASH
 #define LOG_CIRRUS_CONNECT

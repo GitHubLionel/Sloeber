@@ -1,0 +1,5 @@
+ESP12F
+ESP8266 LoLin(WEMOS) D1 R2 & Mini 4 MB
+Bin en 0x300000 pour la version FS de 1 MB
+Bin en 0x200000 pour la version FS de 2 MB
+Bin en 0x100000 pour la version FS de 3 MB

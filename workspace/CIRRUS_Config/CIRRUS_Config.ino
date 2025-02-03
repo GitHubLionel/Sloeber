@@ -117,7 +117,21 @@ String UART_Message = "";
 // Définition Cirrus
 // ********************************************************************************
 
-#ifndef CIRRUS_CS5480
+// Si le cirrus est un CS5480, sinon CS5490
+//#define CIRRUS_CS5480
+
+#ifdef CIRRUS_CS5480
+#define CIRRUS	CS5480
+CIRRUS_Calib_typedef CS_Calib = { 242.00, 53.55, 0x3CC756, 0x40D6B0, 0x7025B9, 0x0, 0x0, 242.00,
+		17.00, 0x3CC756, 0x4303EE, 0x8A6100, 0x0, 0x0 };
+CIRRUS_Config_typedef CS_Config = { 0xC02000, 0x44E2EB, 0x2AA, 0x731F0, 0x51D67C, 0x0 };
+
+CIRRUS_Calib_typedef CS2_Calib = { 260.00, 16.50, 0x3CC00B, 0x41B8D9, 0x5CF11, 0x9, 0x800009,
+		224.50, 60.00, 0x400000, 0x400000, 0x0, 0x0, 0x0 };
+CIRRUS_Config_typedef CS2_Config = { 0xC02000, 0x44E2E4, 0x1002AA, 0x931F0, 0x6C77D9, 0x0 };
+
+#else
+#define CIRRUS	CS5490
 //CIRRUS_Calib_typedef CS_Calib = {0};
 //CIRRUS_Config_typedef CS_Config = {0};
 
@@ -129,17 +143,8 @@ String UART_Message = "";
 //CIRRUS_Calib_typedef CS_Calib = {260.00, 16.50, 0x3BF15A, 0x43E86F, 0x000000, 0x000000, 0x000000};
 //CIRRUS_Calib_typedef CS_Calib = {260.00, 16.50, 0x380B99, 0x3FE3E9, 0x084BDE, 0x000000, 0x000000};
 
-CIRRUS_Calib_typedef CS_Calib = {260.00, 16.50, 0x380B99, 0xC8B5CA, 0x1A04A6, 0x000000, 0x000000};
+CIRRUS_Calib_typedef CS_Calib = {260.00, 16.50, 0x380B99, 0xC8B5CA, 0x1A04A6, 0x000080, 0x800000};
 CIRRUS_Config_typedef CS_Config = {0xC02000, 0x00EEEB, 0x10020A, 0x000001, 0x800000, 0x000000};
-
-#else
-CIRRUS_Calib_typedef CS_Calib = { 242.00, 53.55, 0x3CC756, 0x40D6B0, 0x7025B9, 0x0, 0x0, 242.00,
-		17.00, 0x3CC756, 0x4303EE, 0x8A6100, 0x0, 0x0 };
-CIRRUS_Config_typedef CS_Config = { 0xC02000, 0x44E2EB, 0x2AA, 0x731F0, 0x51D67C, 0x0 };
-
-CIRRUS_Calib_typedef CS2_Calib = { 260.00, 16.50, 0x3CC00B, 0x41B8D9, 0x5CF11, 0x9, 0x800009,
-		224.50, 60.00, 0x400000, 0x400000, 0x0, 0x0, 0x0 };
-CIRRUS_Config_typedef CS2_Config = { 0xC02000, 0x44E2E4, 0x1002AA, 0x931F0, 0x6C77D9, 0x0 };
 #endif
 
 #ifdef CIRRUS_USE_UART
@@ -155,9 +160,13 @@ CIRRUS_SERIAL_MODE *csSerial = new CIRRUS_SERIAL_MODE(D7, D8); // D7=RX, D8=TX  
 #endif
 
 CIRRUS_Communication CS_Com = CIRRUS_Communication(csSerial, CIRRUS_RESET_GPIO);
+#ifdef CIRRUS_CS5480
+CIRRUS_CS548x CS5480 = CIRRUS_CS5480(CS_Com);
+#else
 CIRRUS_CS5490 CS5490 = CIRRUS_CS5490(CS_Com);
+#endif
 #ifdef CIRRUS_CALIBRATION
-CIRRUS_Calibration CS_Calibration = CIRRUS_Calibration(CS5490);
+CIRRUS_Calibration CS_Calibration = CIRRUS_Calibration(CIRRUS);
 #endif
 
 bool Cirrus_OK = false;
@@ -237,14 +246,14 @@ void setup()
 	CS_Com.begin();
 
 	// Start Cirrus
-	Cirrus_OK = CS5490.begin(CIRRUS_UART_BAUD, true);
+	Cirrus_OK = CIRRUS.begin(CIRRUS_UART_BAUD, true);
 
 	// Initialisation
 	if (Cirrus_OK)
-		Cirrus_OK = CIRRUS_Generic_Initialization(CS5490, &CS_Calib, &CS_Config, true, true, '1');
+		Cirrus_OK = CIRRUS_Generic_Initialization(CIRRUS, &CS_Calib, &CS_Config, true, false, '1');
 
 	// Simple Get data
-	Simple_Set_Cirrus(CS5490);
+	Simple_Set_Cirrus(CIRRUS);
 
 	// **** FIN- Attente connexion réseau
 	IHM_Print0("Connexion .....");

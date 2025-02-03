@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="fr-fr">
+<head>
+  <title>Config SSID</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8"> 
+  <link rel="shortcut icon" href="favicon.ico">
+  <style>
+    .formulaire {
+      border: 2px solid black; 
+      text-align: center;
+      margin: auto;
+      width: 300px;
+      padding-top: 5px;
+      padding-bottom: 5px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="formulaire" style="">
+      <form method="POST" action="/setDHCPIP">
+          <div class="">            
+              <input type="text" placeholder="Nom du réseau (SSID)" name="networkNameDHCP" value="" pattern=".{5,30}" required title="Nom entre 5 et 30 caractères">
+          </div>        
+          <div class="">            
+              <input type="password" placeholder="Mot de passe" name="networkPasswordDHCP" value="" pattern=".{8,63}" required title="Mot entre 8 et 63 caractères">
+          </div>        
+          <input class="" type="submit" name="saveDHCP" value="Enregistre et redémarre">
+      </form>      
+  </div>
+
+</body>
+</html>
