@@ -5,17 +5,8 @@
   <meta http-equiv="content-type" content="text/html; charset=UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta charset="utf-8">
-  <link rel="stylesheet" href="uPlot.min.css">
   <link rel="stylesheet" href="Routeur.css">
   <link rel="shortcut icon" href="favicon.ico">
-  <script type='text/javascript' src="FileSaver.min.js"></script>
-  <script type='text/javascript' src="CS5490/Page0.js"></script>
-  <script type='text/javascript' src="CS5490/Page16.js"></script>
-  <script type='text/javascript' src="CS5490/Page17.js"></script>
-  <script type='text/javascript' src="CS5490/Page18.js"></script>
-  <script type='text/javascript' src="uPlot.iife.min.js"></script>
-  <script type='text/javascript' src="graphe.js"></script>
-  <script type='text/javascript' src="Routeur.js"></script>
 </head>
 <body>
 
@@ -23,7 +14,7 @@
     <span>Routeur</span>
     <span id="time" class="right">12:00:00</span>
   </div>
-  <div style="margin-bottom: 54px;">
+  <div id="divHeader" style="margin-bottom: 54px;">
     <button class="tablink" onclick="openPage('m_Data', this, 'green')" id="defaultOpen">Données</button>
     <button class="tablink" onclick="openPage('m_Graphe', this, '#FFCB00')">Graphique</button>
     <button class="tablink" onclick="openPage('m_Energy', this, '#C6410D')">Energie</button>
@@ -77,34 +68,48 @@
   </div>
 
   <div id="m_Graphe" class="tabcontent">
-    <div>
-      <button class="myButton" onclick="refreshGraph('data')">Actualiser le graphique</button>
+    <div class="padCanvas">
+      <div id="divCanvas_power">
+        <canvas id="can_mean_power"></canvas>
+      </div>
+      <div class="btnZoom">
+        <button class="myButton" onclick="refreshGraph('data')">Actualiser</button>
+        <button class="myButton" onclick="undoZoom('can_mean_power')">Dézoomer</button>
+        <button class="myButton" title="Exporter dans un fichier texte CSV" onclick="exportCSV('can_mean_power')">==> CSV</button>
+        <button class="myButton" title="Exporter dans une image PNG" onclick="exportPNG('can_mean_power', 'puissance.png')">==> PNG</button>
+      </div>         
     </div>
-
-    <div id="chart"></div>
   </div>
 
   <div id="m_Energy" class="tabcontent">
-    <div>
-      <button class="myButton" onclick="refreshGraph('energy')">Actualiser le graphique</button>
+    <div class="padCanvas">
+      <div id="divCanvas_energy">
+        <canvas id="can_histo_energy"></canvas>
+      </div>
+      <div class="btnZoom">
+        <button class="myButton" onclick="refreshGraph('energy')">Actualiser</button>
+        <button class="myButton" onclick="undoZoom('can_histo_energy')">Dézoomer</button>
+        <button class="myButton" title="Exporter dans un fichier texte CSV" onclick="exportCSV('can_histo_energy')">==> CSV</button>
+        <button class="myButton" title="Exporter dans une image PNG" onclick="exportPNG('can_histo_energy', 'puissance.png')">==> PNG</button>
+      </div>         
     </div>
-
-    <div id="chart_energy"></div>
   </div>
 
   <div id="m_SSR" class="tabcontent">
     <div class="div_space">
       <fieldset>
       <div>
-        <input type="radio" id="percent" name="SSRType" value="percent" checked>
+        <input type="radio" id="percent" name="SSRType" value="percent"  onchange="doToggle('SSRType')" checked>
         <label for="percent">Pourcentage</label>
-        <input type="radio" id="zero" name="SSRType" value="zero">
+        <input type="radio" id="zero" name="SSRType" value="zero" onchange="doToggle('SSRType')">
         <label for="zero">Zéro</label>
-        <button class="myButton" id="select_SSRType" onclick="doToggle('SSRType')">Select</button>
+<!--        <button class="myButton" id="select_SSRType" onclick="doToggle('SSRType')">Select</button> -->
       </div>
       <div id="powerCE" style="display: none">
         <label for="powerSSR">Puissance CE : </label>
         <input type="text" name="powerSSR" id="powerSSR" value="1000">
+        <label for="targetSSR">Surplus cible : </label>
+        <input type="text" name="targetSSR" id="targetSSR" value="0">
         <button class="myButton" id="powerCE" onclick="sendCEPower()">Update</button>
       </div>
       <div id="rangePercent">
@@ -153,9 +158,9 @@
     </div>
 
     <div class="div_space">
-      <form method="GET" action="/delfile">
-        <label for="delfile">Fichier à supprimer : </label>
-        <input type="text" name="delfile" id="delfile">
+      <form method="GET" action="/delFile">
+        <label for="delFile">Fichier à supprimer : </label>
+        <input type="text" name="delFile" id="delFile">
         <input class="myButton" type="submit" value="Supprimer">
       </form>
     </div>
@@ -204,5 +209,16 @@
 <!-- autre alternative pour l'attente
       <div class="loader_txt" id="loading">Chargement ...</div>
 -->
+
+  <script type='text/javascript' src="chart.js"></script>
+  <script type='text/javascript' src="chartjs-zoom.min.js"></script>
+  <script type='text/javascript' src="date-fns.adapter.js"></script>
+  <script type='text/javascript' src="FileSaver.min.js"></script>
+  <script type='text/javascript' src="CS5490/Page0.js"></script>
+  <script type='text/javascript' src="CS5490/Page16.js"></script>
+  <script type='text/javascript' src="CS5490/Page17.js"></script>
+  <script type='text/javascript' src="CS5490/Page18.js"></script>
+  <script type='text/javascript' src="Graphe.js"></script>
+  <script type='text/javascript' src="Routeur.js"></script>
 </body>
 </html>
