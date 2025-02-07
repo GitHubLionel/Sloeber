@@ -7,7 +7,7 @@
 #include "Partition_utils.h"	// Some utils functions for LittleFS/SPIFFS/FatFS
 
 // data au format CSV
-const String CSV_Filename = "/data.csv";
+const String CSV_Filename = "/simple_data.csv";
 
 // Data 200 ms
 volatile Simple_Data_Struct Simple_Current_Data; //{0,{0}};
@@ -25,13 +25,17 @@ extern CIRRUS_Communication CS_Com;
 #if defined(CIRRUS_SIMPLE_IS_CS5490)
 	#if (CIRRUS_SIMPLE_IS_CS5490 == true)
 	CIRRUS_CS5490 *Current_Cirrus = NULL;
+  #define CHANNEL_ALL
 	#define CHANNEL
+  #define CHANNEL_EX
 	#define CHANNEL2
 	#else
 		#if (CIRRUS_SIMPLE_IS_CS5490 == false)
 		CIRRUS_CS548x *Current_Cirrus = NULL;
+    #define CHANNEL_ALL	Channel_all
 		#define CHANNEL	Channel_1
-		#define CHANNEL2	Channel_1,
+		#define CHANNEL_EX	Channel_1,
+    #define CHANNEL2	Channel_2
 		#else
 			#error "You must define CIRRUS_SIMPLE_IS_CS5490 to true or false"
 		#endif
@@ -42,6 +46,7 @@ extern CIRRUS_Communication CS_Com;
 
 // Booléen indiquant une acquisition de donnée en cours
 bool Data_acquisition = false;
+bool IsTwoChannel = false;
 
 // Gestion énergie
 float energy_day_conso = 0.0;
@@ -76,9 +81,10 @@ void Simple_Set_Cirrus(const CIRRUS_Base &cirrus)
 {
 #if (CIRRUS_SIMPLE_IS_CS5490 == true)
 	Current_Cirrus = (CIRRUS_CS5490 *) (&cirrus);
+	IsTwoChannel = false;
 #else
-	Current_Cirrus = (CIRRUS_CS548x *) (&cirrus);
-#define CHANNEL	Channel_1
+	Current_Cirrus = (CIRRUS_CS548x*) (&cirrus);
+	IsTwoChannel = true;
 #endif
 }
 
@@ -110,7 +116,7 @@ void Simple_Get_Data(void)
 	// To know the time required for data acquisition
 //	uint32_t start_time = millis();
 
-	bool log = Current_Cirrus->GetData(CHANNEL); // durée : 256 ms
+	bool log = Current_Cirrus->GetData(CHANNEL_ALL); // durée : 256 ms
 #ifdef ESP32
 	vTaskDelay(1);
 #endif
@@ -129,9 +135,20 @@ void Simple_Get_Data(void)
 	Simple_Current_Data.Cirrus_ch1.Current = Current_Cirrus->GetIRMS(CHANNEL);
 #endif
 	Simple_Current_Data.Cirrus_ch1.ActivePower = Current_Cirrus->GetPRMSSigned(CHANNEL);
-	Simple_Current_Data.Cirrus_PF = Current_Cirrus->GetExtraData(CHANNEL2 exd_PF);
+
+	// Second channel if present
+	if (Current_Cirrus->IsTwoChannel())
+	{
+		Simple_Current_Data.Cirrus_ch2.Voltage = Current_Cirrus->GetURMS(CHANNEL2);
+#ifdef CIRRUS_RMS_FULL
+		Simple_Current_Data.Cirrus_ch2.Current = Current_Cirrus->GetIRMS(CHANNEL2);
+#endif
+		Simple_Current_Data.Cirrus_ch2.ActivePower = Current_Cirrus->GetPRMSSigned(CHANNEL2);
+	}
+
+	Simple_Current_Data.Cirrus_PF = Current_Cirrus->GetExtraData(CHANNEL_EX exd_PF);
 	Simple_Current_Data.Cirrus_Temp = Current_Cirrus->GetTemperature();
-	Current_Cirrus->GetEnergy(CHANNEL2 &energy_day_conso, &energy_day_surplus);
+	Current_Cirrus->GetEnergy(CHANNEL_EX &energy_day_conso, &energy_day_surplus);
 
 #ifdef USE_SSR
 	// On choisi le premier channel qui mesure la consommation et le surplus
@@ -147,7 +164,7 @@ void Simple_Get_Data(void)
 	if (log)
 	{
 		double temp;
-		RMS_Data data = Current_Cirrus->GetLog(CHANNEL2 &temp);
+		RMS_Data data = Current_Cirrus->GetLog(CHANNEL_EX &temp);
 		log_cumul.Voltage = data.Voltage;
 		log_cumul.Power_ch1 = data.ActivePower;
 		log_cumul.Temp = temp;
@@ -221,6 +238,20 @@ uint8_t Simple_Update_IHM(const char *first_text, const char *last_text, bool di
 
 	sprintf(buffer, "Prms:%.2f   ", Simple_Current_Data.Cirrus_ch1.ActivePower);
 	IHM_Print(line++, (char*) buffer);
+
+	if (IsTwoChannel)
+	{
+		sprintf(buffer, "Urms2: %.2f", Simple_Current_Data.Cirrus_ch2.Voltage);
+		IHM_Print(line++, (char*) buffer);
+
+#ifdef CIRRUS_RMS_FULL
+		sprintf(buffer, "Irms2:%.2f  ", Simple_Current_Data.Cirrus_ch2.Current);
+		IHM_Print(line++, (char*) buffer);
+#endif
+
+		sprintf(buffer, "Prms2:%.2f   ", Simple_Current_Data.Cirrus_ch2.ActivePower);
+		IHM_Print(line++, (char*) buffer);
+	}
 
 	sprintf(buffer, "Energie:%.2f   ", energy_day_conso);
 	IHM_Print(line++, (char*) buffer);

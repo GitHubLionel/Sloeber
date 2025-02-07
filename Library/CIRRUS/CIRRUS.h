@@ -765,7 +765,6 @@ class CIRRUS_Base
 		void Save_To_FLASH(CIRRUS_Calib_typedef *calib, CIRRUS_Config_typedef *config);
 		void Register_To_FLASH(void);
 
-		void CorrectBug(void);
 		void Soft_reset(void);
 
 		void SelectChannel(CIRRUS_Channel channel = Channel_1);
@@ -882,6 +881,7 @@ class CIRRUS_Base
 		bool data_ready(void);
 		void clear_data_ready(void);
 
+		void CorrectBug(void);
 		uint8_t pivor(void);
 		CIRRUS_RegBit ioc(void);
 		CIRRUS_RegBit tod(void);
@@ -895,7 +895,7 @@ class CIRRUS_Base
 		void clear_bitmask(Reg_Mask b_mask);
 		void interrupt_bitmask(uint8_t bit);
 
-		Bit_List config0_default = 0xC02000; // For CS5490 and CS5480
+		Bit_List config0_default = 0xC02000; // For CS5490 and CS5480, 0x400000 for CS5484
 
 	private:
 		// Communication

@@ -22,6 +22,7 @@ typedef struct
 {
 		float Voltage;
 		float Power_ch1;
+		float Power_ch2;
 		float Temp;
 } Graphe_Data;
 
@@ -33,6 +34,7 @@ typedef struct
 		uint32_t time_s;
 
 		RMS_Data Cirrus_ch1;
+		RMS_Data Cirrus_ch2;
 
 		// Extra
 		float Cirrus_PF;

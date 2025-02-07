@@ -454,7 +454,9 @@ void ServerConnexion::KeepAlive(void)
 	// Try to reconnect if we are disconnected
 	if (!WifiConnected())
 	{
+#ifdef ESP32
 		WiFi.removeEvent(WiFiEvent);
+#endif
 		Connexion(false);
 	}
 }
@@ -868,7 +870,7 @@ void Server_CommonEvent(uint16_t event)
 
 	// list files in a directory
 	if ((event & Ev_ListFile) == Ev_ListFile)
-		server.on("/listfile", HTTP_GET, handleListFile);
+		server.on("/listFile", HTTP_GET, handleListFile);
 
 	// create file
 	if ((event & Ev_CreateFile) == Ev_CreateFile)
@@ -1302,10 +1304,10 @@ void handleUploadFile(CB_SERVER_PARAM)
  * The parameter DIR is the name of the directory to read
  * Responce is in JSON format
  * JavaScript side :
- * 	xmlHttp.open("GET","/listfile?DIR=" + the_dir,true);
+ * 	xmlHttp.open("GET","/listFile?DIR=" + the_dir,true);
  * 	xmlHttp.send(null);
  * Server side :
- * 	server.on("/listfile", HTTP_GET, handleListFile);
+ * 	server.on("/listFile", HTTP_GET, handleListFile);
  */
 void handleListFile(CB_SERVER_PARAM)
 {

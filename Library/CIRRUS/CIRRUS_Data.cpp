@@ -126,8 +126,7 @@ void CIRRUS_CS5490::Initialize()
  */
 bool CIRRUS_CS5490::GetData(void)
 {
-	unsigned long reftime = millis();
-	return RMSData->GetData(reftime);
+	return RMSData->GetData();
 }
 
 // ********************************************************************************

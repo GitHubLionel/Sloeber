@@ -144,7 +144,7 @@ bool Relay_Class::getState(uint8_t idRelay)
 String Relay_Class::getAllState(void)
 {
 	String state = "";
-	for (int i = 0; i < _relay.size(); i++)
+	for (unsigned int i = 0; i < _relay.size(); i++)
 	{
 		if (!state.isEmpty())
 			state += ",";
