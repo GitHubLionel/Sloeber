@@ -1,0 +1,18 @@
+ESP32
+ESP32 Dev Module
+Flash Size : 16MB, Partition Scheme : Custom
+Chip is ESP32-D0WD-V3 (revision v3.1)
+Features: WiFi, BT, Dual Core, 240MHz, VRef calibration in efuse, Coding Scheme None
+Crystal is 40MHz
+
+Firmware (Sloeber):
+BootLoader en 0x00001000 (Routeur_CS5480.bootloader.bin)
+Partition en 0x00008000 (Routeur_CS5480.partitions.bin)
+Firmware en 0x00010000 (Routeur_CS5480.bin)
+Notes :
+- les 2 premiers correspondent au nvs
+- en 0x0000e000 il y a OTA data
+- si partition déjà à jour, seul le firmware suffit
+
+FileSystem (Arduino)
+FileSystem en 0x00410000 (4259840 décimal) (Routeur_CS5480.littlefs.bin)
