@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="fr-fr">
 <head>
-  <title>Default ESP32</title>
+  <title>Default ESP page</title>
   <meta http-equiv="content-type" content="text/html; charset=UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta charset="utf-8">
@@ -93,9 +93,9 @@
         return;
       }
 
-      if (send_request === "listfile")
+      if (send_request === "listFile")
       {
-        xmlHttp.open("GET","/listfile?DIR=" + params[0],true);
+        xmlHttp.open("GET","/listFile?DIR=" + params[0],true);
         xmlHttp.onreadystatechange = function() {
           if (requestIsOK(this)) {
             var xmlResponse = xmlHttp.responseText;
@@ -288,7 +288,7 @@
     // ***************************
 
     function listDir() {
-      ESP_Request("listfile", ["/"]);
+      ESP_Request("listFile", ["/"]);
     }
 
     function resetESP() {
@@ -351,14 +351,14 @@
     * {box-sizing: border-box}
 
     html {
-      font-family: "Times New Roman", Times, serif; 
+      font-family: "Times New Roman", Times, serif;
       font-size: 1.2em;
     }
 
-    hr { 
+    hr {
       padding: 15px;
       border-width: 0px;
-    } 
+    }
 
     /* For waiting during upload */
     .loader_gif {
@@ -376,7 +376,7 @@
     .loader_txt {
       border: solid 1px black;
       position: fixed;
-      z-index: 100;  
+      z-index: 100;
       left: 50%;
       top: 50%;
       background-color: #cccccc;
@@ -384,7 +384,7 @@
       margin-left: -200px;
       text-align: center;
       cursor: wait;
-      visibility: hidden;  
+      visibility: hidden;
     }
 
     /* Header div */
@@ -457,7 +457,7 @@
       color:#ffffff;
       font-size:16px;
       font-weight:bold;
-      padding:6px 24px;
+      padding:4px 12px;
     }
 
     .myButton:hover {
@@ -480,13 +480,12 @@
     }
 
     #m_Config {background-color: white;}
-
   </style>
 </head>
 <body>
 
   <div class="header">
-    <span>Default ESP32</span>
+    <span>Default ESP page</span>
     <span id="time" class="right">12:00:00</span>
   </div>
   <div style="margin-bottom: 54px;">

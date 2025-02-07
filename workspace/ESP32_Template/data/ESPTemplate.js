@@ -85,9 +85,9 @@ function ESP_Request(send_request, params = null) {
     return;
   }
 
-  if (send_request === "listfile")
+  if (send_request === "listFile")
   {
-    xmlHttp.open("GET","/listfile?DIR=" + params[0],true);
+    xmlHttp.open("GET","/listFile?DIR=" + params[0],true);
     xmlHttp.onreadystatechange = function() {
       if (requestIsOK(this)) {
         var xmlResponse = xmlHttp.responseText;
@@ -280,7 +280,7 @@ function deleteLOG() {
 // ***************************
 
 function listDir() {
-  ESP_Request("listfile", ["/"]);
+  ESP_Request("listFile", ["/"]);
 }
 
 function resetESP() {

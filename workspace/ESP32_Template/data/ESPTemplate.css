@@ -3,14 +3,14 @@
 * {box-sizing: border-box}
 
 html {
-  font-family: "Times New Roman", Times, serif; 
+  font-family: "Times New Roman", Times, serif;
   font-size: 1.2em;
 }
 
-hr { 
+hr {
   padding: 15px;
   border-width: 0px;
-} 
+}
 
 /* For waiting during upload */
 .loader_gif {
@@ -28,7 +28,7 @@ hr {
 .loader_txt {
   border: solid 1px black;
   position: fixed;
-  z-index: 100;  
+  z-index: 100;
   left: 50%;
   top: 50%;
   background-color: #cccccc;
@@ -36,7 +36,7 @@ hr {
   margin-left: -200px;
   text-align: center;
   cursor: wait;
-  visibility: hidden;  
+  visibility: hidden;
 }
 
 /* Header div */
@@ -109,7 +109,7 @@ button {
   color:#ffffff;
   font-size:16px;
   font-weight:bold;
-  padding:6px 24px;
+  padding:4px 12px;
 }
 
 .myButton:hover {
