@@ -101,7 +101,7 @@
 #define DEBOUNCING_US	200000
 #define KEYBOARD_WITH_ADC // Use ADC library
 #define ADC_USE_ARDUINO   // To use Arduino function
-#define ADC_USE_TASK      // To use task in place of timer in oneshot mode or callback in continuous mode
+//#define ADC_USE_TASK      // To use task in place of timer in oneshot mode or callback in continuous mode
 
 /**********************************************************
  * Cirrus define
@@ -129,7 +129,7 @@
  * SSR define
  **********************************************************/
 #define USE_SSR
-#define ZERO_CROSS_GPIO	GPIO_NUM_34
+#define ZERO_CROSS_GPIO	GPIO_NUM_35
 //#define ZERO_CROSS_TOP_Xms	20	// Allow to have a top 200 ms created by the zero cross (10 * X ms)
 #define SSR_COMMAND_GPIO	GPIO_NUM_12
 #define SSR_LED_GPIO	GPIO_NUM_13

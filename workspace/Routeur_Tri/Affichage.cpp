@@ -54,7 +54,7 @@ extern void UpdateLedRelayFacade(void);
 
 // Use ADC
 extern bool ADC_OK;
-extern bool ADC_Test_Zero;
+extern bool ADC_Test_Zero; // Show PageTest
 
 // Affichage
 #define COLUMN	5
@@ -75,8 +75,6 @@ int Action_Wifi = 0;
 #define DELAY_ACTION    10  // 10 secondes
 
 int Count_Action_Needed = 0;
-
-bool ShowPageTest = false;
 
 /* Private function prototypes -----------------------------------------------*/
 void Show_Page_Test(void);
@@ -242,7 +240,7 @@ void Display_Task_code(void *parameter)
 			case menuData:
 			{
 				Fast_Set_Decimal_Separator(',');
-				if (ShowPageTest)
+				if (ADC_Test_Zero)
 					Show_Page_Test();
 				else
 					switch (current_page)
@@ -330,9 +328,9 @@ void Show_Page_Test(void)
 		uint32_t count;
 		float zero = ADC_GetZero(&count);
 		Temp_str = "Zero: " + String(zero);
-		IHM_Print(line++, (const char*) Temp_str.c_str());
+		IHM_Print(line++, (const char*) Temp_str.c_str(), false);
 		Temp_str = "Count: " + String(count);
-		IHM_Print(line++, (const char*) Temp_str.c_str());
+		IHM_Print(line++, (const char*) Temp_str.c_str(), false);
 		print_debug(zero);
 	}
 }
@@ -400,7 +398,7 @@ void Show_Page3(void)
 
 	// Cirrus
 	IHM_Print(line++, 1, "Cirrus : ", false);
-	Fast_Printf(&buffer[0], Current_Data.Cirrus1_Temp, 2, "", " `C", Buffer_End, &len);
+	Fast_Printf(&buffer[0], Current_Data.Cirrus2_Temp, 2, "", " `C", Buffer_End, &len);
 	IHM_Print(line++, COLUMN, buffer, false);
 
 	// DS18B20
@@ -429,13 +427,13 @@ void Show_Page4(void)
 	IHM_Print(line++, 0, buffer, false);
 
 	// Cosphi
-	IHM_Print(line++, 1, "Cosphi ph1 : ", false);
-	Fast_Printf(&buffer[0], Current_Data.Phase1.PowerFactor, 2, "", "", Buffer_End, &len);
+	IHM_Print(line++, 1, "Cosphi ph2 : ", false);
+	Fast_Printf(&buffer[0], Current_Data.Cirrus2_PF, 2, "", "", Buffer_End, &len);
 	IHM_Print(line++, COLUMN, buffer, false);
 
 	// Puissance apparente
-	IHM_Print(line++, 1, "P apparente ph1 : ", false);
-	Fast_Printf(&buffer[0], Current_Data.Phase1.ApparentPower, 2, "", " VA", Buffer_End, &len);
+	IHM_Print(line++, 1, "P apparente ph2 : ", false);
+	Fast_Printf(&buffer[0], Current_Data.Phase2.ApparentPower, 2, "", " VA", Buffer_End, &len);
 	IHM_Print(line++, COLUMN, buffer, false);
 
 	// Puissance TI

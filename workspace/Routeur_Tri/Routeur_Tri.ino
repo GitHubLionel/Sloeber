@@ -43,7 +43,7 @@
 #define USE_DS
 
 // Use Teleinfo
-//#define USE_TI
+#define USE_TI
 
 // Active le SSR
 #define USE_ZC_SSR
@@ -173,11 +173,15 @@ TeleInfo TI(TI_RX_GPIO, 5000);
 // Définition Cirrus
 // ********************************************************************************
 
-// CS1 = CS5484
-CIRRUS_Calib_typedef CS1_Calib;
+// CS1 = CS5484 (channel 1 = Phase 1 et channel 2 = Phase 3
+//CIRRUS_Calib_typedef CS1_Calib;
+CIRRUS_Calib_typedef CS1_Calib = {242.00, 33.15, 0x3CC966, 0x405450, 0xAC12A1, 0x000000, 0x800000,
+		242.00, 33.15, 0x3C9481, 0x3FC850, 0x247199, 0x000000, 0x800000};
 //CIRRUS_Calib_typedef CS1_Calib = {242.00, 33.15, 0x3C638E, 0x3F94EA, 0x629900, 0x000000, 0x800000,
 //		242.00, 33.15, 0x3C2EE9, 0x3F8CDA, 0xEC5B10, 0x000000, 0x800000};
-CIRRUS_Config_typedef CS1_Config = {0xC00000, 0x44E2EB, 0x2AA, 0x731F0, 0x51D67C, 0x0}; // 0x400000
+
+// Pas de ZC
+CIRRUS_Config_typedef CS1_Config = {0x400000, 0x00EEEE, 0x0602AA, 0x731F0, 0x51D67C, 0x0}; // 0x44E2EB
 
 // Config1 = 0x44E2EB : version ZC sur DO0
 // Config1 = 0x00E4EB : version ZC sur DO0, P1 négatif sur DO3
@@ -185,11 +189,15 @@ CIRRUS_Config_typedef CS1_Config = {0xC00000, 0x44E2EB, 0x2AA, 0x731F0, 0x51D67C
 // Config1 = 0x44E25B : version ZC sur DO0, P2 négatif sur DO2, EPG3 output (P1 avg) sur DO3
 // Config1 = 0x22E51B : version ZC sur DO0, EPG2 output (P1 avg) sur DO2, P2 négatif sur DO3
 
-// CS2 = 5480
-CIRRUS_Calib_typedef CS2_Calib;
+// CS2 = 5480 (channel 1 = Phase 2 et channel 2 = prod et Talema)
+//CIRRUS_Calib_typedef CS2_Calib;
+CIRRUS_Calib_typedef CS2_Calib = {242.00, 33.15, 0x3C7286, 0x3F193C, 0x716F10, 0x000000, 0x800000,
+		242.00, 33.15, 0x3C7286, 0x3F897F, 0x5300A4, 0x000000, 0x800000};
 //CIRRUS_Calib_typedef CS2_Calib = {242.00, 33.15, 0x3C65AD, 0x3F48B7, 0x5AD0F1, 0x000000, 0x800000,
 //		242.00, 33.15, 0x3C65AD, 0x3EE855, 0x2605A4, 0x000000, 0x800000};
-CIRRUS_Config_typedef CS2_Config = {0xC02000, 0x44E2E4, 0x1002AA, 0x931F0, 0x6C77D9, 0x0};
+
+// Juste ZC sur DO0
+CIRRUS_Config_typedef CS2_Config = {0xC02000, 0x44E2EB, 0x0002AA, 0x931F0, 0x6C77D9, 0x0}; // 0x44E2E4   0x00EEEC
 
 #ifdef CIRRUS_USE_UART
 #if CIRRUS_UART_HARD == 1
@@ -244,6 +252,7 @@ uint16_t interval[] = {3600, 2500, 1140, 240};
 
 bool ADC_OK = false;
 bool ADC_Test_Zero = false;
+int TalemaPhase_int = 1;
 
 // ********************************************************************************
 // Définition Fichier ini
@@ -268,6 +277,7 @@ void handleInitPVData(CB_SERVER_PARAM);
 void handleLastData(CB_SERVER_PARAM);
 void handleOperation(CB_SERVER_PARAM);
 void handleCirrus(CB_SERVER_PARAM);
+void handleFillTheoric(CB_SERVER_PARAM);
 void onNewDaychange(uint8_t year, uint8_t month, uint8_t day)
 {
 	// Mise à jour des données pour le nouveau jour
@@ -386,16 +396,22 @@ void setup()
 	// Configure first Cirrus : CS5484
 	CS_Com.SelectCirrus(0);
 
-	// Initialisation CS5484 : phase 1, phase 2
+	// Initialisation CS5484 : phase 1, phase 3
 	if (Cirrus_OK)
-		Cirrus_OK = CIRRUS_Generic_Initialization(CS5484, &CS1_Calib, &CS1_Config, false, true, '1');
+		Cirrus_OK = CIRRUS_Generic_Initialization(CS5484, &CS1_Calib, &CS1_Config, false, false, '1');
 
 	// Configure second Cirrus : CS5480
 	CS_Com.SelectCirrus(1);
 
-	// Initialisation CS5484 : phase 3, production
+	// Initialisation CS5484 : phase 2, production
 	if (Cirrus_OK)
-		Cirrus_OK = CIRRUS_Generic_Initialization(CS5480, &CS2_Calib, &CS2_Config, false, true, '2');
+	{
+		Cirrus_OK = CIRRUS_Generic_Initialization(CS5480, &CS2_Calib, &CS2_Config, false, false, '2');
+		if (Cirrus_OK)
+		{
+			CS5480.GetRMSData(Channel_1)->SetWantData(exd_PF | exd_PApparent);
+		}
+	}
 
 	// On revient sur le premier Cirrus : CS5484
 	CS_Com.SelectCirrus(0);
@@ -434,6 +450,10 @@ void setup()
 	}
 	else
 		print_debug(F("ADC Failed"));
+
+	// Talema
+	TalemaPhase_int = init_routeur.ReadInteger("TALEMA", "Phase", 1);
+	SetTalemaParams((Phase_ID) TalemaPhase_int);
 #endif
 
 #ifdef USE_KEYBOARD
@@ -509,7 +529,7 @@ void setup()
 #ifdef USE_ADC
 	if (ADC_OK)
 	{
-		ADC_Begin(1796);
+		ADC_Begin(1794); //1796
 	}
 #endif
 	// Actualise la date
@@ -561,6 +581,8 @@ void OnAfterConnexion(void)
 	server.on("/operation", HTTP_POST, handleOperation);
 
 	server.on("/getCirrus", HTTP_PUT, handleCirrus);
+
+	server.on("/getTheoric", HTTP_POST, handleFillTheoric);
 }
 
 // ********************************************************************************
@@ -628,6 +650,9 @@ void handleInitialization(CB_SERVER_PARAM)
 	else
 		message += "ON#";
 
+	// Talema factor
+	message += (String) TalemaPhase_int + '#';
+
 	// Relay part
 	String alarm = "";
 	String start = "", end = "";
@@ -672,7 +697,7 @@ void handleLastData(CB_SERVER_PARAM)
 {
 	char buffer[255] = {0};
 	char *pbuffer = &buffer[0];
-	uint16_t len;
+	uint16_t len = 0;
 	float Energy, Surplus, Prod;
 	bool graphe = Get_Last_Data(&Energy, &Surplus, &Prod);
 
@@ -692,7 +717,7 @@ void handleLastData(CB_SERVER_PARAM)
 
 	// Temperatures
 	pbuffer = Fast_Printf(pbuffer, 2, "#", Buffer_End, true,
-			{Current_Data.Cirrus1_Temp, Current_Data.DS18B20_Int, Current_Data.DS18B20_Ext});
+			{Current_Data.Cirrus2_Temp, Current_Data.DS18B20_Int, Current_Data.DS18B20_Ext});
 
 	// Etat du SSR
 	pbuffer = Fast_Printf(pbuffer, (int) SSR_Get_State(), 0, "SSR=", "#", Buffer_End, &len);
@@ -714,6 +739,43 @@ void handleLastData(CB_SERVER_PARAM)
 //	print_debug(buffer);
 
 	pserver->send(200, "text/plain", buffer);
+}
+
+void handleFillTheoric(CB_SERVER_PARAM)
+{
+	// Default
+	RETURN_BAD_ARGUMENT();
+
+	int nb = pserver->arg("DATA_NB").toInt();
+	int last_date = pserver->arg("DATA_DATE").toInt();
+
+//	print_debug("DATA_NB: " + pserver->arg("DATA_NB") + ",  last_date=" + pserver->arg("DATA_DATE"));
+
+	int *data = NULL;
+	data = (int *) malloc((nb) * sizeof(int));
+
+	emul_PV.Fill_Power_Day(last_date, nb, data);
+
+//	char buffer[5000] = {0};
+//	char *pbuffer = &buffer[0];
+//	uint16_t len = 0;
+//	for (int i = 0; i < nb; i++)
+//	{
+//	  pbuffer = Fast_Printf(pbuffer, data[i], 0, "", "\t", Buffer_End, &len);
+//	  if (len + 5 > 5000)
+//	  	break;
+//	}
+//	buffer[len-1] = 0;
+
+	String message = (String) data[0];
+	for (int i = 1; i < nb; i++)
+	{
+		message += "\t" + (String) data[i];
+	}
+
+	free(data);
+
+	pserver->send(200, "text/plain", message);
 }
 
 void handleOperation(CB_SERVER_PARAM)
@@ -743,7 +805,6 @@ void handleOperation(CB_SERVER_PARAM)
 		init_routeur.WriteIntegerIndex(id, "Relais", "State", state);
 		UpdateLedRelayFacade();
 	}
-
 	if (pserver->hasArg("AlarmID"))
 	{
 		int id = pserver->arg("AlarmID").toInt();
@@ -760,6 +821,14 @@ void handleOperation(CB_SERVER_PARAM)
 		init_routeur.WriteIntegerIndex(id, "Relais", "Alarm2_end", end);
 	}
 #endif
+
+	if (pserver->hasArg("TalemaPhase"))
+	{
+		TalemaPhase_int = pserver->arg("TalemaPhase").toInt();
+		SetTalemaParams((Phase_ID) TalemaPhase_int);
+
+		init_routeur.WriteInteger("TALEMA", "Phase", TalemaPhase_int);
+	}
 
 #ifdef USE_ZC_SSR
 	// Change le mode d'action Pourcent/Zéro

@@ -51,8 +51,8 @@ typedef struct
 		uint32_t time_s;
 
 		RMS_Data Phase1; // CS5484 channel 1
-		RMS_Data Phase2; // CS5484 channel 2
-		RMS_Data Phase3; // CS5480 channel 1
+		RMS_Data Phase2; // CS5480 channel 1
+		RMS_Data Phase3; // CS5484 channel 2
 		RMS_Data Production; // CS5480 channel 2
 
 		// La somme des énergies des 3 phases
@@ -61,12 +61,12 @@ typedef struct
 
 		// Un raccourci sur la production
 		float *energy_day_prod = &Production.Energy;
-		// Extra
-		float Cirrus1_PF;
-		float Cirrus1_Freq;
+		// Extra data sur le CS5480
+		float Cirrus2_PF;
+		float Cirrus2_Freq;
 
-		// Températures
-		float Cirrus1_Temp;
+		// Températures sur le CS5480
+		float Cirrus2_Temp;
 
 		float Talema_Current = 0.0;
 		float Talema_Power = 0.0;
@@ -89,6 +89,10 @@ typedef struct
 
 } Data_Struct;
 
+typedef struct {
+		Phase_ID phase = Phase1;
+} Talema_Params_Typedef;
+
 // To access cirrus data
 extern Data_Struct Current_Data;
 extern volatile Graphe_Data log_cumul;
@@ -99,6 +103,7 @@ void Log_Data_Task_code(void *parameter);
 
 void Set_PhaseCE(Phase_ID phase);
 Phase_ID Get_PhaseCE(void);
+void SetTalemaParams(Phase_ID phase);
 
 void Get_Data(void);
 uint8_t Update_IHM(const char *first_text, const char *last_text, bool display = true);

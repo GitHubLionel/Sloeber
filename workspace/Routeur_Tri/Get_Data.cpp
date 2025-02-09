@@ -35,7 +35,8 @@ int ExtraDataCount = 1;
 
 // data au format CSV
 const String CSV_Filename = "/data.csv";
-const String Energy_Filename = "/energy_2025.csv";
+String Energy_Filename = "/energy_2025.csv";
+String Energy_Heading = "Date\tE_Conso\tE_Surplus\tE_Prod\r\n";
 
 // Data 200 ms
 Data_Struct Current_Data; //{0,{0}};
@@ -57,6 +58,8 @@ bool Data_acquisition = false;
 // Gestion énergie
 uint32_t Cumul_time = millis();
 uint32_t Talema_time = millis();
+Talema_Params_Typedef TalemaParams = {Phase1};
+float *TalemaPhase = &Current_Data.Phase1.Voltage;
 
 // Gestion log pour le graphique
 volatile Graphe_Data log_cumul;
@@ -141,14 +144,14 @@ void Get_Data(void)
 	CIRRUS_CS548x *CurrentCirrus;
 	Data_acquisition = true;
 
-	// Sélection du premier cirrus : CS5484, phase 1 et 2
+	// Sélection du premier cirrus : CS5484, phase 1 et 3
 	CurrentCirrus = (CIRRUS_CS548x*) CS_Com.SelectCirrus(0, Channel_1);
 	log1 = CurrentCirrus->GetData(Channel_all);
 	taskYIELD();
 
 	if ((err = CurrentCirrus->GetErrorCount()) > 0)
 	{
-		print_debug("*** Cirrus1 error : " + String(err));
+		print_debug("*** Cirrus1 error : " + String(CurrentCirrus->Print_LastError()));
 		Data_acquisition = false;
 		return;
 	}
@@ -164,29 +167,31 @@ void Get_Data(void)
 	CurrentCirrus->GetEnergy(Channel_1, &Current_Data.Phase1.Energy, NULL);
 	power_cumul = CurrentCirrus->GetLastMeanPRMSSigned(Channel_1);
 
-	Current_Data.Phase2.Voltage = CurrentCirrus->GetURMS(Channel_2);
-	Current_Data.Phase2.ActivePower = CurrentCirrus->GetPRMSSigned(Channel_2);
-	CurrentCirrus->GetEnergy(Channel_2, &Current_Data.Phase2.Energy, NULL);
+	Current_Data.Phase3.Voltage = CurrentCirrus->GetURMS(Channel_2);
+	Current_Data.Phase3.ActivePower = CurrentCirrus->GetPRMSSigned(Channel_2);
+	CurrentCirrus->GetEnergy(Channel_2, &Current_Data.Phase3.Energy, NULL);
 	power_cumul += CurrentCirrus->GetLastMeanPRMSSigned(Channel_2);
 
-	Current_Data.Cirrus1_PF = CurrentCirrus->GetExtraData(Channel_1, exd_PF);
-
-	// Sélection du deuxième cirrus : CS5480, phase 3 et production
+	// Sélection du deuxième cirrus : CS5480, phase 2 et production
 	CurrentCirrus = (CIRRUS_CS548x*) CS_Com.SelectCirrus(1, Channel_1);
 	log2 = CurrentCirrus->GetData(Channel_all);
 	taskYIELD();
 
 	if ((err = CurrentCirrus->GetErrorCount()) > 0)
 	{
-		print_debug("*** Cirrus2 error : " + String(err));
+		print_debug("*** Cirrus2 error : " + String(CurrentCirrus->Print_LastError()));
 		Data_acquisition = false;
 		return;
 	}
 
 	// Fill current data
-	Current_Data.Phase3.Voltage = CurrentCirrus->GetURMS(Channel_1);
-	Current_Data.Phase3.ActivePower = CurrentCirrus->GetPRMSSigned(Channel_1);
-	CurrentCirrus->GetEnergy(Channel_1, &Current_Data.Phase3.Energy, NULL);
+	Current_Data.Phase2.Voltage = CurrentCirrus->GetURMS(Channel_1);
+	Current_Data.Phase2.ActivePower = CurrentCirrus->GetPRMSSigned(Channel_1);
+#ifdef CIRRUS_RMS_FULL
+	Current_Data.Phase2.ApparentPower = CurrentCirrus->GetExtraData(Channel_1, exd_PApparent);
+	Current_Data.Cirrus2_PF = CurrentCirrus->GetExtraData(Channel_1, exd_PF);
+#endif
+	CurrentCirrus->GetEnergy(Channel_1, &Current_Data.Phase2.Energy, NULL);
 	power_cumul += CurrentCirrus->GetLastMeanPRMSSigned(Channel_1);
 
 	// Now we can compute the total energy of the 3 phases
@@ -204,7 +209,7 @@ void Get_Data(void)
 	CurrentCirrus->GetEnergy(Channel_2, &Current_Data.Production.Energy, NULL);
 
 	// Temperature on the CS5480
-	Current_Data.Cirrus1_Temp = CurrentCirrus->GetTemperature();
+	Current_Data.Cirrus2_Temp = CurrentCirrus->GetTemperature();
 
 	// On revient sur le premier cirrus
 	CS_Com.SelectCirrus(0, Channel_1);
@@ -227,12 +232,13 @@ void Get_Data(void)
 	{
 		ref_time = millis();
 		Current_Data.Talema_Current = ADC_GetTalemaCurrent();
-		Current_Data.Talema_Power = Current_Data.Talema_Current * Current_Data.Phase1.Voltage
-				* Current_Data.Phase1.PowerFactor; // A sélectionner la bonne phase
-		Current_Data.Talema_Energy = Current_Data.Talema_Energy
-				+ Current_Data.Talema_Power * ((ref_time - Talema_time) / 1000.0) / 3600.0;
+		Current_Data.Talema_Power = ADC_GetTalemaPower() * (*TalemaPhase);
+		Current_Data.Talema_Energy += Current_Data.Talema_Power * ((ref_time - Talema_time) / 1000.0) / 3600.0;
 		Talema_time = ref_time;
 	}
+
+	// Get extra data
+	GetExtraData();
 
 	// Log
 	if (log1 && log2)
@@ -243,12 +249,12 @@ void Get_Data(void)
 		log_cumul.Voltage_ph1 = data.Voltage;
 		log_cumul.Power_ph1 = data.ActivePower;
 		data = CS5484.GetLog(Channel_2, NULL);
-		log_cumul.Voltage_ph2 = data.Voltage;
-		log_cumul.Power_ph2 = data.ActivePower;
-
-		data = CS5480.GetLog(Channel_1, &temp);
 		log_cumul.Voltage_ph3 = data.Voltage;
 		log_cumul.Power_ph3 = data.ActivePower;
+
+		data = CS5480.GetLog(Channel_1, &temp);
+		log_cumul.Voltage_ph2 = data.Voltage;
+		log_cumul.Power_ph2 = data.ActivePower;
 		data = CS5480.GetLog(Channel_2, NULL);
 		log_cumul.Power_prod = data.ActivePower;
 
@@ -262,9 +268,6 @@ void Get_Data(void)
 		if (logSemaphore != NULL)
 			xSemaphoreGive(logSemaphore);
 	}
-
-	// Get extra data
-	GetExtraData();
 
 	Data_acquisition = false;
 }
@@ -292,6 +295,25 @@ void GetExtraData(void)
 			Current_Data.TI_Energy = (TI.getIndexWh() - Current_Data.TI_Counter);
 			Current_Data.TI_Power = TI.getPowerVA();
 		}
+	}
+}
+
+void SetTalemaParams(Phase_ID phase)
+{
+	TalemaParams.phase = phase;
+	switch (phase)
+	{
+		case Phase1:
+			TalemaPhase = &Current_Data.Phase1.Voltage;
+			break;
+		case Phase2:
+			TalemaPhase = &Current_Data.Phase2.Voltage;
+			break;
+		case Phase3:
+			TalemaPhase = &Current_Data.Phase3.Voltage;
+			break;
+		default:
+			;
 	}
 }
 
@@ -348,7 +370,7 @@ uint8_t Update_IHM(const char *first_text, const char *last_text, bool display)
 	sprintf(buffer, "Energie:%.2f   ", conso); // energy_day_conso
 	IHM_Print(line++, (char*) buffer);
 
-	sprintf(buffer, "T:%.2f", Current_Data.Cirrus1_Temp);
+	sprintf(buffer, "T:%.2f", Current_Data.Cirrus2_Temp);
 	IHM_Print(line++, (char*) buffer);
 
 	if (strlen(last_text) > 0)
@@ -484,9 +506,14 @@ void append_energy(void)
 
 	// Ouvre le fichier en append, le crée s'il n'existe pas
 	Lock_File = true;
+	bool Exist = Data_Partition->exists(Energy_Filename);
 	File temp = Data_Partition->open(Energy_Filename, "a");
 	if (temp)
 	{
+		// Le fichier n'existait pas (nouvelle année), on ajoute la première ligne
+		if (!Exist)
+			temp.print(Energy_Heading);
+
 		// Time, Econso, Esurplus, Eprod
 		RTC_Local.getShortDate(buffer); // Copie la date
 		Fast_Set_Decimal_Separator('.');
@@ -508,12 +535,16 @@ void onDaychange(uint8_t year, uint8_t month, uint8_t day)
 {
 	print_debug(F("Callback day change"));
 	// On ajoute les énergies au fichier
+	Energy_Filename = "/energy_20" + (String) year + ".csv";
 	append_energy();
 	Current_Data.energy_day_conso = 0.0;
 	Current_Data.energy_day_surplus = 0.0;
 	*Current_Data.energy_day_prod = 0.0;
+	Current_Data.Talema_Energy = 0.0;
 	CS5480.RestartEnergy();
 	CS5484.RestartEnergy();
+	if (TI_OK)
+		Current_Data.TI_Counter = TI.getIndexWh();
 
 	// On archive le fichier data du jour en lui donnant le nom du jour
 	if (Data_Partition->exists(CSV_Filename))
