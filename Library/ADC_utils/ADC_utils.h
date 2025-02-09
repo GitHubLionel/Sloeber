@@ -17,5 +17,6 @@ void ADC_Begin(int zero = ADC_ZERO);
 uint16_t ADC_Read0(void);
 
 // Get Talema rms current
-float ADC_GetTalemaCurrent(void);
+float ADC_GetTalemaCurrent();
+float ADC_GetTalemaPower();
 float ADC_GetZero(uint32_t *count);

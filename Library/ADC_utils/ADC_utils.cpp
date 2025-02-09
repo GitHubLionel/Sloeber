@@ -1,4 +1,5 @@
 #include "ADC_utils.h"
+#include "Debug_utils.h"
 
 #if defined(ESP8266) | defined(ADC_USE_ARDUINO)
 uint8_t ADC_gpio[2];
@@ -39,10 +40,10 @@ ADC_Read_Mode_Function ADC_Read_Mode = NULL;
 typedef void (*Do_Code_action)(void);
 Do_Code_action Action = NULL;
 
-// Timer to get data in OneShot mode
+// Timer to get data in OneShot mode when we don't use task
 #ifndef ADC_USE_TASK
 hw_timer_t *Timer_Tore = NULL;
-uint32_t Timer_Read_Delay = 100;	// 0.1 ms
+uint32_t Timer_Read_Delay = 200;	// 0.2 ms
 #endif
 
 // The zero of the ADC for mean wave
@@ -71,31 +72,51 @@ extern volatile SemaphoreHandle_t topZC_Semaphore;
 // To avoid division
 #define MEAN_WAVE_CUMUL	false
 
+// To debug the count of the cumul
+//#define DEBUG_CUMUL_COUNT
+
+// ADC value for the first channel used for keyboard
+volatile int ADC_Value0 = 0;
+
 // ADC cumul
 volatile int ADC_cumul = 0;
+volatile int ADC_sinus_cumul = 0;
 volatile int ADC_cumul_count = 0;
-volatile int ADC_cumul_count_int = 0;
-volatile int ADC_Value0 = 0;
+
+#ifdef DEBUG_CUMUL_COUNT
+volatile int ADC_cumul_count_cumul = 0;
+volatile int ADC_cumul_count_total = 0;
+#endif
 
 // ZC operation
 #if MEAN_WAVE_CUMUL == true
+volatile int cumul_count_int = 0;
 volatile int current_cumul_int = 0;
+volatile int sinus_cumul_int = 0;
 volatile int raw_current_int = 0;
-volatile int raw_current_count = 1; // To avoid division by zero at beginning
+volatile int raw_power_int = 0;
+volatile int raw_count_int = 1; // To avoid division by zero at beginning
 #else
 volatile int current_cumul = 0;
 volatile int raw_current = 0;
+volatile int power_cumul = 0;
+volatile int raw_power = 0;
 #endif
 
-volatile int current_cumul_count = 0;
+volatile int period_cumul_count = 0;
+
+// Sinusoïde de référence
+#define SINUS_PRECISION	1000.0
+int *sinus, *p_sinus;  // Tableau du sinus et pointeur de parcourt du tableau
+bool Fill_Sinus_Ref(void);
 
 // Function for debug message, may be redefined elsewhere
-void __attribute__((weak)) print_debug(const char *mess, bool ln = true)
-{
-	// Just to avoid compile warning
-	(void) mess;
-	(void) ln;
-}
+//void __attribute__((weak)) print_debug(const char *mess, bool ln = true)
+//{
+//	// Just to avoid compile warning
+//	(void) mess;
+//	(void) ln;
+//}
 
 // Mean computation
 void Compute_Mean_Wave(void);
@@ -108,7 +129,7 @@ void Compute_Mean_Wave(void);
 
 void ADC_INTO_IRAM do_Code(void)
 {
-	int result0, result1;
+	int result0, result1, v_shifted;
 	if (ADC_Read_Mode(&result0, &result1))
 	{
 		portENTER_CRITICAL(&ADC_Keyboard_Mux);
@@ -117,9 +138,11 @@ void ADC_INTO_IRAM do_Code(void)
 
 		if (Use_Two_Channel)
 		{
-			int v_shifted = result1 - ADC_zero;
+			v_shifted = result1 - ADC_zero;
 			ADC_cumul = ADC_cumul + (v_shifted * v_shifted);
+			ADC_sinus_cumul = ADC_sinus_cumul + (v_shifted * (*p_sinus));
 			ADC_cumul_count = ADC_cumul_count + 1;
+			p_sinus++;
 		}
 	}
 
@@ -235,7 +258,7 @@ bool ADC_Initialize_OneShot(std::initializer_list<uint8_t> gpios, bool action_ze
 	ADC_Initialized = true;
 
 #ifndef ADC_USE_TASK
-	Timer_Tore = timerBegin(1000000); // Fixe la frÃ©quence Ã  1 MHz => tick de 1 us
+	Timer_Tore = timerBegin(1000000); // Fixe la fréquence à 1 MHz => tick de 1 us
 	timerAttachInterrupt(Timer_Tore, Action);
 #endif
 
@@ -296,11 +319,19 @@ bool ADC_Initialize_Continuous(std::initializer_list<uint8_t> gpios, bool action
 
 /**
  * Start ADC reading
- * The zero parameter is used for the second channel to compute rms current
+ * If we use the two channel, then :
+ * - The zero parameter is used to determine the zero of the ADC that correspond to the zero current
+ * - The reference sinus wave is used to compute the power
  */
 void ADC_Begin(int zero)
 {
 	ADC_zero = zero;
+
+	if (Use_Two_Channel)
+	{
+		if (!Fill_Sinus_Ref())
+			return;
+	}
 
 	if (ADC_Status == adcUndef)
 		return;
@@ -319,7 +350,7 @@ void ADC_Begin(int zero)
 			analogContinuousStart();
 		}
 #ifdef ADC_USE_TASK
-	xTaskCreatePinnedToCore(task_function, NULL, 4096 * 2, NULL, 6, NULL, 0); // ESP_TASK_PRIO_MAX / 2
+	xTaskCreatePinnedToCore(task_function, NULL, 4096 * 2, NULL, ESP_TASK_PRIO_MAX / 2, NULL, 0); // ESP_TASK_PRIO_MAX / 2
 #endif
 }
 
@@ -336,6 +367,45 @@ uint16_t ADC_Read0(void)
 // Mean wave computation with Zero cross
 // ********************************************************************************
 
+/**
+ * Fill reference sinusoïde array for a voltage of 1 V
+ * We multiply by SINUS_PRECISION to have integer precision when we convert float to int
+ */
+bool Fill_Sinus_Ref(void)
+{
+	const float SQRT2 = 1.41421356;
+	const float TwoPI = 6.28318531;
+	uint16_t period;
+	uint16_t sampling;
+
+#ifdef ADC_USE_TASK
+	period = 20; // Task every 1 ms
+#else
+	// 100 for Timer_Read_Delay = 200, 200 for Timer_Read_Delay = 100
+	period = 20000 / Timer_Read_Delay;
+#endif
+
+	sampling = period + 2;  // + 2 si on dépasse un peu, histoire de se donner un peu de marge !
+
+	sinus = (int *)malloc(sampling * sizeof(int));
+	if (sinus == NULL)
+	{
+		print_debug("Sinus allocation error.\r\n");
+		p_sinus = NULL;
+		return false;
+	}
+	else
+	{
+		for (int i = 0; i < sampling; i++)
+		{
+			sinus[i] = (int)(SQRT2 * sin(TwoPI * (float) i / (float) period) * SINUS_PRECISION);
+//			print_debug(sinus[i]);
+		}
+		p_sinus = &sinus[0];
+	}
+	return true;
+}
+
 #if MEAN_WAVE_CUMUL == true
 void ADC_INTO_IRAM Compute_Mean_Wave(void)
 {
@@ -344,27 +414,41 @@ void ADC_INTO_IRAM Compute_Mean_Wave(void)
 	if (xSemaphoreTake(topZC_Semaphore, 0) == pdTRUE)
 	{
 		if (!ZC_First_Top)
+		{
 			// First 1/2 alternance
 			ZC_First_Top = true;
+			p_sinus = &sinus[0];
+		}
 		else
 		{
 			// Cumul over one period
 			current_cumul_int = current_cumul_int + ADC_cumul;
-			ADC_cumul_count_int = ADC_cumul_count_int + ADC_cumul_count;
+			sinus_cumul_int = sinus_cumul_int + ADC_sinus_cumul;
+			cumul_count_int = cumul_count_int + ADC_cumul_count;
+#ifdef DEBUG_CUMUL_COUNT
+			ADC_cumul_count_cumul = ADC_cumul_count_cumul + ADC_cumul_count;
+#endif
 			ADC_cumul = 0;
+			ADC_sinus_cumul = 0;
 			ADC_cumul_count = 0;
 
-			// We cumul 5 periods
-			current_cumul_count = current_cumul_count + 1;
-			if (current_cumul_count == PERIOD_COUNT)
+			// We cumul PERIOD_COUNT periods
+			period_cumul_count = period_cumul_count + 1;
+			if (period_cumul_count == PERIOD_COUNT)
 			{
 				portENTER_CRITICAL(&ADC_Tore_Mux);
 				raw_current_int = current_cumul_int;
-				raw_current_count = ADC_cumul_count_int;
+				raw_power_int = sinus_cumul_int;
+				raw_count_int = cumul_count_int;
 				portEXIT_CRITICAL(&ADC_Tore_Mux);
 				current_cumul_int = 0;
-				ADC_cumul_count_int = 0;
-				current_cumul_count = 0;
+				sinus_cumul_int = 0;
+				cumul_count_int = 0;
+				period_cumul_count = 0;
+#ifdef DEBUG_CUMUL_COUNT
+				ADC_cumul_count_total = ADC_cumul_count_cumul;
+				ADC_cumul_count_cumul = 0;
+#endif
 			}
 			ZC_First_Top = false;
 		}
@@ -378,27 +462,41 @@ void ADC_INTO_IRAM Compute_Mean_Wave(void)
 	if (xSemaphoreTake(topZC_Semaphore, 0) == pdTRUE)
 	{
 		if (!ZC_First_Top)
+		{
 			// First 1/2 alternance
 			ZC_First_Top = true;
+			p_sinus = &sinus[0];
+		}
 		else
 		{
 			// Cumul over one period
 			if (ADC_cumul_count != 0)
 			{
 				current_cumul = current_cumul + ADC_cumul / ADC_cumul_count;
-				current_cumul_count = current_cumul_count + 1;
+				power_cumul = power_cumul + ADC_sinus_cumul / ADC_cumul_count;
+				period_cumul_count = period_cumul_count + 1;
 			}
+#ifdef DEBUG_CUMUL_COUNT
+			ADC_cumul_count_cumul = ADC_cumul_count_cumul + ADC_cumul_count;
+#endif
 			ADC_cumul = 0;
+			ADC_sinus_cumul = 0;
 			ADC_cumul_count = 0;
 
 			// We cumul PERIOD_COUNT periods
-			if (current_cumul_count == PERIOD_COUNT)
+			if (period_cumul_count == PERIOD_COUNT)
 			{
 				portENTER_CRITICAL(&ADC_Tore_Mux);
 				raw_current = current_cumul / PERIOD_COUNT;
+				raw_power = power_cumul / PERIOD_COUNT;
 				portEXIT_CRITICAL(&ADC_Tore_Mux);
 				current_cumul = 0;
-				current_cumul_count = 0;
+				power_cumul = 0;
+				period_cumul_count = 0;
+#ifdef DEBUG_CUMUL_COUNT
+				ADC_cumul_count_total = ADC_cumul_count_cumul;
+				ADC_cumul_count_cumul = 0;
+#endif
 			}
 			ZC_First_Top = false;
 		}
@@ -406,30 +504,49 @@ void ADC_INTO_IRAM Compute_Mean_Wave(void)
 }
 #endif
 
-float ADC_GetTalemaCurrent(void)
+float ADC_GetTalemaCurrent()
 {
-	int raw;
 	portENTER_CRITICAL(&ADC_Tore_Mux);
 #if MEAN_WAVE_CUMUL == true
-	if (raw_current_count != 0)
-	  raw = (double)raw_current_int / raw_current_count;
+	float raw;
+	if (raw_count_int != 0)
+	  raw = (double)raw_current_int / raw_count_int;
 	else
 		raw = 0;
 #else
-	raw = raw_current;
+	int raw = raw_current;
 #endif
 	portEXIT_CRITICAL(&ADC_Tore_Mux);
-
-	float Talema_current;
-#if MEAN_WAVE_CUMUL == true
-	Talema_current = 0.0125 * sqrt(raw) - 0.008;
-#else
-	Talema_current = 0.0125 * sqrt(raw); //0.018157097
+#ifdef DEBUG_CUMUL_COUNT
+	print_debug(ADC_cumul_count_total);
 #endif
 
-	return Talema_current;
+	return 0.0125 * sqrt(raw);
 }
 
+// We assume that power is always positive
+float ADC_GetTalemaPower()
+{
+	portENTER_CRITICAL(&ADC_Tore_Mux);
+#if MEAN_WAVE_CUMUL == true
+	float raw;
+	if (raw_count_int != 0)
+	  raw = (double)abs(raw_power_int) / raw_count_int;
+	else
+		raw = 0;
+#else
+	int raw = abs(raw_power);
+#endif
+	portEXIT_CRITICAL(&ADC_Tore_Mux);
+#ifdef DEBUG_CUMUL_COUNT
+	print_debug(ADC_cumul_count_total);
+#endif
+
+	return 0.0125 * (float)raw/SINUS_PRECISION;  // 0.0131
+}
+/**
+ * Return the zero of the ADC and the number of accumulation of data
+ */
 float ADC_GetZero(uint32_t *count)
 {
 	float zero = 0;
