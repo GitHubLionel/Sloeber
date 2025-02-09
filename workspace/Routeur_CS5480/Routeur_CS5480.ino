@@ -183,8 +183,8 @@ TeleInfo TI(TI_RX_GPIO, 5000);
 //CIRRUS_Calib_typedef CS_Calib = {242.00, 34.00, 0x3C6C7B, 0x3E23FF, 0x000000, 0x000000, 0x000000,
 //		242.00, 34.00, 0x3C6C7B, 0x3DF7B2, 0x000000, 0x000000, 0x000000};
 
-CIRRUS_Calib_typedef CS_Calib = {242.00, 34.00, 0x3C6C7B, 0x3E23FF, 0xF12640, 0x000000, 0x000000,
-		242.00, 34.00, 0x3C6C7B, 0x3DF7B2, 0xF41D61, 0x000000, 0x000000};
+CIRRUS_Calib_typedef CS_Calib = {242.00, 34.00, 0x3C6C7B, 0x3E23FF, 0xF12640, 0x000030, 0x800000,
+		242.00, 34.00, 0x3C6C7B, 0x3DF7B2, 0xF41D61, 0x000030, 0x800000};
 
 //CIRRUS_Calib_typedef CS_Calib = {242.00, 53.55, 0x3CC756, 0x40D6B0, 0x7025B9, 0x0, 0x0,
 //					242.00, 53.55, 0x3CC756, 0x40D6B0, 0x7025B9, 0x0, 0x0};
@@ -216,10 +216,6 @@ extern bool Calibration;
 bool Cirrus_OK = false;
 bool Mess_For_Cirrus_Connect = false;
 
-// To access cirrus data
-extern volatile Data_Struct Current_Data;
-extern volatile Graphe_Data log_cumul;
-
 #ifndef USE_ZC_SSR
 extern volatile SemaphoreHandle_t topZC_Semaphore;
 extern void onCirrusZC(void);
@@ -246,7 +242,6 @@ uint16_t interval[] = {1250, 950, 650, 250};
 
 bool ADC_OK = false;
 bool ADC_Test_Zero = false;
-int TalemaFactor_int = 1;
 
 // ********************************************************************************
 // Définition Fichier ini
@@ -419,10 +414,6 @@ void setup()
 	}
 	else
 		print_debug(F("ADC Failed"));
-
-	// Talema
-	TalemaFactor_int = init_routeur.ReadInteger("TALEMA", "Factor", 1);
-	SetTalemaFactor((Talema_Factor_Enum) TalemaFactor_int);
 #endif
 
 #ifdef USE_KEYBOARD
@@ -507,7 +498,7 @@ void setup()
 #ifdef USE_ADC
 	if (ADC_OK)
 	{
-		ADC_Begin(1892);
+		ADC_Begin(1891); // 1892
 	}
 #endif
 	// Actualise la date
@@ -628,9 +619,6 @@ void handleInitialization(CB_SERVER_PARAM)
 	else
 		message += "ON#";
 
-	// Talema factor
-	message += (String) TalemaFactor_int + '#';
-
 	// Relay part
 	String alarm = "";
 	String start = "", end = "";
@@ -675,7 +663,7 @@ void handleLastData(CB_SERVER_PARAM)
 {
 	char buffer[255] = {0};
 	char *pbuffer = &buffer[0];
-	uint16_t len;
+	uint16_t len = 0;
 	float Energy, Surplus, Prod;
 	bool graphe = Get_Last_Data(&Energy, &Surplus, &Prod);
 
@@ -733,11 +721,23 @@ void handleFillTheoric(CB_SERVER_PARAM)
 
 	emul_PV.Fill_Power_Day(last_date, nb, data);
 
+//	char buffer[5000] = {0};
+//	char *pbuffer = &buffer[0];
+//	uint16_t len = 0;
+//	for (int i = 0; i < nb; i++)
+//	{
+//	  pbuffer = Fast_Printf(pbuffer, data[i], 0, "", "\t", Buffer_End, &len);
+//	  if (len + 5 > 5000)
+//	  	break;
+//	}
+//	buffer[len-1] = 0;
+
 	String message = (String) data[0];
 	for (int i = 1; i < nb; i++)
 	{
 		message += "\t" + (String) data[i];
 	}
+
 	free(data);
 
 	pserver->send(200, "text/plain", message);
@@ -786,13 +786,6 @@ void handleOperation(CB_SERVER_PARAM)
 	}
 #endif
 
-	if (pserver->hasArg("TalemaFactor_int"))
-	{
-		TalemaFactor_int = pserver->arg("TalemaFactor_int").toInt();
-		SetTalemaFactor((Talema_Factor_Enum) TalemaFactor_int);
-		init_routeur.WriteInteger("TALEMA", "Factor", TalemaFactor_int, "SSR=0, Channel1=1, Channel2=2");
-	}
-
 #ifdef USE_ZC_SSR
 	// Change le mode d'action Pourcent/Zéro
 	// Ne pas oublier de redémarrer le SSR après
@@ -822,6 +815,7 @@ void handleOperation(CB_SERVER_PARAM)
 		init_routeur.WriteFloat("SSR", "Target", target);
 	}
 
+    // Test puissance CE
 	if (pserver->hasArg("CheckPower"))
 	{
 		TaskList.SuspendTask("CIRRUS_Task");

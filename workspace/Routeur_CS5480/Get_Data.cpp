@@ -56,7 +56,6 @@ bool Data_acquisition = false;
 
 // Gestion énergie
 uint32_t Talema_time = millis();
-Talema_Factor_Enum TalemaFactor = tfChannel1;
 
 // Gestion log pour le graphique
 volatile Graphe_Data log_cumul;
@@ -70,7 +69,6 @@ volatile SemaphoreHandle_t logSemaphore = NULL;
 // ********************************************************************************
 
 void GetExtraData(void);
-double GetTalemaFactor(void);
 void append_data(void);
 void append_energy(void);
 
@@ -91,7 +89,7 @@ void __attribute__((weak)) print_debug(String mess, bool ln = true)
  */
 void Get_Data(void)
 {
-	static int countmessage = 0;
+//	static int countmessage = 0;
 	bool log = false;
 	uint32_t err;
 
@@ -137,7 +135,7 @@ void Get_Data(void)
 	Current_Data.Cirrus_ch2.ActivePower = CS5480.GetPRMSSigned(Channel_2);
 
 	// Temps d'acquisition des données
-//	if (countmessage < 20)
+//	if (countmessage++ < 40)
 //		print_debug("*** Data time : " + String(millis() - start_time) + " ms ***"); // 67 - 133 ms
 
 #ifdef USE_SSR
@@ -151,7 +149,7 @@ void Get_Data(void)
 	{
 		uint32_t ref_time = millis();
 		Current_Data.Talema_Current = ADC_GetTalemaCurrent();
-		Current_Data.Talema_Power = Current_Data.Talema_Current * Current_Data.Cirrus_ch1.Voltage * GetTalemaFactor();
+		Current_Data.Talema_Power = ADC_GetTalemaPower() * Current_Data.Cirrus_ch1.Voltage;
 		Current_Data.Talema_Energy += Current_Data.Talema_Power * ((ref_time - Talema_time) / 1000.0) / 3600.0;
 		Talema_time = ref_time;
 	}
@@ -184,8 +182,6 @@ void Get_Data(void)
 			xSemaphoreGive(logSemaphore);
 	}
 
-	countmessage++;
-
 	Data_acquisition = false;
 }
 
@@ -213,28 +209,6 @@ void GetExtraData(void)
 			Current_Data.TI_Power = TI.getPowerVA();
 		}
 	}
-}
-void SetTalemaFactor(Talema_Factor_Enum factor)
-{
-	TalemaFactor = factor;
-}
-
-double GetTalemaFactor(void)
-{
-	double factor = 0.0;
-	switch (TalemaFactor)
-	{
-		case tfSSR:
-			factor = SSR_Get_Current_Percent() / 100;
-			break;
-		case tfChannel1:
-			factor = Current_Data.Cirrus_ch1.PowerFactor;
-			break;
-		case tfChannel2:
-			factor = Current_Data.Cirrus_ch2.PowerFactor;
-			break;
-	}
-	return factor;
 }
 
 // ********************************************************************************
