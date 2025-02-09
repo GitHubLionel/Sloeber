@@ -311,7 +311,7 @@
       <label id="label_SSR" for="toggle_SSR">SSR OFF</label><br>
       <label id="label_CEPhase" for="CEPhase">Phase du chauffe-eau : </label>
       <select name="CEPhase" id="CEPhase" size="1" onchange="">
-        <option value="1">Phase 1</option>
+        <option value="1" selected>Phase 1</option>
         <option value="2">Phase 2</option>
         <option value="3">Phase 3</option>
       </select>
@@ -319,18 +319,13 @@
     </div>
 
     <div class="div_space">
-      <fieldset>
-      <div>
-        <span>Talema Phase :</span>
-        <input type="radio" id="TPhase1" name="TPhaseAction" value="1" title="Si Talema est branché sur la phase 1" checked>
-        <label for="TPhase0">Phase 1</label>
-        <input type="radio" id="TPhase2" name="TPhaseAction" value="2" title="Si Talema est branché sur la phase 2">
-        <label for="TPhase1">Phase 2</label>
-        <input type="radio" id="TPhase3" name="TPhaseAction" value="3" title="Si Talema est branché sur la phase 3">
-        <label for="TPhase2">Phase 3</label>
-        <button class="myButton" onclick="setTalemaParams()">Mettre à jour</button>
-      </div>
-      </fieldset>
+      <span>Talema Phase :</span>
+      <select name="TPhaseAction" id="TPhase" size="1" onchange="">
+        <option value="1" selected>Phase 1</option>
+        <option value="2">Phase 2</option>
+        <option value="3">Phase 3</option>
+      </select>
+      <button class="myButton" onclick="sendTalemaPhase()">Mettre à jour</button>
     </div>
 
     <div class="div_space">
