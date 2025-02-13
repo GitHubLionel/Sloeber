@@ -53,7 +53,7 @@ extern Relay_Class Relay;
 
 // Use ADC
 extern bool ADC_OK;
-extern bool ADC_Test_Zero; // Show PageTest
+extern ADC_Action_Enum ADC_Action; // Show PageTest
 
 // Affichage
 #define COLUMN	5
@@ -238,7 +238,7 @@ void Display_Task_code(void *parameter)
 			case menuData:
 			{
 				Fast_Set_Decimal_Separator(',');
-				if (ADC_Test_Zero)
+				if ((ADC_Action == adc_Raw) || (ADC_Action == adc_Zero))
 					Show_Page_Test();
 				else
 					switch (current_page)
@@ -321,15 +321,28 @@ void Show_Page_Test(void)
 	uint8_t line = 0;
 	String Temp_str = "";
 
-	if (ADC_OK && ADC_Test_Zero)
+	if (ADC_OK)
 	{
-		uint32_t count;
-		float zero = ADC_GetZero(&count);
-		Temp_str = "Zero: " + String(zero);
-		IHM_Print(line++, (const char*) Temp_str.c_str(), false);
-		Temp_str = "Count: " + String(count);
-		IHM_Print(line++, (const char*) Temp_str.c_str(), false);
-		print_debug(zero);
+		if (ADC_Action == adc_Raw)
+		{
+			int raw = ADC_Read0();
+			Temp_str = "Raw0: " + String(raw) + "   ";
+			IHM_Print(line++, (const char*) Temp_str.c_str(), false);
+			raw = ADC_Read1();
+			Temp_str = "Raw1: " + String(raw) + "   ";
+			IHM_Print(line++, (const char*) Temp_str.c_str(), false);
+		}
+		else
+		if (ADC_Action == adc_Zero)
+		{
+			uint32_t count;
+			float zero = ADC_GetZero(&count);
+			Temp_str = "Zero: " + String(zero);
+			IHM_Print(line++, (const char*) Temp_str.c_str(), false);
+			Temp_str = "Count: " + String(count);
+			IHM_Print(line++, (const char*) Temp_str.c_str(), false);
+			print_debug(zero);
+		}
 	}
 }
 

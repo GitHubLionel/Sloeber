@@ -132,7 +132,7 @@
           <li><span>DS18B20 externe :</span><span id="_T_DS_ext" class="right">25°C</span></li>
         </ul>
       </div>
-      
+
       <div class="col-3 col-s-3 menu">
       <p> Divers </p>
         <ul>
@@ -170,81 +170,54 @@
       <input type="checkbox" name="cbdateGraph" >
       <label for="cbdateGraph">Graphique du </label>
       <input type="date" id="dtPicker" name="dtPicker" value="">
-
       <button class="myButton" onclick="refreshGraph()">Actualiser le graphique</button>
+      <button class="myButton" onclick="fillTheoric()">Théorique</button>
     </div>
-    
-    <div class="divSplitter">
-      <div class="divDown">
-
-        <div class="padCanvas">
-          <canvas id="can_mean_power"></canvas>
-          <div class="btnZoom">
-            <button class="myButton" onclick="undoZoom('can_mean_power')">Dézoomer</button>
-            <button class="myButton" onclick="fillTheoric()">Théorique</button>
-            <button class="myButton" title="Exporter dans un fichier texte CSV" onclick="exportCSV('can_mean_power')">==> CSV</button>
-            <button class="myButton" title="Exporter dans une image PNG" onclick="exportPNG('can_mean_power', 'puissance.png')">==> PNG</button>
-          </div>         
-        </div>          
-      </div>
+    <div id="divPower">
+      <canvas id="can_mean_power"></canvas>
     </div>
   </div>
-  
+
   <div id="m_Temperatue" class="tabcontent">
-    <div class="divSplitter">
-      <div class="divDown">
-
-        <div class="padCanvas">
-          <canvas id="can_mean_temperature"></canvas>
-          <div class="btnZoom">
-            <button class="myButton" onclick="undoZoom('can_mean_temperature')">Dézoomer</button>
-            <button class="myButton" title="Exporter dans une image PNG" onclick="exportPNG('can_mean_temperature', 'température.png')">==> PNG</button>
-          </div>         
-        </div>          
-      </div>
+    <div id="divTemperature">
+      <canvas id="can_mean_temperature"></canvas>
     </div>
   </div>
-  
-  <div id="m_Energy" class="tabcontent">
-    <div class="divSplitter">
-      <div class="divUp">
-        <div class="padCanvas">
-          <canvas id="can_mean_energy"></canvas>
-          <div class="btnZoom">
-            <button class="myButton" onclick="undoZoom('can_mean_energy')">Dézoomer</button>
-            <button class="myButton" title="Exporter dans une image PNG" onclick="exportPNG('can_mean_energy', 'energie_jour.png')">==> PNG</button>
-          </div>          
-        </div>          
-      </div>
-      <div class="splitter" id='splitterEnergy'></div>
-      <div class="divDown">
-        <div class="padCanvas">
-          <canvas id="can_histo_energy"></canvas>
-          <div class="btnZoom">
-            <select name="mois" id="mois" size="1" style="width:120px;" onchange="getEnergy()">
-              <option value="01">Janvier</option>
-              <option value="02">Février</option>
-              <option value="03">Mars</option>
-              <option value="04">Avril</option>
-              <option value="05">Mai</option>
-              <option value="06">Juin</option>
-              <option value="07">Juillet</option>
-              <option value="08">Août</option>
-              <option value="09" selected>Septembre</option>
-              <option value="10">Octobre</option>
-              <option value="11">Novembre</option>
-              <option value="12">Décembre</option>
-              <option value="all">Tous les mois</option>      
-            </select>    
-            <select name="annee" id="annee" size="1" style="width:80px;" onchange="">
-            </select>     
 
-            <button class="myButton" onclick="getEnergy()">Afficher</button>
-            <button class="myButton" title="Exporter dans une image PNG" onclick="exportPNG('can_histo_energy', 'energie.png')">==> PNG</button>
-          </div>
-        </div>     
-      </div>
-    </div>  
+  <div id="m_Energy" class="tabcontent">
+    <flex id="flex-container" class="v" style="flex: 1; height: 500px">
+      <flex-item id="flex_up" style="flex: 1;">
+        <div>
+          <canvas id="can_mean_energy"></canvas>
+        </div>
+      </flex-item>
+      <flex-resizer></flex-resizer>
+      <flex-item id="flex_down" style="flex: 2;">
+        <div>
+          <canvas id="can_histo_energy"></canvas>
+        </div>
+      </flex-item>
+    </flex>
+    <div class="btnZoom">
+      <select name="mois" id="mois" size="1" style="width:120px;" onchange="getEnergy()">
+        <option value="01">Janvier</option>
+        <option value="02">Février</option>
+        <option value="03">Mars</option>
+        <option value="04">Avril</option>
+        <option value="05">Mai</option>
+        <option value="06">Juin</option>
+        <option value="07">Juillet</option>
+        <option value="08">Août</option>
+        <option value="09" selected>Septembre</option>
+        <option value="10">Octobre</option>
+        <option value="11">Novembre</option>
+        <option value="12">Décembre</option>
+        <option value="all">Tous les mois</option>
+      </select>
+      <select name="annee" id="annee" size="1" style="width:80px;" onchange="">
+      </select>
+      <button class="myButton" onclick="getEnergy()">Afficher</button>
+    </div>
   </div>
 
   <div id="m_SSR" class="tabcontent">
@@ -256,7 +229,7 @@
         <input type="radio" id="zero" name="SSRType" value="zero" onchange="doSSRAction('zero')">
         <label for="zero">Zéro</label>
         <input type="radio" id="fullpower" name="SSRType" value="fullpower" onchange="doSSRAction('fullpower')">
-        <label for="fullpower">Pleine charge</label>        
+        <label for="fullpower">Pleine charge</label>
       </div>
       <div id="powerCE" style="display: none">
         <label for="powerSSR">Puissance CE : </label>
@@ -334,7 +307,7 @@
               <label class="label_form">Forcer Relais </label>
             </td>
             <td>
-              <label class="switch switch-flat">     
+              <label class="switch switch-flat">
                 <input id="ToggleRelay" class="switch-input" type="checkbox" />
                 <span class="switch-label" data-on="ON" data-off="OFF"></span>
                 <span class="switch-handle"></span>      	
@@ -435,6 +408,15 @@
     </div>
   </div>
 
+  <div id="chartMenu" class="context-menu" style="display: none">
+    <ul>
+      <li onclick="undoZoom()">Reset Zoom</li>
+      <li title="Exporter dans un fichier texte CSV" onclick="exportCSV()">==> CSV</li>
+      <li title="Exporter dans une image PNG" onclick="exportPNG()">==> PNG</li>
+      <li title = "Change le mode d'affichage du tooltip" onclick="onTooltipButtonClick()">Tooltip</li>
+    </ul>
+  </div>
+
   <!-- Message d'attente -->
   <div class="loader_gif" id="loading"> </div>
 <!-- autre alternative pour l'attente
@@ -445,7 +427,6 @@
   <script type='text/javascript' src="chartjs-zoom.min.js"></script>
   <script type='text/javascript' src="date-fns.adapter.js"></script>
 
-  <script type='text/javascript' src='resizilla.umd.js'></script>
   <script type='text/javascript' src="FileSaver.min.js"></script>
   <!-- Mettre en dernier -->
   <script type='text/javascript' src="Graphe.js"></script>

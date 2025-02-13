@@ -241,7 +241,7 @@ uint16_t interval[] = {1250, 950, 650, 250};
 #endif
 
 bool ADC_OK = false;
-bool ADC_Test_Zero = false;
+ADC_Action_Enum ADC_Action = adc_Sigma;
 
 // ********************************************************************************
 // Définition Fichier ini
@@ -407,7 +407,7 @@ void setup()
 
 	// **** 8- Initialisation Clavier, relais, ADC
 #ifdef USE_ADC
-	if ((ADC_OK = ADC_Initialize_OneShot({KEYBOARD_ADC_GPIO, GPIO_NUM_39}, ADC_Test_Zero)) == true) // @suppress("Invalid arguments")
+	if ((ADC_OK = ADC_Initialize_OneShot({KEYBOARD_ADC_GPIO, GPIO_NUM_39}, ADC_Action)) == true) // @suppress("Invalid arguments")
 	{
 		print_debug(F("ADC OK"));
 //		ADC_Begin();
@@ -487,7 +487,8 @@ void setup()
 	TaskList.AddTask(CIRRUS_DATA_TASK(Cirrus_OK)); // Cirrus get data Task
 	TaskList.AddTask(DISPLAY_DATA_TASK);
 #ifdef USE_KEYBOARD
-	TaskList.AddTask(KEYBOARD_DATA_TASK(true));
+	if (ADC_Action == adc_Sigma)
+	  TaskList.AddTask(KEYBOARD_DATA_TASK(true));
 #endif
 	TaskList.AddTask(LOG_DATA_TASK);  // Save log Task
 #ifdef USE_RELAY
