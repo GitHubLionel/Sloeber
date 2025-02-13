@@ -39,7 +39,6 @@ void Btn_Definition_2B();
 void Btn_Definition_3B();
 void Btn_Definition_4B();
 Btn_Action RawToBtn(uint16_t val);
-void Check_Btn_Clicked(unsigned long ms);
 
 // Function for debug message, may be redefined elsewhere
 void __attribute__((weak)) print_debug(const char *mess, bool ln = true)
@@ -60,7 +59,7 @@ void __attribute__((weak)) print_debug(const char *mess, bool ln = true)
  * Ne pas oublier de mettre la fonction Keyboard_UpdateTime() dans le loop principal
  * IMPORTANT: ADC must be initialized before
  */
-void Keyboard_Initialize(uint8_t nbButton, ADC_Sampling sampling, const KeyBoard_Click_cb &kbClick)
+bool Keyboard_Initialize(uint8_t nbButton, ADC_Sampling sampling, const KeyBoard_Click_cb &kbClick)
 {
 #if defined(ESP8266) | (!defined(KEYBOARD_WITH_ADC))
 	// For ESP8266, we have only D0
@@ -109,6 +108,8 @@ void Keyboard_Initialize(uint8_t nbButton, ADC_Sampling sampling, const KeyBoard
 	}
 	else
 		Keyboard_Initialized = true;
+
+	return Keyboard_Initialized;
 }
 
 /**
@@ -118,7 +119,7 @@ void Keyboard_Initialize(uint8_t nbButton, ADC_Sampling sampling, const KeyBoard
  * Ne pas oublier de mettre la fonction Keyboard_UpdateTime() dans le loop principal
  * IMPORTANT: ADC must be initialized before
  */
-void Keyboard_Initialize(uint8_t nbButton, const uint16_t interval[],
+bool Keyboard_Initialize(uint8_t nbButton, const uint16_t interval[],
 		const KeyBoard_Click_cb &kbClick)
 {
 #if defined(ESP8266) | (!defined(KEYBOARD_WITH_ADC))
@@ -141,6 +142,8 @@ void Keyboard_Initialize(uint8_t nbButton, const uint16_t interval[],
 	}
 	else
 		Keyboard_Initialized = true;
+
+	return Keyboard_Initialized;
 }
 
 #if defined(ESP8266) | (!defined(KEYBOARD_WITH_ADC))

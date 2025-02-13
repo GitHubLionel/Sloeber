@@ -46,6 +46,9 @@ hw_timer_t *Timer_Tore = NULL;
 uint32_t Timer_Read_Delay = 200;	// 0.2 ms
 #endif
 
+// The action selected
+ADC_Action_Enum Current_Action;
+
 // The zero of the ADC for mean wave
 int ADC_zero = ADC_ZERO;
 
@@ -77,6 +80,10 @@ extern volatile SemaphoreHandle_t topZC_Semaphore;
 
 // ADC value for the first channel used for keyboard
 volatile int ADC_Value0 = 0;
+// ADC value for the second channel used for Talema
+volatile int ADC_Value1 = 0;
+// Just for test
+volatile int ADC_Error_count = 0;
 
 // ADC cumul
 volatile int ADC_cumul = 0;
@@ -120,34 +127,32 @@ bool Fill_Sinus_Ref(void);
 
 // Mean computation
 void Compute_Mean_Wave(void);
+bool SetActionCode(ADC_Action_Enum action);
 
 // ********************************************************************************
 // Get raw ADC values
-// do_Code: get raw value for first channel and compute mean wave (sigma) for second channel if exist
+// do_Code_Raw: get raw value for first channel and second channel if exist
 // do_Code_Zero: get raw value for first channel and compute mean for second channel if exist
+// do_Code_Sigma: get raw value for first channel and compute mean wave (sigma) for second channel if exist
 // ********************************************************************************
 
-void ADC_INTO_IRAM do_Code(void)
+void ADC_INTO_IRAM do_Code_Raw(void)
 {
-	int result0, result1, v_shifted;
+	int result0, result1;
 	if (ADC_Read_Mode(&result0, &result1))
 	{
 		portENTER_CRITICAL(&ADC_Keyboard_Mux);
 		ADC_Value0 = result0;
 		portEXIT_CRITICAL(&ADC_Keyboard_Mux);
-
 		if (Use_Two_Channel)
 		{
-			v_shifted = result1 - ADC_zero;
-			ADC_cumul = ADC_cumul + (v_shifted * v_shifted);
-			ADC_sinus_cumul = ADC_sinus_cumul + (v_shifted * (*p_sinus));
-			ADC_cumul_count = ADC_cumul_count + 1;
-			p_sinus++;
+			portENTER_CRITICAL(&ADC_Tore_Mux);
+			ADC_Value1 = result1;
+			portEXIT_CRITICAL(&ADC_Tore_Mux);
 		}
 	}
-
-	if (Use_Two_Channel)
-	  Compute_Mean_Wave();
+	else
+		ADC_Error_count = ADC_Error_count + 1;
 }
 
 void ADC_INTO_IRAM do_Code_Zero(void)
@@ -166,6 +171,52 @@ void ADC_INTO_IRAM do_Code_Zero(void)
 			portEXIT_CRITICAL(&ADC_Tore_Mux);
 		}
 	}
+	else
+		ADC_Error_count = ADC_Error_count + 1;
+}
+
+void ADC_INTO_IRAM do_Code_Sigma(void)
+{
+	int result0, result1, v_shifted;
+	if (ADC_Read_Mode(&result0, &result1))
+	{
+		portENTER_CRITICAL(&ADC_Keyboard_Mux);
+		ADC_Value0 = result0;
+		portEXIT_CRITICAL(&ADC_Keyboard_Mux);
+
+		if (Use_Two_Channel)
+		{
+			v_shifted = result1 - ADC_zero;
+			ADC_cumul = ADC_cumul + (v_shifted * v_shifted);
+			ADC_sinus_cumul = ADC_sinus_cumul + (v_shifted * (*p_sinus));
+			ADC_cumul_count = ADC_cumul_count + 1;
+			p_sinus++;
+		}
+	}
+
+	// Not in ADC_Read_Mode to make the computation even if ADC read failed
+	if (Use_Two_Channel)
+		Compute_Mean_Wave();
+}
+
+bool SetActionCode(ADC_Action_Enum action)
+{
+	switch (action)
+	{
+		case adc_Raw:
+			Action = &do_Code_Raw;
+			break;
+		case adc_Zero:
+			Action = &do_Code_Zero;
+			break;
+		case adc_Sigma:
+			Action = &do_Code_Sigma;
+			break;
+		default:
+			return false;
+	};
+	Current_Action = action;
+	return true;
 }
 
 #ifdef ADC_USE_TASK
@@ -192,7 +243,7 @@ bool ADC_INTO_IRAM ADC_Read_OneShot(int *result_ch0, int *result_ch1)
 #if defined(ESP8266) | defined(ADC_USE_ARDUINO)
 	*result_ch0 = analogRead(ADC_gpio[0]);
 	if (Use_Two_Channel)
-	  *result_ch1 = analogRead(ADC_gpio[1]);
+		*result_ch1 = analogRead(ADC_gpio[1]);
 	return true;
 #else
 	bool success = (adc_oneshot_read(adc1_handle, ADC_Channel[0], result_ch0) == ESP_OK); // @suppress("Invalid arguments")
@@ -207,7 +258,7 @@ bool ADC_INTO_IRAM ADC_Read_OneShot(int *result_ch0, int *result_ch1)
  * The first gpio is used in the ADC_Read0 function. This raw value, no treatment.
  * Set action_zero to true when you want to determine the zero for the second channel
  */
-bool ADC_Initialize_OneShot(std::initializer_list<uint8_t> gpios, bool action_zero)
+bool ADC_Initialize_OneShot(std::initializer_list<uint8_t> gpios, ADC_Action_Enum action)
 {
 #if defined(ESP8266) | defined(ADC_USE_ARDUINO)
 	uint8_t i = 0;
@@ -251,10 +302,9 @@ bool ADC_Initialize_OneShot(std::initializer_list<uint8_t> gpios, bool action_ze
 	ADC_Read_Mode = &ADC_Read_OneShot;
 	Use_Two_Channel = (gpios.size() == 2);
 
-	if (action_zero)
-	  Action = &do_Code_Zero;
-	else
-		Action = &do_Code;
+	if (!SetActionCode(action))
+		return false;
+
 	ADC_Initialized = true;
 
 #ifndef ADC_USE_TASK
@@ -290,16 +340,16 @@ bool ADC_INTO_IRAM ADC_Read_Continuous(int *result_ch0, int *result_ch1)
  * The first gpio is used in the ADC_Read0 function. This raw value, no treatment.
  * Set action_zero to true when you want to determine the zero  for the second channel
  */
-bool ADC_Initialize_Continuous(std::initializer_list<uint8_t> gpios, bool action_zero)
+bool ADC_Initialize_Continuous(std::initializer_list<uint8_t> gpios, ADC_Action_Enum action)
 {
 #define CONVERSIONS_PER_PIN 64
 	ADC_Status = adcContinuous;
 	ADC_Read_Mode = &ADC_Read_Continuous;
 	Use_Two_Channel = (gpios.size() == 2);
-	if (action_zero)
-	  Action = &do_Code_Zero;
-	else
-		Action = &do_Code;
+
+	if (!SetActionCode(action))
+		return false;
+
 	ADC_Initialized = true;
 
 	// Optional for ESP32: Set the resolution to 9-12 bits (default is 12 bits)
@@ -327,7 +377,7 @@ void ADC_Begin(int zero)
 {
 	ADC_zero = zero;
 
-	if (Use_Two_Channel)
+	if (Use_Two_Channel && (Current_Action == adc_Sigma))
 	{
 		if (!Fill_Sinus_Ref())
 			return;
@@ -354,13 +404,27 @@ void ADC_Begin(int zero)
 #endif
 }
 
-uint16_t ADC_Read0(void)
+int ADC_Read0(void)
 {
-	uint32_t value;
+	int value;
 	portENTER_CRITICAL(&ADC_Keyboard_Mux);
-	value = (uint16_t) ADC_Value0;
+	value = ADC_Value0;
 	portEXIT_CRITICAL(&ADC_Keyboard_Mux);
 	return value;
+}
+
+int ADC_Read1(void)
+{
+	int value;
+	portENTER_CRITICAL(&ADC_Tore_Mux);
+	value = ADC_Value1;
+	portEXIT_CRITICAL(&ADC_Tore_Mux);
+	return value;
+}
+
+int ADC_Get_Error(void)
+{
+	return ADC_Error_count;
 }
 
 // ********************************************************************************
@@ -387,7 +451,7 @@ bool Fill_Sinus_Ref(void)
 
 	sampling = period + 2;  // + 2 si on dépasse un peu, histoire de se donner un peu de marge !
 
-	sinus = (int *)malloc(sampling * sizeof(int));
+	sinus = (int*) malloc(sampling * sizeof(int));
 	if (sinus == NULL)
 	{
 		print_debug("Sinus allocation error.\r\n");
@@ -398,7 +462,7 @@ bool Fill_Sinus_Ref(void)
 	{
 		for (int i = 0; i < sampling; i++)
 		{
-			sinus[i] = (int)(SQRT2 * sin(TwoPI * (float) i / (float) period) * SINUS_PRECISION);
+			sinus[i] = (int) (SQRT2 * sin(TwoPI * (float) i / (float) period) * SINUS_PRECISION);
 //			print_debug(sinus[i]);
 		}
 		p_sinus = &sinus[0];
@@ -542,7 +606,7 @@ float ADC_GetTalemaPower()
 	print_debug(ADC_cumul_count_total);
 #endif
 
-	return 0.0125 * (float)raw/SINUS_PRECISION;  // 0.0131
+	return 0.0125 * (float) raw / SINUS_PRECISION;  // 0.0131
 }
 /**
  * Return the zero of the ADC and the number of accumulation of data

@@ -11,10 +11,18 @@
 // The adc value of the zero of the sin wave for rms current on channel 2
 #define ADC_ZERO	1900  // typical value
 
-bool ADC_Initialize_OneShot(std::initializer_list<uint8_t> gpios, bool action_zero = false);
-bool ADC_Initialize_Continuous(std::initializer_list<uint8_t> gpios, bool action_zero = false);
+typedef enum {
+	adc_Raw = 1,
+	adc_Zero,
+	adc_Sigma
+} ADC_Action_Enum;
+
+bool ADC_Initialize_OneShot(std::initializer_list<uint8_t> gpios, ADC_Action_Enum action = adc_Sigma);
+bool ADC_Initialize_Continuous(std::initializer_list<uint8_t> gpios, ADC_Action_Enum action = adc_Sigma);
 void ADC_Begin(int zero = ADC_ZERO);
-uint16_t ADC_Read0(void);
+int ADC_Read0(void);
+int ADC_Read1(void);
+int ADC_Get_Error(void);
 
 // Get Talema rms current
 float ADC_GetTalemaCurrent();
