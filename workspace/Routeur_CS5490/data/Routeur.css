@@ -147,6 +147,7 @@ h3 {
 .tablink {
   background-color: black;
   color: white;
+  white-space:nowrap;
   float: left;
   border: none;
   outline: none;

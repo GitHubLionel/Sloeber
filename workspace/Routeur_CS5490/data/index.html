@@ -68,30 +68,14 @@
   </div>
 
   <div id="m_Graphe" class="tabcontent">
-    <div class="padCanvas">
-      <div id="divCanvas_power">
-        <canvas id="can_mean_power"></canvas>
-      </div>
-      <div class="btnZoom">
-        <button class="myButton" onclick="refreshGraph('data')">Actualiser</button>
-        <button class="myButton" onclick="undoZoom('can_mean_power')">Dézoomer</button>
-        <button class="myButton" title="Exporter dans un fichier texte CSV" onclick="exportCSV('can_mean_power')">==> CSV</button>
-        <button class="myButton" title="Exporter dans une image PNG" onclick="exportPNG('can_mean_power', 'puissance.png')">==> PNG</button>
-      </div>         
+    <div id="divPower">
+      <canvas id="can_mean_power"></canvas>
     </div>
   </div>
 
   <div id="m_Energy" class="tabcontent">
-    <div class="padCanvas">
-      <div id="divCanvas_energy">
-        <canvas id="can_histo_energy"></canvas>
-      </div>
-      <div class="btnZoom">
-        <button class="myButton" onclick="refreshGraph('energy')">Actualiser</button>
-        <button class="myButton" onclick="undoZoom('can_histo_energy')">Dézoomer</button>
-        <button class="myButton" title="Exporter dans un fichier texte CSV" onclick="exportCSV('can_histo_energy')">==> CSV</button>
-        <button class="myButton" title="Exporter dans une image PNG" onclick="exportPNG('can_histo_energy', 'puissance.png')">==> PNG</button>
-      </div>         
+    <div id="divEnergy">
+      <canvas id="can_histo_energy"></canvas>
     </div>
   </div>
 
@@ -204,6 +188,16 @@
     </div>
   </div>
 
+  <div id="chartMenu" class="context-menu" style="display: none">
+    <ul>
+      <li onclick="undoZoom()">Reset Zoom</li>
+      <li onclick="refreshGraph()">Actualiser</li>
+      <li title="Exporter dans un fichier texte CSV" onclick="exportCSV()">==> CSV</li>
+      <li title="Exporter dans une image PNG" onclick="exportPNG()">==> PNG</li>
+      <li title = "Change le mode d'affichage du tooltip" onclick="onTooltipButtonClick()">Tooltip</li>
+    </ul>
+  </div>
+
   <!-- Message d'attente -->
   <div class="loader_gif" id="loading"> </div>
 <!-- autre alternative pour l'attente
@@ -213,12 +207,16 @@
   <script type='text/javascript' src="chart.js"></script>
   <script type='text/javascript' src="chartjs-zoom.min.js"></script>
   <script type='text/javascript' src="date-fns.adapter.js"></script>
+
   <script type='text/javascript' src="FileSaver.min.js"></script>
+<!--
   <script type='text/javascript' src="CS5490/Page0.js"></script>
   <script type='text/javascript' src="CS5490/Page16.js"></script>
   <script type='text/javascript' src="CS5490/Page17.js"></script>
   <script type='text/javascript' src="CS5490/Page18.js"></script>
+-->
   <script type='text/javascript' src="Graphe.js"></script>
   <script type='text/javascript' src="Routeur.js"></script>
+
 </body>
 </html>
