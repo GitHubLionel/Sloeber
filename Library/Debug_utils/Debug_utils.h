@@ -57,6 +57,8 @@ void WatchDog_Init(uint32_t WDT_TIMEOUT_ms);
 
 void SERIAL_Initialization(int baud = UART_BAUD);
 
+void delete_logFile();
+
 // Pour le debug dans le log
 void print_debug(String mess, bool ln = true);
 void print_debug(const char *mess, bool ln = true);
