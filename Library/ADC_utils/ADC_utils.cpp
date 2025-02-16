@@ -112,7 +112,7 @@ volatile int raw_power = 0;
 
 volatile int period_cumul_count = 0;
 
-// Sinusoïde de référence
+// SinusoÃ¯de de rÃ©fÃ©rence
 #define SINUS_PRECISION	1000.0
 int *sinus, *p_sinus;  // Tableau du sinus et pointeur de parcourt du tableau
 bool Fill_Sinus_Ref(void);
@@ -308,7 +308,7 @@ bool ADC_Initialize_OneShot(std::initializer_list<uint8_t> gpios, ADC_Action_Enu
 	ADC_Initialized = true;
 
 #ifndef ADC_USE_TASK
-	Timer_Tore = timerBegin(1000000); // Fixe la fréquence à 1 MHz => tick de 1 us
+	Timer_Tore = timerBegin(1000000); // Fixe la frÃ©quence Ã  1 MHz => tick de 1 us
 	timerAttachInterrupt(Timer_Tore, Action);
 #endif
 
@@ -432,7 +432,7 @@ int ADC_Get_Error(void)
 // ********************************************************************************
 
 /**
- * Fill reference sinusoïde array for a voltage of 1 V
+ * Fill reference sinusoÃ¯de array for a voltage of 1 V
  * We multiply by SINUS_PRECISION to have integer precision when we convert float to int
  */
 bool Fill_Sinus_Ref(void)
@@ -449,7 +449,7 @@ bool Fill_Sinus_Ref(void)
 	period = 20000 / Timer_Read_Delay;
 #endif
 
-	sampling = period + 2;  // + 2 si on dépasse un peu, histoire de se donner un peu de marge !
+	sampling = period + 2;  // + 2 si on dÃ©passe un peu, histoire de se donner un peu de marge !
 
 	sinus = (int*) malloc(sampling * sizeof(int));
 	if (sinus == NULL)
