@@ -312,6 +312,7 @@ class ServerConnexion
 		{
 			return _Wifi_Signal;
 		}
+		String getCurrentRSSI(void) const;
 
 		String getGateway() const;
 		String getMAC() const;

@@ -574,6 +574,11 @@ bool ServerConnexion::DefaultAPConnexion()
 	return Connexion();
 }
 
+String ServerConnexion::getCurrentRSSI(void) const
+{
+	return "RSSI: " + (String) WiFi.RSSI() + " dBm";
+}
+
 String ServerConnexion::getGateway() const
 {
 	return WiFi.gatewayIP().toString();
