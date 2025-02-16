@@ -16,7 +16,9 @@ TimerInterrupt Timer_SSR;
 #define TIMERMUX_ENTER()	void()
 #define TIMERMUX_EXIT()	void()
 #define TIMERMUX_SECURE(op) op
-#elif ESP32
+#endif
+
+#ifdef ESP32
 // Voir https://deepbluembedded.com/esp32-timers-timer-interrupt-tutorial-arduino-ide/ pour ESP32 2.0.x
 // https://docs.espressif.com/projects/arduino-esp32/en/latest/api/timer.html pour ESP32 3.0.x
 #if defined(ESP_IDF_VERSION) && (ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)) // ESP32 2.0.x
@@ -204,7 +206,8 @@ void IRAM_ATTR startTimerAndTrigger(uint32_t delay)
 #ifdef ESP8266
 	Timer_SSR.setInterval(delay);
 	Timer_SSR.startTimer();
-#elif ESP32
+#endif
+#ifdef ESP32
 #if defined(ESP_IDF_VERSION) && (ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)) // ESP32 2.0.x
 	timerWrite(Timer_SSR, 0);
 	timerAlarmWrite(Timer_SSR, delay, false);
@@ -368,7 +371,8 @@ void SSR_Initialize(uint8_t ZC_Pin, uint8_t SSR_Pin, int8_t LED_Pin)
 	// Au top du zéro-cross, attend SSR_COUNT us pour lancer le pulse SSR
 #ifdef ESP8266
 	timer_OK = Timer_SSR.setInterval(SSR_COUNT, onTimerSSR, false);
-#elif ESP32
+#endif
+#ifdef ESP32
 #if defined(ESP_IDF_VERSION) && (ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)) // ESP32 2.0.x
 	Timer_SSR = timerBegin(TIMER_NUM, 80, true);  // Pour une clock de 80 MHz => tick de 1 us
 	timerAttachInterrupt(Timer_SSR, &onTimerSSR, true);

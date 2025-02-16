@@ -7,7 +7,8 @@
 #include "Arduino.h"
 #ifdef ESP8266
 #include <SoftwareSerial.h>
-#elif ESP32
+#endif
+#ifdef ESP32
 #include <HardwareSerial.h>
 #endif
 
@@ -50,7 +51,8 @@ class TeleInfo
 	private:
 #ifdef ESP8266
 		SoftwareSerial *tiSerial;
-#elif ESP32
+#endif
+#ifdef ESP32
 		HardwareSerial *tiSerial;
 #endif
 		bool _tiRunning = false;

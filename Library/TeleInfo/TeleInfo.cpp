@@ -51,7 +51,8 @@ TeleInfo::TeleInfo(uint8_t rxPin, uint32_t refresh_ms, uint32_t baud)
 	tiSerial = new SoftwareSerial(rxPin);
 	tiSerial->begin(baud);
 	//  tiSerial->begin(baud, SWSERIAL_8N1, rxPin, -1, false, FRAME_MAX_SIZE);
-#elif ESP32
+#endif
+#ifdef ESP32
 	tiSerial = new HardwareSerial(1);
 	tiSerial->begin(baud, SERIAL_8N1, rxPin);
 #endif
