@@ -302,6 +302,10 @@ void setup()
 		return;
 	}
 
+	// S'il reste moins de 100 octets, on essaie de supprimer le log
+	if (Partition_FreeSpace() < 100)
+		delete_logFile();
+
 	// Message de démarrage à mettre APRES SERIAL et LittleFS !
 	print_debug(F("\r\n\r\n****** Starting : "), false);
 	print_debug(getSketchName(__FILE__, true));

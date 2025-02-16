@@ -67,11 +67,6 @@
 			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp32/hardware/esp32/3.0.3/libraries/HTTPUpdateServer</locationURI>
 		</link>
 		<link>
-			<name>libraries/LCD_I2C</name>
-			<type>2</type>
-			<locationURI>ECLIPSE_HOME/arduinoPlugin/libraries/LCD_I2C/2.4.0</locationURI>
-		</link>
-		<link>
 			<name>libraries/LittleFS</name>
 			<type>2</type>
 			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp32/hardware/esp32/3.0.3/libraries/LittleFS</locationURI>

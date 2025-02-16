@@ -21,7 +21,7 @@ Config.Release.compile.sloeber.extra.assembly=
 Config.Release.compile.sloeber.extra.c.compile=
 Config.Release.compile.sloeber.extra.compile=-DUSE_CONFIG_LIB_FILE -DESPASYNCHTTPUPDATESERVER_LITTLEFS
 Config.Release.compile.sloeber.extra.cpp.compile=
-Config.Release.compile.sloeber.extra.link=
+Config.Release.compile.sloeber.extra.link=-DVERSION=${Project_Version}
 Config.Release.compile.sloeber.size.custom=
 Config.Release.compile.sloeber.size.type=RAW_RESULT
 Config.Release.compile.sloeber.warning_level=ALL

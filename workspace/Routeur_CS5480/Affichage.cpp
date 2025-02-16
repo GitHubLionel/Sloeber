@@ -538,10 +538,11 @@ void Show_Page_Wifi(void)
 	IHM_Print(1, 7, "Wifi", false);
 
 	IHM_Print(3, 1, myServer.IPaddress().c_str(), false);
+	IHM_Print(4, 1, myServer.getCurrentRSSI().c_str(), false);
 
 	SSR_Status_On = SSR_Get_State();
 
-	IHM_Print(5, 1, "Reset Wifi ?", false);
+	IHM_Print(6, 1, "Reset Wifi ?", false);
 }
 
 void Show_Page_Wifi_Action(void)

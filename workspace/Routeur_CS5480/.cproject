@@ -3,6 +3,9 @@
 	<storageModule moduleId="org.eclipse.cdt.core.settings">
 		<cconfiguration id="io.sloeber.core.sketch.0">
 			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="io.sloeber.core.sketch.0" moduleId="org.eclipse.cdt.core.settings" name="Release">
+				<macros>
+					<stringMacro name="Project_Version" type="VALUE_TEXT" value="v5.0"/>
+				</macros>
 				<externalSettings/>
 				<extensions>
 					<extension id="org.eclipse.cdt.core.ELF" point="org.eclipse.cdt.core.BinaryParser"/>
@@ -12,7 +15,7 @@
 				</extensions>
 			</storageModule>
 			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
-				<configuration artifactName="${ProjName}" buildProperties="" cleanCommand="rm -f" description="" id="io.sloeber.core.sketch.0" name="Release" parent="io.sloeber.core.configuration.release">
+				<configuration artifactExtension="_${Project_Version}" artifactName="${ProjName}_${Project_Version}" buildProperties="" cleanCommand="rm -f" description="" id="io.sloeber.core.sketch.0" name="Release" parent="io.sloeber.core.configuration.release">
 					<folderInfo id="io.sloeber.core.sketch.0." name="/" resourcePath="">
 						<toolChain id="io.sloeber.core.toolChain.release.28085856" name="Arduino Toolchain (Sloeber edition)" superClass="io.sloeber.core.toolChain.release">
 							<targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.ELF" id="io.sloeber.targetplatform.1135068089" name="Arduino Target" osList="all" superClass="io.sloeber.targetplatform"/>
@@ -53,7 +56,6 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/Task_utils}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/libraries/ESPmDNS/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/Emul_PV}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/libraries/LCD_I2C/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/libraries/WebServer/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/libraries/HTTPUpdateServer/src}&quot;"/>
 								</option>
@@ -95,7 +97,6 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/Task_utils}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/libraries/ESPmDNS/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/Emul_PV}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/libraries/LCD_I2C/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/libraries/WebServer/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/libraries/HTTPUpdateServer/src}&quot;"/>
 								</option>
@@ -137,16 +138,17 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/Task_utils}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/libraries/ESPmDNS/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/Emul_PV}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/libraries/LCD_I2C/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/libraries/WebServer/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/libraries/HTTPUpdateServer/src}&quot;"/>
 								</option>
 								<inputType id="io.sloeber.compiler.S.sketch.input.1177578633" name="Assembly source files" superClass="io.sloeber.compiler.S.sketch.input"/>
 							</tool>
-							<tool id="io.sloeber.tool.ar.1804800591" name="Arduino archiver" superClass="io.sloeber.tool.ar"/>
+							<tool command="${recipe.ar.pattern}" id="io.sloeber.tool.ar.1804800591" name="Arduino archiver" superClass="io.sloeber.tool.ar"/>
 							<tool id="io.sloeber.tool.combine.1897966926" name="Arduino combiner" superClass="io.sloeber.tool.combine"/>
-							<tool id="io.sloeber.tool.objcopy.eep.1870368" name="Arduino tool objcopy command" superClass="io.sloeber.tool.objcopy.eep"/>
-							<tool id="io.sloeber.tool.size.188581679" name="Arduino tool Print Size" superClass="io.sloeber.tool.size"/>
+							<tool commandLinePattern="${sloeber.objcopy}" id="io.sloeber.tool.objcopy.eep.1870368" name="Arduino tool objcopy command" superClass="io.sloeber.tool.objcopy.eep"/>
+							<tool id="io.sloeber.tool.size.188581679" name="Arduino tool Print Size" superClass="io.sloeber.tool.size">
+								<outputType id="io.sloeber.tool.size.output.280439872" name="size info" outputPrefix="" superClass="io.sloeber.tool.size.output"/>
+							</tool>
 						</toolChain>
 					</folderInfo>
 					<folderInfo id="io.sloeber.core.sketch.0.libraries/**/._*" resourcePath="libraries/**/._*">
