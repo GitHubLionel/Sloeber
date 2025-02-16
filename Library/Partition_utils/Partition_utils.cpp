@@ -228,15 +228,26 @@ void ESPinformations(void)
 #endif
 }
 
-size_t Partition_FreeSpace(void)
+/**
+ * Return free space in byte
+ * if Data_Partition (default false), return free space of data partition else free space of file system partition
+ */
+size_t Partition_FreeSpace(bool Data)
 {
 	FSInfo fsInfo;
+	// Select data partition
+	if (Data)
+		SelectPartitionForInfo(Data_Partition);
 #ifdef ESP8266
 	Info_Partition->info(fsInfo);
 #endif
 #ifdef ESP32
 	FillFSInfo(fsInfo);
 #endif
+	// Return filesystem partition
+	if (Data)
+		SelectPartitionForInfo(FS_Partition);
+
 	return fsInfo.totalBytes - fsInfo.usedBytes;
 }
 

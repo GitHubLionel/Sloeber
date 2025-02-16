@@ -63,5 +63,5 @@ void CheckBeginSlash(String &path);
 void ESPinformations(void);
 void Partition_Info(void);
 void Partition_ListDir(void);
-size_t Partition_FreeSpace(void);
+size_t Partition_FreeSpace(bool Data = false);
 String formatBytes(float bytes, int id_multi);
