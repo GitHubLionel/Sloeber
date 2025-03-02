@@ -1074,7 +1074,9 @@ void CIRRUS_Base::send_instruction(uint8_t instruction)
 		data_reset();
 		CorrectBug();
 		CSDelay(10);
+#ifdef CIRRUS_USE_UART
 		Com->UART_Change_Baud(600);
+#endif
 	}
 }
 
