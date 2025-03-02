@@ -147,6 +147,55 @@ void WatchDog_Init(uint32_t WDT_TIMEOUT_ms)
 // Management functions
 // ********************************************************************************
 
+#define LOG_BUFFER_SIZE	512
+static char *log_buffer = NULL;
+static vprintf_like_t Old_log_vprintf = NULL;
+static bool log_keep_UART = false;
+
+int LogMessageOutputToFile(const char *format, va_list args)
+{
+	int ret = 0;
+	File logFile = FS_Partition->open(LOG_Filename, "a");
+	if (logFile)
+	{
+		ret = vsnprintf(log_buffer, LOG_BUFFER_SIZE, format, args);
+		logFile.print(log_buffer);
+		logFile.print("\r\n");
+		logFile.flush();
+		logFile.close();
+	}
+	if (log_keep_UART)
+		return vprintf(format, args); // To keep the UART message
+	else
+		return ret;
+}
+
+/**
+ * This function is used to redirect core debug information to log file
+ * Don't forget to add the directive USE_ESP_IDF_LOG to project
+ * BEWARE: not work in DEBUG and VERBOSE mode with WIFI
+ */
+void Core_Debug_Log_Init(bool keepUART)
+{
+	// Alloc memory for buffer for log message
+	log_buffer = (char*) malloc((LOG_BUFFER_SIZE) * sizeof(char));
+	log_keep_UART = keepUART;
+
+	Old_log_vprintf = esp_log_set_vprintf(LogMessageOutputToFile);
+	esp_log_level_set("*", ESP_LOG_VERBOSE);
+
+	ESP_LOGI("My_Debug", "Log callback running\n");
+}
+
+/**
+ * Restaure log message to uart
+ */
+void Core_Debug_Log_Restaure(void)
+{
+	if (Old_log_vprintf)
+		esp_log_set_vprintf(Old_log_vprintf);
+}
+
 void delete_logFile()
 {
 	FS_Partition->remove(LOG_Filename);

@@ -57,6 +57,8 @@ void WatchDog_Init(uint32_t WDT_TIMEOUT_ms);
 
 void SERIAL_Initialization(int baud = UART_BAUD);
 
+void Core_Debug_Log_Init(bool keepUART = false);
+void Core_Debug_Log_Restaure(void);
 void delete_logFile();
 
 // Pour le debug dans le log
