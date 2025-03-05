@@ -28,13 +28,18 @@ typedef enum
 	SSR_Action_Dimme
 } SSR_Action_typedef;
 
+
+// Task to boost the SSR (Full load) for 1 hour
+#define SSR_BOOST_TASK	{true, "SSR_BOOST_Task", 4096, 3, 3600 * 1000, Core0, SSR_Boost_Task_code}
+void SSR_Boost_Task_code(void *parameter);
+
 // Fonction d'action
 typedef void (*Gestion_SSR_TypeDef)(const float, const float);
 
 void SSR_Initialize(uint8_t ZC_Pin, uint8_t SSR_Pin, int8_t LED_Pin = -1);
 float SSR_Compute_Dump_power(float default_Power = 0.0);
 
-void SSR_Action(SSR_Action_typedef do_action, bool restart = false);
+void SSR_Set_Action(SSR_Action_typedef do_action, bool restart = false);
 SSR_Action_typedef SSR_Get_Action(void);
 
 SSR_State_typedef SSR_Get_State(void);

@@ -39,6 +39,8 @@ volatile SemaphoreHandle_t topZC_Semaphore;
 #endif
 #endif  // ESP32
 
+#include "Tasks_utils.h"
+
 #define DEBUG_SSR           0          // Affichage de P_100 et SSR_COUNT
 
 // Les handle des pins et du timer
@@ -451,7 +453,7 @@ float SSR_Compute_Dump_power(float default_Power)
 	PrintVal("Puissance sans charge", initial_p, false);
 
 	// On allume le SSR et on refait une mesure
-	SSR_Action(SSR_Action_FULL, true);
+	SSR_Set_Action(SSR_Action_FULL, true);
 	delay(2000); // Pour stabiliser
 
 	CIRRUS_get_rms_data(&urms, &prms);
@@ -466,7 +468,7 @@ float SSR_Compute_Dump_power(float default_Power)
 	}
 
 	// On éteint le SSR
-	SSR_Action(SSR_Action_OFF);
+	SSR_Set_Action(SSR_Action_OFF);
 
 	final_p = cumul_p / count_max;
 	final_u = cumul_u / count_max;
@@ -486,7 +488,7 @@ float SSR_Compute_Dump_power(float default_Power)
 	PrintVal("Puissance de la charge relative", Dump_Power_Relatif, false);
 
 	// Restaure current action
-	SSR_Action(action);
+	SSR_Set_Action(action);
 
 	return final_p - initial_p;
 }
@@ -502,7 +504,7 @@ float SSR_Compute_Dump_power(float default_Power)
  * Appeler SSR_Enable() pour (re)démarrer le SSR ou mettre restart à true
  *
  */
-void SSR_Action(SSR_Action_typedef do_action, bool restart)
+void SSR_Set_Action(SSR_Action_typedef do_action, bool restart)
 {
 	current_action = do_action;
 	SSR_Disable();
@@ -837,6 +839,41 @@ void SSR_Update_Surplus_Timer(const float Cirrus_voltage, const float Cirrus_pow
 		Restart_PID();
 
 	Set_Percent(100.0 * TotalOutput / New_Dump_Power);
+}
+
+// ********************************************************************************
+// Task function to save the log
+// ********************************************************************************
+
+void SSR_Boost_Task_code(void *parameter)
+{
+	BEGIN_TASK_CODE("SSR_BOOST_Task");
+	bool First = true;
+	bool SSR_Stop = false;
+
+	for (EVER)
+	{
+		// Do nothing and suspend the task the first time
+		if (First)
+		{
+			SSR_Stop = true;
+			First = false;
+		}
+		else
+		{
+			if (SSR_Get_Action() == SSR_Action_Surplus)
+			{
+				SSR_Set_Action(SSR_Action_FULL, true);
+				SSR_Stop = false;
+			}
+			else
+			{
+				SSR_Set_Action(SSR_Action_Surplus, true);
+				SSR_Stop = true;
+			}
+		}
+		END_TASK_CODE(SSR_Stop);
+	}
 }
 
 // ********************************************************************************
