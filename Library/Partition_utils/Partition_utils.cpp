@@ -132,7 +132,6 @@ bool CreateOpenDataPartition(bool ForceFormat, bool ShowInfo)
 	}
 }
 
-
 // ********************************************************************************
 // Check if path begin with a / and add it if not present
 // ********************************************************************************
@@ -163,6 +162,7 @@ bool FillFSInfo(FSInfo &info)
 {
 	info.totalBytes = Info_Partition->totalBytes();
 	info.usedBytes = Info_Partition->usedBytes();
+	info.blockSize = 4096;
 	return true;
 }
 #endif
@@ -251,6 +251,30 @@ size_t Partition_FreeSpace(bool Data)
 	return fsInfo.totalBytes - fsInfo.usedBytes;
 }
 
+/**
+ * Return the size in byte of the specified file
+ */
+size_t Partition_FileSize(String &file, bool Data)
+{
+	File f;
+	CheckBeginSlash(file);
+	if (Data)
+	  f = Data_Partition->open(file.c_str());
+	else
+		f = FS_Partition->open(file.c_str());
+
+	if ((!f) || (f.isDirectory()))
+	{
+		print_debug(F("Failed to open file"));
+		if (f)
+			f.close();
+		return 0;
+	}
+	size_t size = f.size();
+	f.close();
+	return size;
+}
+
 // Get all informations about LittleFS, SPIFFS or FatFS partition
 void Partition_Info(void)
 {
@@ -290,10 +314,12 @@ void Partition_Info(void)
 		Serial_Info->printf("Block number:\t%d\r\n", s);
 		Serial_Info->printf("Page size:\t%d bytes (%s)\r\n", fsInfo.totalBytes,
 				formatBytes(fsInfo.totalBytes, 0).c_str());
+#ifdef ESP8266
 		Serial_Info->printf("Max open files:\t%d\r\n", fsInfo.maxOpenFiles);
 
 		// Taille max. d'un chemin
 		Serial_Info->printf("Max path lenght:\t%d\r\n", fsInfo.maxPathLength);
+#endif
 	}
 	Serial_Info->println();
 }
@@ -344,13 +370,17 @@ void scanDir(fs::FS &fs, const char *dirname)
 	}
 	if (!root.isDirectory())
 	{
+		root.close();
 		Serial_Info->println(" - not a directory");
 		return;
 	}
 
-	File file = root.openNextFile();
-	while (file)
+	while (true)
 	{
+		File file = root.openNextFile();
+		if (!file)
+			break;
+
 		if (file.isDirectory())
 		{
 			Serial_Info->printf("\t>> Enter Dir: %s\r\n", file.name());
@@ -368,8 +398,10 @@ void scanDir(fs::FS &fs, const char *dirname)
 					formatBytes(file.size(), 0).c_str(), time);
 #endif
 		}
-		file = root.openNextFile();
+		file.close();
 	}
+
+	root.close();
 }
 #endif
 
@@ -398,6 +430,96 @@ String formatBytes(float bytes, int id_multi)
 		return String(bytes) + multi[id_multi] + "o";
 	else
 		return formatBytes(bytes / 1024, id_multi + 1);
+}
+
+// ********************************************************************************
+// List of filename of a directory
+// ********************************************************************************
+
+inline bool checkFile(const char *file, const listFile_typedef &skipfile)
+{
+	bool ret = true;
+	for (auto const &skip : skipfile)
+	{
+		if ((strstr(file, skip.c_str()) != NULL))
+		{
+			ret = false;
+			break;
+		}
+	}
+	return ret;
+}
+
+/**
+ * Get the list of the name of the files of a directory
+ * @param: data_partition : true for data partition else filesystem partition
+ * @param: dir : the name of the directory
+ * @param: skipfile : the list of files to exclude
+ * @param: list : the list of the file of the directory
+ * @return: true if the list is filled
+ */
+bool FillListFile(bool data_partition, const String &dir, const listFile_typedef &skipfile, listFile_typedef &list)
+{
+	File root;
+	if (data_partition)
+		root = Data_Partition->open(dir);
+	else
+		root = FS_Partition->open(dir);
+
+	if (!root)
+	{
+		print_debug(F("Failed to open data partition"));
+		return false;
+	}
+	if (!root.isDirectory())
+	{
+		root.close();
+		print_debug(F("Failed to open data partition"));
+		return false;
+	}
+
+	while (true)
+	{
+		File file = root.openNextFile();
+		if (!file)
+			break;
+
+		if (!file.isDirectory())
+		{
+			const char *filename = file.name();
+			if (checkFile(filename, skipfile))
+			{
+				list.push_back((String) filename);
+			}
+		}
+		file.close();
+	}
+	root.close();
+	return true;
+}
+
+/**
+ * Print the list of file
+ */
+void PrintListFile(listFile_typedef &list)
+{
+	for (auto const &l : list)
+	{
+		print_debug(l);
+	}
+}
+
+/**
+ * Return the list of file in a string
+ */
+String ListFileToString(listFile_typedef &list)
+{
+	String result = "";
+	for (auto const &l : list)
+	{
+		result += l + "\r\n";
+	}
+	return result;
 }
 
 // ********************************************************************************

@@ -40,6 +40,10 @@
 		#endif
 	#endif
 #endif
+#include <list>
+
+// A list of filename typedef
+typedef std::list<String> listFile_typedef;
 
 // The pre-defined filesystem partition
 extern PART_TYPE *FS_Partition;
@@ -64,4 +68,10 @@ void ESPinformations(void);
 void Partition_Info(void);
 void Partition_ListDir(void);
 size_t Partition_FreeSpace(bool Data = false);
+size_t Partition_FileSize(String &file, bool Data = false);
 String formatBytes(float bytes, int id_multi);
+
+bool FillListFile(bool data_partition, const String &dir, const listFile_typedef &skipfile, listFile_typedef &list);
+void PrintListFile(listFile_typedef &list);
+String ListFileToString(listFile_typedef &list);
+
