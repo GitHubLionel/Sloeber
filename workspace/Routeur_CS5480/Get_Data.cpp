@@ -64,6 +64,17 @@ bool log_new_data = false;
 // Sauvegarde du log
 volatile SemaphoreHandle_t logSemaphore = NULL;
 
+// Gestion fichier dans la FLASH
+listFile_typedef listFile;
+
+/**
+ * Nombre max de fichier dans la FLASH
+ * Un fichier fait environ 60 ko
+ * L'espace de la FLASH est de 11403264 0 (10.88 Mo)
+ * Donc un max de 185.6
+ */
+#define MAX_LOGFILE	160
+
 // ********************************************************************************
 // Functions prototype
 // ********************************************************************************
@@ -71,6 +82,7 @@ volatile SemaphoreHandle_t logSemaphore = NULL;
 void GetExtraData(void);
 void append_data(void);
 void append_energy(void);
+void AddFileToListFile(listFile_typedef &list, const String &file);
 
 // Function for debug message, may be redefined elsewhere
 void __attribute__((weak)) print_debug(String mess, bool ln = true)
@@ -112,7 +124,7 @@ void Get_Data(void)
 
 	if ((err = CS5480.GetErrorCount()) > 0)
 	{
-		print_debug("*** Cirrus error : " + String(CS5480.Print_LastError()));
+//		print_debug("*** Cirrus error : " + String(CS5480.Print_LastError()));
 		Data_acquisition = false;
 		return;
 	}
@@ -153,10 +165,6 @@ void Get_Data(void)
 		Current_Data.Talema_Energy += Current_Data.Talema_Power * ((ref_time - Talema_time) / 1000.0) / 3600.0;
 		Talema_time = ref_time;
 	}
-
-//	uint32_t err = CS5480.GetErrorCount();
-//	if (err > 0)
-//		print_debug("erreur = " + (String)err);
 
 	// Get extra data
 	GetExtraData();
@@ -458,7 +466,39 @@ void onDaychange(uint8_t year, uint8_t month, uint8_t day)
 		char Day_Name[20] = {0};
 		sprintf(Day_Name, "/%02d-%02d-%02d.csv", year, month, day);
 		Data_Partition->rename(CSV_Filename, String(Day_Name));
+		AddFileToListFile(listFile, String(Day_Name));
 	}
+}
+
+// ********************************************************************************
+// Gestion des fichiers data
+// ********************************************************************************
+
+/**
+ * Ajoute un nouveau fichier à la liste
+ * Supprime le plus ancien fichier si on a dépassé le nombre MAX de fichier
+ */
+void AddFileToListFile(listFile_typedef &list, const String &file)
+{
+	list.push_back(file);
+
+	while (list.size() > MAX_LOGFILE)
+	{
+		String old_file = list.front();
+		list.pop_front();
+		Data_Partition->remove(old_file);
+	}
+}
+
+void FillListFile(void)
+{
+	const listFile_typedef skip = {"data", "energy"};
+	FillListFile(true, "/", skip, listFile);
+}
+
+void PrintListFile(void)
+{
+	PrintListFile(listFile);
 }
 
 // ********************************************************************************

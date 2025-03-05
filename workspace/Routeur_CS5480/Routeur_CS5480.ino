@@ -302,9 +302,12 @@ void setup()
 		return;
 	}
 
-	// S'il reste moins de 100 octets, on essaie de supprimer le log
-	if (Partition_FreeSpace() < 100)
+	// S'il reste moins de 10 koctets, on essaie de supprimer le log
+	// La limite minimale est 4096 o (block size) soit 4 ko
+	if (Partition_FreeSpace() <= 10240)
 		delete_logFile();
+
+	Core_Debug_Log_Init();
 
 	// Message de démarrage à mettre APRES SERIAL et LittleFS !
 	print_debug(F("\r\n\r\n****** Starting : "), false);
@@ -328,6 +331,12 @@ void setup()
 
 	// Création de la partition data
 	CreateOpenDataPartition(false, false);
+
+	// Gestion des fichiers data
+	print_debug(F("Free Data space : "), false);
+	print_debug((int)Partition_FreeSpace(true));
+	FillListFile();
+//	PrintListFile();
 
 	// Initialisation fichier ini
 	init_routeur.Begin(true);
@@ -397,7 +406,7 @@ void setup()
 //	SSR_Compute_Dump_power();
 
 	SSR_Action_typedef action = (SSR_Action_typedef) init_routeur.ReadInteger("SSR", "Action", 1); // Par défaut Percent, voir page web
-	SSR_Action(action);
+	SSR_Set_Action(action);
 
 	// NOTE : le SSR est éteint, on le démarre dans la page web
 	if (init_routeur.ReadBool("SSR", "StateOFF", true)) // Etat par défaut: OFF
@@ -498,6 +507,8 @@ void setup()
 #ifdef USE_RELAY
 	TaskList.AddTask(RELAY_DATA_TASK(true));
 #endif
+	TaskList.AddTask(SSR_BOOST_TASK);  // Boost SSR Task
+	// Create all the tasks
 	TaskList.Create(USE_IDLE_TASK);
 	TaskList.InfoTask();
 #ifdef USE_ADC
@@ -797,12 +808,12 @@ void handleOperation(CB_SERVER_PARAM)
 	if (pserver->hasArg("SSRAction"))
 	{
 		if (pserver->arg("SSRAction") == "percent")
-			SSR_Action(SSR_Action_Percent);
+			SSR_Set_Action(SSR_Action_Percent);
 		else
 			if (pserver->arg("SSRAction") == "zero")
-				SSR_Action(SSR_Action_Surplus);
+				SSR_Set_Action(SSR_Action_Surplus);
 			else
-				SSR_Action(SSR_Action_FULL);
+				SSR_Set_Action(SSR_Action_FULL);
 
 		init_routeur.WriteInteger("SSR", "Action", SSR_Get_Action(), "Full=1, Percent=2, Zero=3");
 	}
