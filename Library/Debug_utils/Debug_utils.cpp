@@ -155,15 +155,25 @@ static bool log_keep_UART = false;
 int LogMessageOutputToFile(const char *format, va_list args)
 {
 	int ret = 0;
-	File logFile = FS_Partition->open(LOG_Filename, "a");
-	if (logFile)
+#ifdef LOG_DEBUG
+	if (GLOBAL_PRINT_DEBUG)
 	{
 		ret = vsnprintf(log_buffer, LOG_BUFFER_SIZE, format, args);
-		logFile.print(log_buffer);
-		logFile.print("\r\n");
-		logFile.flush();
-		logFile.close();
+		// Pas trouvé le moyen de supprimer ces deux messages !!
+		if ((strstr(log_buffer, "STA already disconnected") == NULL) &&
+				(strstr(log_buffer, "Reason: 201 - NO_AP_FOUND") == NULL))
+		{
+			File logFile = FS_Partition->open(LOG_Filename, "a");
+			if (logFile)
+			{
+				logFile.print(log_buffer);
+				logFile.print("\r\n");
+				logFile.flush();
+				logFile.close();
+			}
+		}
 	}
+#endif
 	if (log_keep_UART)
 		return vprintf(format, args); // To keep the UART message
 	else
