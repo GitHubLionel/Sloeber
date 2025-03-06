@@ -28,9 +28,8 @@ typedef enum
 	SSR_Action_Dimme
 } SSR_Action_typedef;
 
-
 // Task to boost the SSR (Full load) for 1 hour
-#define SSR_BOOST_TASK	{true, "SSR_BOOST_Task", 4096, 3, 3600 * 1000, Core0, SSR_Boost_Task_code}
+#define SSR_BOOST_TASK	{condSuspended, "SSR_BOOST_Task", 4096, 3, 3600 * 1000, Core0, SSR_Boost_Task_code}
 void SSR_Boost_Task_code(void *parameter);
 
 // Fonction d'action

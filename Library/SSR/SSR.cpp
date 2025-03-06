@@ -845,32 +845,23 @@ void SSR_Update_Surplus_Timer(const float Cirrus_voltage, const float Cirrus_pow
 // Task function to save the log
 // ********************************************************************************
 
+// Task to start SSR full load for one hour
 void SSR_Boost_Task_code(void *parameter)
 {
 	BEGIN_TASK_CODE("SSR_BOOST_Task");
-	bool First = true;
 	bool SSR_Stop = false;
 
 	for (EVER)
 	{
-		// Do nothing and suspend the task the first time
-		if (First)
+		if (SSR_Get_Action() == SSR_Action_Surplus)
 		{
-			SSR_Stop = true;
-			First = false;
+			SSR_Set_Action(SSR_Action_FULL, true);
+			SSR_Stop = false;
 		}
 		else
 		{
-			if (SSR_Get_Action() == SSR_Action_Surplus)
-			{
-				SSR_Set_Action(SSR_Action_FULL, true);
-				SSR_Stop = false;
-			}
-			else
-			{
-				SSR_Set_Action(SSR_Action_Surplus, true);
-				SSR_Stop = true;
-			}
+			SSR_Set_Action(SSR_Action_Surplus, true);
+			SSR_Stop = true;
 		}
 		END_TASK_CODE(SSR_Stop);
 	}

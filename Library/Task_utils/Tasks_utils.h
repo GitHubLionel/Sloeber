@@ -5,7 +5,7 @@
  *
  * So, in the end of the setup, you just need to have for example :
  *
- * TaskList.AddTask({true, "Task_Name", 1024, 5, 2000, CoreAny, Task_Function});
+ * TaskList.AddTask({condCreate, "Task_Name", 1024, 5, 2000, CoreAny, Task_Function});
  * TaskList.Create();
  *
  * See TaskData_t struct for the meaning of each data parameters of the task
@@ -20,7 +20,7 @@
 	 {
 		 ... your code
 
-		 END_TASK_CODE();
+		 END_TASK_CODE(false); // False to not suspend the task
 	 }
  }
  *
@@ -86,13 +86,16 @@
 #if RUN_TASK_MEMORY == true
 #define END_TASK_CODE(suspend)	{ td->Memory = uxTaskGetStackHighWaterMark(NULL); \
 		taskYIELD(); \
-		if (sleep != 0) vTaskDelay(sleep); \
 		if ((suspend) && !td->IsSuspended) \
-			{ td->IsSuspended = true; vTaskSuspend(td->Handle);}}
+			{ td->IsSuspended = true; vTaskSuspend(td->Handle);} \
+	  else \
+			if (sleep != 0) vTaskDelay(sleep);}
 #else
-#define END_TASK_CODE(suspend)	{ taskYIELD(); if (sleep != 0) vTaskDelay(sleep); \
+#define END_TASK_CODE(suspend)	{ taskYIELD(); \
 		if ((suspend) && !td->IsSuspended) \
-			{ td->IsSuspended = true; vTaskSuspend(td->Handle);}}
+			{ td->IsSuspended = true; vTaskSuspend(td->Handle);} \
+		else \
+			if (sleep != 0) vTaskDelay(sleep);}
 #endif
 
 // The same couple of define to use with DelayUntil
@@ -102,13 +105,16 @@
 
 #if RUN_TASK_MEMORY == true
 #define END_TASK_CODE_UNTIL(suspend)	{ td->Memory = uxTaskGetStackHighWaterMark(NULL); \
-		xTaskDelayUntil(&xLastWakeTime, sleep); \
 		if ((suspend) && !td->IsSuspended) \
-			{ td->IsSuspended = true; vTaskSuspend(td->Handle);}}
+			{ td->IsSuspended = true; vTaskSuspend(td->Handle);} \
+		else \
+		  xTaskDelayUntil(&xLastWakeTime, sleep);}
 #else
-#define END_TASK_CODE_UNTIL(suspend)	{ xTaskDelayUntil(&xLastWakeTime, sleep); \
+#define END_TASK_CODE_UNTIL(suspend)	{ \
 		if ((suspend) && !td->IsSuspended) \
-			{ td->IsSuspended = true; vTaskSuspend(td->Handle);}}
+			{ td->IsSuspended = true; vTaskSuspend(td->Handle);} \
+		else \
+			xTaskDelayUntil(&xLastWakeTime, sleep);}
 #endif
 
 // Core used by a task
@@ -119,10 +125,18 @@ typedef enum
 	CoreAny
 } Task_Core;
 
+// The initial condition when we call Create() function for the task
+typedef enum
+{
+	condNotCreate = 0,  // Not create the task, should be created later with CreateTask() function
+	condCreate,         // Create the task and start it immediatly
+	condSuspended       // Create the task suspended. Call ResumeTask() to start the task
+} Task_Condition;
+
 /**
  * Task structure
- * All parameters are required except Param, Memory, UserParam and Handle.
- * Condition is a parameter only used in the main Create() function. If false then the task
+ * All parameters are required except Param, Memory, UserParam, Handle and IsSuspended.
+ * Condition is a parameter only used in the main Create() function. If 'condNotCreate' then the task
  * will not be created and could be created separatly with CreateTask().
  * Handle should be always initialized to NULL because it will be filled when task is created.
  * UserParam can be used to pass information to the task when it is running.
@@ -131,18 +145,18 @@ typedef enum
 typedef struct
 {
 	public:
-		bool Condition = false;						       // Boolean to determine if we create the task or no in Create function
-		char Name[configMAX_TASK_NAME_LEN + 1];  // Task name
-		configSTACK_DEPTH_TYPE StackSize;        // Task stack size
-		UBaseType_t Priority;                    // Task priority : 0 lower to higher configMAX_PRIORITIES - 1
-		int Sleep_ms;                            // Task sleep delay in ms
-		Task_Core Core;													 // Core where is running the task
-		TaskFunction_t TaskCode;								 // The code of the task
-		void *Param = NULL;											 // The parameter passed to the code function
-		int Memory = 0;                          // Task stack staying memory (used by the "Memory" task)
-		void *UserParam = NULL;						  		 // A parameter that can be used in the code function
-		TaskHandle_t Handle = NULL;							 // The handle of the task
-		bool IsSuspended = false;                // Is the task suspended ?
+		Task_Condition Condition = condNotCreate; // Initial condition of the task for the Create() function
+		char Name[configMAX_TASK_NAME_LEN + 1];   // Task name
+		configSTACK_DEPTH_TYPE StackSize;         // Task stack size
+		UBaseType_t Priority;                     // Task priority : 0 lower to higher configMAX_PRIORITIES - 1
+		int Sleep_ms;                             // Task sleep delay in ms
+		Task_Core Core;												  	// Core where is running the task
+		TaskFunction_t TaskCode;							  	// The code of the task
+		void *Param = NULL;										  	// The parameter passed to the code function
+		int Memory = 0;                           // Task stack staying memory (used by the "Memory" task)
+		void *UserParam = NULL;						  		  // A parameter that can be used in the code function
+		TaskHandle_t Handle = NULL;							  // The handle of the task
+		bool IsSuspended = false;                 // Is the task suspended ?
 } TaskData_t;
 
 /**
@@ -159,7 +173,7 @@ class TaskList_c
 		void AddTask(const TaskData_t task);
 
 		void DeleteTask(const String &name);
-		bool CreateTask(const String &name, bool force = false, void *param = NULL);
+		bool CreateTask(const String &name, bool forceDelete = false, void *param = NULL);
 		void SuspendTask(const String &name);
 		void ResumeTask(const String &name);
 		void ChangeSleepTask(const String &name, int sleep_ms, bool reload = false);

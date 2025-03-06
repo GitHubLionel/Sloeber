@@ -168,7 +168,7 @@ typedef void (*onTimeOut)();
  * Check the connexion every minute and try to reconnect if connexion is lost
  */
 #ifdef KEEP_ALIVE_USE_TASK
-#define KEEP_ALIVE_DATA_TASK	{true, "KEEP_ALIVE_Task", 8192, 5, 60000, CoreAny, KEEP_ALIVE_Task_code}
+#define KEEP_ALIVE_DATA_TASK	{condCreate, "KEEP_ALIVE_Task", 8192, 5, 60000, CoreAny, KEEP_ALIVE_Task_code}
 void KEEP_ALIVE_Task_code(void *parameter);
 #else
 #define KEEP_ALIVE_DATA_TASK	{}

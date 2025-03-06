@@ -42,7 +42,7 @@ typedef void (*RTC_secondechange_cb)(void);
 
 // To use RTCLocal in a task
 #ifdef RTC_USE_TASK
-#define RTC_DATA_TASK	{true, "RTC_Task", 4096, ESP_TASK_PRIO_MAX / 2, 10, CoreAny, RTC_Task_code}
+#define RTC_DATA_TASK	{condCreate, "RTC_Task", 4096, ESP_TASK_PRIO_MAX / 2, 10, CoreAny, RTC_Task_code}
 void RTC_Task_code(void *parameter);
 #else
 #define RTC_DATA_TASK	{}

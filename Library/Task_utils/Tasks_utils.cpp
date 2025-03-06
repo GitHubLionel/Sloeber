@@ -31,10 +31,12 @@ void Task_Memory_code_local(void *parameter)
 	TaskList.Task_Memory_code(parameter);
 }
 
-const TaskData_t TaskZero = {false, "zero", 1024, 0, 1000, CoreAny, NULL};
-const TaskData_t TaskIdle0 = {true, "TK_Idle0", 1024, tskIDLE_PRIORITY, 10, Core0, Task_Idle0_code};
-const TaskData_t TaskIdle1 = {true, "TK_Idle1", 1024, tskIDLE_PRIORITY, 10, Core1, Task_Idle1_code};
-const TaskData_t TaskIdleSecond = {true, "IdleSecond", 4096, 10, 1000, CoreAny, Task_IdleSecond_code};
+const TaskData_t TaskZero = {condNotCreate, "zero", 1024, 0, 1000, CoreAny, NULL};
+
+// These tasks in used to mesure the idle time of the core
+const TaskData_t TaskIdle0 = {condCreate, "TK_Idle0", 1024, tskIDLE_PRIORITY, 10, Core0, Task_Idle0_code};
+const TaskData_t TaskIdle1 = {condCreate, "TK_Idle1", 1024, tskIDLE_PRIORITY, 10, Core1, Task_Idle1_code};
+const TaskData_t TaskIdleSecond = {condCreate, "IdleSecond", 4096, 10, 1000, CoreAny, Task_IdleSecond_code};
 
 static portMUX_TYPE Idlelock = portMUX_INITIALIZER_UNLOCKED;
 static uint32_t count_Idle0 = 0;
@@ -52,7 +54,7 @@ TaskList_c::TaskList_c(bool with_memory)
 	if (with_memory)
 	{
 #if (RUN_TASK_MEMORY == true) && !defined(NO_MEMORY_TASK)
-		TaskMemory = {true, "Memory_Task", TASK_MEMORY_STACK, 2, 10000, CoreAny, Task_Memory_code_local};
+		TaskMemory = {condCreate, "Memory_Task", TASK_MEMORY_STACK, 2, 10000, CoreAny, Task_Memory_code_local};
 		AddTask(TaskMemory);
 #endif
 	}
@@ -76,7 +78,7 @@ bool TaskList_c::Create(bool with_idle_task)
 
 	for (int i = 0; i < Tasks.size(); i++)
 	{
-		if (Tasks[i].Condition)
+		if (Tasks[i].Condition > 0)
 		{
 			if (Tasks[i].Core == CoreAny)
 			{
@@ -98,6 +100,11 @@ bool TaskList_c::Create(bool with_idle_task)
 						&Tasks[i].Handle,          // Task handle
 						Tasks[i].Core							 // Task core
 						);
+			}
+			if (Tasks[i].Condition == condSuspended)
+			{
+				Tasks[i].IsSuspended = true;
+				vTaskSuspend(Tasks[i].Handle);
 			}
 		}
 		success = success && (xReturned == pdPASS);
@@ -185,17 +192,17 @@ void TaskList_c::DeleteTask(const String &name)
 
 /**
  * Create (or recreate) a task who is in the task list
- * If the task already exist do nothing except if force = true (default false)
+ * If the task already exist do nothing except if forceDelete = true (default false)
  * Pass param if no null (default NULL)
  */
-bool TaskList_c::CreateTask(const String &name, bool force, void *param)
+bool TaskList_c::CreateTask(const String &name, bool forceDelete, void *param)
 {
 	BaseType_t xReturned = pdFAIL;
 	TaskData_t *td = GetTaskByName(name);
 	if (td != NULL)
 	{
 		// If task exist and force = true, then delete the task
-		if ((td->Handle != NULL) && force)
+		if ((td->Handle != NULL) && forceDelete)
 		{
 			if (!td->IsSuspended)
 				vTaskSuspend(td->Handle);
@@ -231,6 +238,11 @@ bool TaskList_c::CreateTask(const String &name, bool force, void *param)
 						&td->Handle,          // Task handle
 						td->Core							// Task core
 						);
+			}
+			if (td->Condition == condSuspended)
+			{
+				td->IsSuspended = true;
+				vTaskSuspend(td->Handle);
 			}
 		}
 	}

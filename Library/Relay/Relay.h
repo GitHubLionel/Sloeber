@@ -11,7 +11,7 @@
 
 // To create a basic task to update Relay every 1 minute
 #ifdef RELAY_USE_TASK
-#define RELAY_DATA_TASK(start)	{(start), "RELAY_Task", 1024, 2, 60000, CoreAny, RELAY_Task_code}
+#define RELAY_DATA_TASK(start)	{(Task_Condition)(start), "RELAY_Task", 1024, 2, 60000, CoreAny, RELAY_Task_code}
 void RELAY_Task_code(void *parameter);
 #else
 #define RELAY_DATA_TASK(start)	{}

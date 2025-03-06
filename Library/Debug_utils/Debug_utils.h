@@ -42,7 +42,7 @@ extern bool GLOBAL_PRINT_DEBUG;
 
 // To create a basic task to analyse UART message
 #ifdef UART_USE_TASK
-#define UART_DATA_TASK	{true, "UART_Task", 4096, 8, 10, Core1, UART_Task_code}
+#define UART_DATA_TASK	{condCreate, "UART_Task", 4096, 8, 10, Core1, UART_Task_code}
 void UART_Task_code(void *parameter);
 #else
 #define UART_DATA_TASK {}

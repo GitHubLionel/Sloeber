@@ -15,7 +15,7 @@
 
 // To create a basic task to check DS18B20 temperature running every 2 s
 #ifdef DS18B20_USE_TASK
-#define DS18B20_DATA_TASK(start)	{(start), "DS18B20_Task", 1536, 5, 2000, CoreAny, DS18B20_Task_code}
+#define DS18B20_DATA_TASK(start)	{(Task_Condition)(start), "DS18B20_Task", 1536, 5, 2000, CoreAny, DS18B20_Task_code}
 void DS18B20_Task_code(void *parameter);
 #else
 #define DS18B20_DATA_TASK(start)	{}
