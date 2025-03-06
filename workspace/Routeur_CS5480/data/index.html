@@ -17,7 +17,7 @@
   <div style="margin-bottom: 44px;">
     <button class="tablink" onclick="openPage('m_Data', this, 'green')" id="defaultOpen">Données</button>
     <button class="tablink" onclick="openPage('m_Graphe', this, '#FFCB00')">Graphiques</button>
-    <button class="tablink" onclick="openPage('m_Temperatue', this, '#1FCB00')">Température</button>
+    <button class="tablink" onclick="openPage('m_Temperature', this, '#1FCB00')">Température</button>
     <button class="tablink" onclick="openPage('m_Energy', this, '#C6410D')">Energie</button>
     <button class="tablink" onclick="openPage('m_SSR', this, '#0ee6f0')">SSR, Relais, PV</button>
     <button class="tablink" onclick="openPage('m_Config', this, '#cd11e8')">Config</button>
@@ -178,7 +178,7 @@
     </div>
   </div>
 
-  <div id="m_Temperatue" class="tabcontent">
+  <div id="m_Temperature" class="tabcontent">
     <div id="divTemperature">
       <canvas id="can_mean_temperature"></canvas>
     </div>
@@ -253,6 +253,8 @@
     <div class="div_space">
       <button class="myButton" id="toggle_SSR" onclick="doToggle('SSR')">Toggle SSR</button>
       <label id="label_SSR" for="toggle_SSR">SSR OFF</label>
+      <br><br>
+      <button class="myButton" id="boost_SSR" onclick="doBoostSSR()">Boost SSR une heure</button>
     </div>
 
     <div class="div_space">

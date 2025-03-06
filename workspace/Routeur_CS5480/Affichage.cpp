@@ -141,7 +141,6 @@ void UserKeyboardAction(Btn_Action Btn_Clicked, uint32_t count)
 					case menuSSR:
 						if (Action_Needed)
 						{
-//							SSR_Set_Action(SSR_Action_FULL, true);
 							TaskList.ResumeTask("SSR_BOOST_Task");
 							Action_Needed = false;
 						}

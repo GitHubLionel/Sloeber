@@ -479,15 +479,18 @@ void setup()
 
 	// Initialisation des taches
 //	--- Memory free stack ---
-//	Memory_Task: 1316 / 4096
-//	RTC_Task: 1372 / 4096
-//	UART_Task: 3396 / 4096
-//	KEEP_ALIVE_Task: 7504 / 8192
-//	DS18B20_Task: 604 / 1536
+//	Memory_Task: 1404 / 4096
+//	RTC_Task: 1500 / 4096
+//	UART_Task: 3400 / 4096
+//	KEEP_ALIVE_Task: 7496 / 8192
+//	DS18B20_Task: 616 / 1536
 //	TELEINFO_Task: 180 / 1024
-//	CIRRUS_Task: 3192 / 6144
-//	DISPLAY_Task: 2312 / 4096
-//	KEYBOARD_Task: 3464 / 4096
+//	CIRRUS_Task: 4816 / 6144
+//	DISPLAY_Task: 2992 / 4096
+//	KEYBOARD_Task: 2856 / 4096
+//	LOG_DATA_Task: 1228 / 4096
+//	RELAY_Task: 452 / 1024
+//	SSR_BOOST_Task: 3400 / 4096
 	TaskList.AddTask(RTC_DATA_TASK); // RTC Task
 	TaskList.AddTask(UART_DATA_TASK); // UART Task
 	TaskList.AddTask(KEEP_ALIVE_DATA_TASK); // Keep alive Wifi Task
@@ -857,6 +860,12 @@ void handleOperation(CB_SERVER_PARAM)
 		else
 			SSR_Disable();
 		init_routeur.WriteBool("SSR", "StateOFF", (SSR_Get_State() == SSR_OFF));
+	}
+
+	// Boost le SSR pour une heure
+	if (pserver->hasArg("Boost_SSR"))
+	{
+		TaskList.ResumeTask("SSR_BOOST_Task");
 	}
 #endif
 

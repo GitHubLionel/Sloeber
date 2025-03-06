@@ -60,7 +60,7 @@ extern Data_Struct Current_Data;
 extern volatile Graphe_Data log_cumul;
 
 // Task to save log every 10 s
-#define LOG_DATA_TASK	{true, "LOG_DATA_Task", 4096, 3, 10000, Core1, Log_Data_Task_code}
+#define LOG_DATA_TASK	{condCreate, "LOG_DATA_Task", 4096, 3, 10000, Core1, Log_Data_Task_code}
 void Log_Data_Task_code(void *parameter);
 
 void Get_Data(void);
