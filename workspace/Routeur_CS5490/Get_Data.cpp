@@ -68,13 +68,13 @@ void __attribute__((weak)) print_debug(String mess, bool ln = true)
  */
 void Get_Data(void)
 {
-	static int countmessage = 0;
+//	static int countmessage = 0;
 	bool log = false;
 
 #ifdef LOG_CIRRUS_CONNECT
 	if (Data_acquisition || CS_Com.Is_IHM_Locked())
 #else
-  if (Simple_Data_acquisition)
+  if (Data_acquisition)
 #endif
 	{
 		return; // On est déjà dans la procédure ou il y a un message pour le Cirrus
@@ -128,10 +128,8 @@ void Get_Data(void)
 //		print_debug("*** LOG " );
 	}
 
-//	if (countmessage < 20)
+//	if (countmessage++ < 20)
 //		print_debug("*** Data time : " + String(millis() - start_time) + " ms ***"); // 130 - 260 ms
-
-	countmessage++;
 
 	Data_acquisition = false;
 }

@@ -162,7 +162,7 @@ bool TI_OK = false;
 
 //CIRRUS_Calib_typedef CS_Calib = {260.00, 16.50, 0x3BF15A, 0x43E86F, 0x000000, 0x000000, 0x000000};
 //CIRRUS_Calib_typedef CS_Calib = {260.00, 16.50, 0x380B99, 0x3FE3E9, 0x084BDE, 0x000000, 0x000000};
-CIRRUS_Calib_typedef CS_Calib = {260.00, 16.50, 0x380B99, 0xC8B5CA, 0x1A04A6, 0x000000, 0x000000};
+CIRRUS_Calib_typedef CS_Calib = {260.00, 16.50, 0x380B99, 0xC8B5CA, 0x1A04A6, 0x000080, 0x800000};
 CIRRUS_Config_typedef CS_Config = {0xC02000, 0x00EEEB, 0x10020A, 0x000001, 0x800000, 0x000000};
 
 #ifdef CIRRUS_USE_UART
@@ -271,8 +271,8 @@ void setup()
 	// Essaye de récupérer la dernière heure, utile pour un reboot
 	// Paramètres éventuellement à adapter : AutoSave et SaveDelay (par défaut toutes les 10 s)
 	RTC_Local.setupDateTime();
-	RTC_Local.setEndDayCallBack(onDaychange); // Action à faire juste avant minuit
-	RTC_Local.setDayChangeCallback(onDaychange); // Action à faire si on change de jour (mise à jour)
+	RTC_Local.setBeforeEndDayCallBack(onDaychange); // Action à faire juste avant minuit
+	RTC_Local.setDateChangeCallback(onDaychange); // Action à faire si on change de jour (mise à jour)
 
 	// **** 3- Initialisation du display
 	if (IHM_Initialization(I2C_ADDRESS, false))
@@ -310,6 +310,9 @@ void setup()
 	if (Cirrus_OK)
 		Cirrus_OK = CIRRUS_Generic_Initialization(CS5490, &CS_Calib, &CS_Config, false, false, '1');
 
+	if (Cirrus_OK)
+		CS5490.GetRMSData()->SetWantData(exd_Frequency | exd_PApparent | exd_PF);
+
 	// **** 7- Initialisation SSR avec Zero-Cross ****
 #ifdef USE_ZC_SSR
 	SSR_Initialize(ZERO_CROSS_GPIO, SSR_COMMAND_GPIO, SSR_LED_GPIO);
@@ -319,7 +322,7 @@ void setup()
 //	SSR_Set_Dimme_Target(50);
 //  SSR_Action(SSR_Action_Dimme);
 
-	SSR_Action(SSR_Action_Percent);  // Par défaut à 10%, voir page web
+	SSR_Set_Action(SSR_Action_Percent);  // Par défaut à 10%, voir page web
 //	SSR_Set_Percent(20);
 			// NOTE : le SSR est éteint, on le démarre dans la page web
 #endif
@@ -654,9 +657,9 @@ void handleOperation(void)
 	if (server.hasArg("SSRType"))
 	{
 		if (server.arg("SSRType") == "true")
-			SSR_Action(SSR_Action_Percent);
+			SSR_Set_Action(SSR_Action_Percent);
 		else
-			SSR_Action(SSR_Action_Surplus);
+			SSR_Set_Action(SSR_Action_Surplus);
 	}
 
 	// Gestion dimmer en pourcentage
