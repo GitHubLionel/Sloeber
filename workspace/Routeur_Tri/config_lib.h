@@ -17,12 +17,12 @@
 /**********************************************************
  * Debug and UART define : Debug_utils library
  **********************************************************/
-#define SERIAL_DEBUG
+//#define SERIAL_DEBUG
 #define LOG_DEBUG
 //#define USE_UART // Beware if SERIAL_DEBUG is also defined since all two use Serial0
 #define UART_BAUD	115200
 
-//#define USE_SAVE_CRASH
+#define USE_SAVE_CRASH
 
 /**********************************************************
  * Partition define : Partition_utils library
@@ -116,7 +116,7 @@
 #ifdef CIRRUS_USE_UART
 #define CIRRUS_UART_BAUD	512000
 #endif
-#define CIRRUS_FLASH
+//#define CIRRUS_FLASH
 #define LOG_CIRRUS_CONNECT
 //#define CIRRUS_CALIBRATION
 //#define DEBUG_CIRRUS

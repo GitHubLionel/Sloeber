@@ -72,13 +72,26 @@ volatile SemaphoreHandle_t logSemaphore = NULL;
 Phase_ID Phase_CE = Phase1;
 float *VoltageForCE = &Current_Data.Phase1.Voltage;
 
+// Gestion fichier dans la FLASH
+listFile_typedef listFile;
+
+/**
+ * Nombre max de fichier dans la FLASH
+ * Un fichier fait environ 68 ko
+ * L'espace de la FLASH est de 11403264 octets (10.88 Mo)
+ * Donc un max de 163.7
+ */
+#define MAX_LOGFILE	140
+
 // ********************************************************************************
 // Functions prototype
 // ********************************************************************************
 
+void UpdateLedSurplus(float power);
 void GetExtraData(void);
 void append_data(void);
 void append_energy(void);
+void AddFileToListFile(listFile_typedef &list, const String &file);
 
 // Function for debug message, may be redefined elsewhere
 void __attribute__((weak)) print_debug(String mess, bool ln = true)
@@ -218,6 +231,8 @@ void Get_Data(void)
 //	if (countmessage++ < 40)
 //		print_debug("*** Data time : " + String(millis() - start_time) + " ms ***"); // 129 ~ 194 max 230 ms
 
+	UpdateLedSurplus(power_cumul);
+
 #ifdef USE_SSR
 	if (Gestion_SSR_CallBack != NULL)
 	{
@@ -314,6 +329,31 @@ void SetTalemaParams(Phase_ID phase)
 			break;
 		default:
 			;
+	}
+}
+
+void UpdateLedSurplus(float power)
+{
+	static bool last_state = false;
+	bool state = (power < 0);
+	if (last_state != state)
+	{
+		if (state)
+		{
+//			digitalWrite(GPIO_NUM_23, LOW);
+			ledcWrite(GPIO_NUM_23, 0);
+			digitalWrite(GPIO_NUM_32, HIGH);
+		}
+		else
+		{
+//			digitalWrite(GPIO_NUM_23, HIGH);
+			int pwm = (int) power;
+			if (pwm > 1023)
+				pwm = 1023;
+			ledcWrite(GPIO_NUM_23, pwm);
+			digitalWrite(GPIO_NUM_32, LOW);
+		}
+	  last_state = state;
 	}
 }
 
@@ -486,7 +526,9 @@ void reboot_energy(void)
 //				CS5480.RestartEnergy(Channel_2, data[i - 1]);
 				Current_Data.energy_day_conso = data[i - 3];
 				Current_Data.energy_day_surplus = data[i - 2];
-				*Current_Data.energy_day_prod = data[i - 1];
+//				*Current_Data.energy_day_prod = data[i - 1];
+				// On doit ré-initialiser au niveau du Cirrus
+				CS5480.RestartEnergy(Channel_2, data[i - 1], 0);
 			}
 		}
 	}
@@ -539,7 +581,7 @@ void onDaychange(uint8_t year, uint8_t month, uint8_t day)
 	append_energy();
 	Current_Data.energy_day_conso = 0.0;
 	Current_Data.energy_day_surplus = 0.0;
-	*Current_Data.energy_day_prod = 0.0;
+//	*Current_Data.energy_day_prod = 0.0;
 	Current_Data.Talema_Energy = 0.0;
 	CS5480.RestartEnergy();
 	CS5484.RestartEnergy();
@@ -554,7 +596,39 @@ void onDaychange(uint8_t year, uint8_t month, uint8_t day)
 		char Day_Name[20] = {0};
 		sprintf(Day_Name, "/%02d-%02d-%02d.csv", year, month, day);
 		Data_Partition->rename(CSV_Filename, String(Day_Name));
+		AddFileToListFile(listFile, String(Day_Name));
 	}
+}
+
+// ********************************************************************************
+// Gestion des fichiers data
+// ********************************************************************************
+
+/**
+ * Ajoute un nouveau fichier à la liste
+ * Supprime le plus ancien fichier si on a dépassé le nombre MAX de fichier
+ */
+void AddFileToListFile(listFile_typedef &list, const String &file)
+{
+	list.push_back(file);
+
+	while (list.size() > MAX_LOGFILE)
+	{
+		String old_file = list.front();
+		list.pop_front();
+		Data_Partition->remove(old_file);
+	}
+}
+
+void FillListFile(void)
+{
+	const listFile_typedef skip = {"data", "energy"};
+	FillListFile(true, "/", skip, listFile);
+}
+
+void PrintListFile(void)
+{
+	PrintListFile(listFile);
 }
 
 // ********************************************************************************

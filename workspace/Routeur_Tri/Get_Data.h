@@ -98,7 +98,7 @@ extern Data_Struct Current_Data;
 extern volatile Graphe_Data log_cumul;
 
 // Task to save log every 10 s
-#define LOG_DATA_TASK	{true, "LOG_DATA_Task", 4096, 3, 10000, Core1, Log_Data_Task_code}
+#define LOG_DATA_TASK	{condCreate, "LOG_DATA_Task", 4096, 3, 10000, Core1, Log_Data_Task_code}
 void Log_Data_Task_code(void *parameter);
 
 void Set_PhaseCE(Phase_ID phase);
@@ -111,4 +111,7 @@ bool Get_Last_Data(float *Energy, float *Surplus, float *Prod);
 
 void reboot_energy(void);
 void onDaychange(uint8_t year, uint8_t month, uint8_t day);
+
+void FillListFile(void);
+void PrintListFile(void);
 

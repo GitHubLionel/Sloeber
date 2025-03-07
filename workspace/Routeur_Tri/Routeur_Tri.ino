@@ -251,7 +251,7 @@ uint16_t interval[] = {3600, 2500, 1140, 240};
 #endif
 
 bool ADC_OK = false;
-bool ADC_Test_Zero = false;
+ADC_Action_Enum ADC_Action = adc_Sigma;
 int TalemaPhase_int = 1;
 
 // ********************************************************************************
@@ -313,6 +313,13 @@ void setup()
 		return;
 	}
 
+	// S'il reste moins de 10 koctets, on essaie de supprimer le log
+	// La limite minimale est 4096 o (block size) soit 4 ko
+	if (Partition_FreeSpace() <= 10240)
+		delete_logFile();
+
+	Core_Debug_Log_Init();
+
 	// Message de démarrage à mettre APRES SERIAL et LittleFS !
 	print_debug(F("\r\n\r\n****** Starting : "), false);
 	print_debug(getSketchName(__FILE__, true));
@@ -334,7 +341,13 @@ void setup()
 #endif
 
 	// Création de la partition data
-	CreateOpenDataPartition(false, true);
+	CreateOpenDataPartition(false, false);
+
+	// Gestion des fichiers data
+	print_debug(F("Free Data space : "), false);
+	print_debug((int)Partition_FreeSpace(true));
+	FillListFile();
+//	PrintListFile();
 
 	// Initialisation fichier ini
 	init_routeur.Begin(true);
@@ -416,6 +429,15 @@ void setup()
 	// On revient sur le premier Cirrus : CS5484
 	CS_Com.SelectCirrus(0);
 
+	// Led conso en PWM
+	pinMode(GPIO_NUM_23, OUTPUT);
+	digitalWrite(GPIO_NUM_23, HIGH);
+	ledcAttach(GPIO_NUM_23, 1000, 10);
+
+	// Led surplus
+	pinMode(GPIO_NUM_32, OUTPUT);
+	digitalWrite(GPIO_NUM_32, LOW);
+
 	// **** 7- Initialisation SSR avec Zero-Cross ****
 #ifdef USE_ZC_SSR
 	SSR_Initialize(ZERO_CROSS_GPIO, SSR_COMMAND_GPIO, SSR_LED_GPIO);
@@ -429,7 +451,7 @@ void setup()
 	//	SSR_Compute_Dump_power();
 
 	SSR_Action_typedef action = (SSR_Action_typedef)init_routeur.ReadInteger("SSR", "Action", 1); // Par défaut Percent, voir page web
-	SSR_Action(action);
+	SSR_Set_Action(action);
 
 	// NOTE : le SSR est éteint, on le démarre dans la page web
 	if (init_routeur.ReadBool("SSR", "StateOFF", true)) // Etat par défaut: OFF
@@ -443,7 +465,7 @@ void setup()
 
 	// **** 8- Initialisation Clavier, relais, ADC
 #ifdef USE_ADC
-	if ((ADC_OK = ADC_Initialize_OneShot({KEYBOARD_ADC_GPIO, GPIO_NUM_39}, ADC_Test_Zero)) == true) // @suppress("Invalid arguments")
+	if ((ADC_OK = ADC_Initialize_OneShot({KEYBOARD_ADC_GPIO, GPIO_NUM_39}, ADC_Action)) == true) // @suppress("Invalid arguments")
 	{
 		print_debug(F("ADC OK"));
 //		ADC_Begin();
@@ -518,12 +540,15 @@ void setup()
 	TaskList.AddTask(CIRRUS_DATA_TASK(Cirrus_OK)); // Cirrus get data Task
 	TaskList.AddTask(DISPLAY_DATA_TASK);
 #ifdef USE_KEYBOARD
-	TaskList.AddTask(KEYBOARD_DATA_TASK(true));
+	if (ADC_Action == adc_Sigma)
+	  TaskList.AddTask(KEYBOARD_DATA_TASK(true));
 #endif
 	TaskList.AddTask(LOG_DATA_TASK);  // Save log Task
 #ifdef USE_RELAY
 	TaskList.AddTask(RELAY_DATA_TASK(true));
 #endif
+	TaskList.AddTask(SSR_BOOST_TASK);  // Boost SSR Task
+	// Create all the tasks
 	TaskList.Create(USE_IDLE_TASK);
 	TaskList.InfoTask();
 #ifdef USE_ADC
@@ -576,6 +601,7 @@ void OnAfterConnexion(void)
 	server.on("/init_PVData", HTTP_GET, handleInitPVData);
 
 	server.on("/getLastData", HTTP_GET, handleLastData);
+	server.on("/error", HTTP_GET, handleLastData); // On joue au con !
 
 	server.on("/operation", HTTP_PUT, handleOperation);
 	server.on("/operation", HTTP_POST, handleOperation);
@@ -836,12 +862,12 @@ void handleOperation(CB_SERVER_PARAM)
 	if (pserver->hasArg("SSRAction"))
 	{
 		if (pserver->arg("SSRAction") == "percent")
-			SSR_Action(SSR_Action_Percent);
+			SSR_Set_Action(SSR_Action_Percent);
 		else
 			if (pserver->arg("SSRAction") == "zero")
-				SSR_Action(SSR_Action_Surplus);
+				SSR_Set_Action(SSR_Action_Surplus);
 			else
-				SSR_Action(SSR_Action_FULL);
+				SSR_Set_Action(SSR_Action_FULL);
 
 		init_routeur.WriteInteger("SSR", "Action", SSR_Get_Action(), "Full=1, Percent=2, Zero=3");
 	}
@@ -893,6 +919,12 @@ void handleOperation(CB_SERVER_PARAM)
 		else
 			SSR_Disable();
 		init_routeur.WriteBool("SSR", "StateOFF", (SSR_Get_State() == SSR_OFF));
+	}
+
+	// Boost le SSR pour une heure
+	if (pserver->hasArg("Boost_SSR"))
+	{
+		TaskList.ResumeTask("SSR_BOOST_Task");
 	}
 #endif
 
