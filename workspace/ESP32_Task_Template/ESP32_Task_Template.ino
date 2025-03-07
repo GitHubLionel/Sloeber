@@ -144,7 +144,7 @@ void Display_Task_code(void *parameter)
 		END_TASK_CODE(IHM_IsDisplayOff());
 	}
 }
-#define DISPLAY_DATA_TASK	{true, "Display_Task", 4096, 4, 1000, CoreAny, Display_Task_code}
+#define DISPLAY_DATA_TASK	{condCreate, "Display_Task", 4096, 4, 1000, CoreAny, Display_Task_code}
 
 // ********************************************************************************
 // Initialization
