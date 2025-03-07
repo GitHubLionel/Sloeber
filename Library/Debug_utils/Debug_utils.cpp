@@ -146,7 +146,7 @@ void WatchDog_Init(uint32_t WDT_TIMEOUT_ms)
 // ********************************************************************************
 // Management functions
 // ********************************************************************************
-
+#ifdef ESP32
 #define LOG_BUFFER_SIZE	512
 static char *log_buffer = NULL;
 static vprintf_like_t Old_log_vprintf = NULL;
@@ -205,6 +205,7 @@ void Core_Debug_Log_Restaure(void)
 	if (Old_log_vprintf)
 		esp_log_set_vprintf(Old_log_vprintf);
 }
+#endif
 
 void delete_logFile()
 {

@@ -258,10 +258,17 @@ size_t Partition_FileSize(String &file, bool Data)
 {
 	File f;
 	CheckBeginSlash(file);
+#ifdef ESP8266
+	if (Data)
+	  f = Data_Partition->open(file.c_str(), "r");
+	else
+		f = FS_Partition->open(file.c_str(), "r");
+#else
 	if (Data)
 	  f = Data_Partition->open(file.c_str());
 	else
 		f = FS_Partition->open(file.c_str());
+#endif
 
 	if ((!f) || (f.isDirectory()))
 	{
@@ -458,6 +465,37 @@ inline bool checkFile(const char *file, const listFile_typedef &skipfile)
  * @param: list : the list of the file of the directory
  * @return: true if the list is filled
  */
+#ifdef ESP8266
+bool FillListFile(bool data_partition, const String &dir, const listFile_typedef &skipfile, listFile_typedef &list)
+{
+	Dir root;
+	if (data_partition)
+		root = Data_Partition->openDir(dir);
+	else
+		root = FS_Partition->openDir(dir);
+
+	if (!root.isDirectory())
+	{
+		print_debug(F("Failed to open data partition"));
+		return false;
+	}
+
+	while (root.next())
+	{
+		if (!root.isDirectory())
+		{
+			const char *filename = root.fileName().c_str();
+			if (checkFile(filename, skipfile))
+			{
+				list.push_back((String) filename);
+			}
+		}
+	}
+	return true;
+}
+#endif
+
+#ifdef ESP32
 bool FillListFile(bool data_partition, const String &dir, const listFile_typedef &skipfile, listFile_typedef &list)
 {
 	File root;
@@ -497,6 +535,7 @@ bool FillListFile(bool data_partition, const String &dir, const listFile_typedef
 	root.close();
 	return true;
 }
+#endif
 
 /**
  * Print the list of file

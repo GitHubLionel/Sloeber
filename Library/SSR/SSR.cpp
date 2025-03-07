@@ -39,7 +39,9 @@ volatile SemaphoreHandle_t topZC_Semaphore;
 #endif
 #endif  // ESP32
 
+#ifdef ESP32
 #include "Tasks_utils.h"
+#endif
 
 #define DEBUG_SSR           0          // Affichage de P_100 et SSR_COUNT
 
@@ -786,6 +788,8 @@ void SSR_Update_Dimme_Timer(const float Cirrus_voltage, const float Cirrus_power
 		{
 			Set_Percent(P_100 - EPSILON);
 		}
+
+	(void) Cirrus_voltage; // For compiler
 }
 
 /**
@@ -845,6 +849,7 @@ void SSR_Update_Surplus_Timer(const float Cirrus_voltage, const float Cirrus_pow
 // Task function to save the log
 // ********************************************************************************
 
+#ifdef ESP32
 // Task to start SSR full load for one hour
 void SSR_Boost_Task_code(void *parameter)
 {
@@ -866,6 +871,7 @@ void SSR_Boost_Task_code(void *parameter)
 		END_TASK_CODE(SSR_Stop);
 	}
 }
+#endif
 
 // ********************************************************************************
 // End of file
