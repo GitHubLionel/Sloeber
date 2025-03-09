@@ -1182,13 +1182,17 @@ void handleGetFile(CB_SERVER_PARAM)
 void handleUploadFile(AsyncWebServerRequest *request, String thefile, size_t index, uint8_t *data,
 		size_t len, bool final)
 {
-	String logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url();
-	print_debug(logmessage);
+	String logmessage = "";
 	String filename = thefile;
 	PART_TYPE *Part = FS_Partition;
 
 	if (!index)
 	{
+		ReloadPage = (request->hasArg("reload") && request->arg("reload").equals("on"));
+
+		logmessage = "Client:" + request->client()->remoteIP().toString() + " " + request->url();
+		print_debug(logmessage);
+
 		CheckBeginSlash(filename);
 
 		if (request->hasArg("partition"))
@@ -1221,10 +1225,13 @@ void handleUploadFile(AsyncWebServerRequest *request, String thefile, size_t ind
 	{
 		// close the file handle as the upload is now done
 		request->_tempFile.close();
-		logmessage = "Upload Complete: " + String(filename) + ",size: " + String(index + len);
+		logmessage = "Upload Complete: " + String(filename) + ", size: " + String(index + len);
 		print_debug(logmessage);
-		if (request->hasArg("reload"))
+		if (ReloadPage)
+		{
+			ReloadPage = false;
 			request->redirect("/");
+		}
 	}
 }
 #else
