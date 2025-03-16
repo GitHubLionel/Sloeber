@@ -232,7 +232,9 @@ void CIRRUS_Communication::begin(void)
 #endif
 
 	// Première initialisation à 600 bauds
-	UART_Change_Baud(600);
+	Cirrus_UART->begin(600);
+	Cirrus_TimeOut = TIMEOUT600;
+	CSDelay(100);  // For UART stabilize
 #else
 	Cirrus_SPI->begin(SPI_SCLK, SPI_MISO, SPI_MOSI, -1);
 #endif
@@ -246,9 +248,8 @@ void CIRRUS_Communication::begin(void)
 #ifdef CIRRUS_USE_UART
 void CIRRUS_Communication::UART_Change_Baud(uint32_t baud)
 {
-	// Pas besoin de faire Cirrus_UART->end() car fait dans le begin()
-	Cirrus_UART->begin(baud);
-	CSDelay(100);  // For UART stabilize
+	Cirrus_UART->updateBaudRate(baud);
+	CSDelay(10);  // For UART stabilize
 
 	if (baud >= 128000)
 		Cirrus_TimeOut = TIMEOUT512K;
