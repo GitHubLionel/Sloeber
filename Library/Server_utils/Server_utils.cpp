@@ -869,9 +869,16 @@ void Server_CommonEvent(uint16_t event)
 	// upload file
 	// reload if param is present
 	if ((event & Ev_UploadFile) == Ev_UploadFile)
-		server.on("/upload", HTTP_POST, [](CB_SERVER_PARAM)
+#ifndef USE_ASYNC_WEBSERVER
+		server.on("/upload", HTTP_POST, []()
+		{ pserver->send(200, "text/plain", "");}, handleUploadFile);
+#else
+		server.on("/upload", HTTP_POST, [](AsyncWebServerRequest *request)
+		{}, [](AsyncWebServerRequest *request, const String &filename, size_t index, uint8_t *data, size_t len, bool final)
 		{
-			pserver->send(200, "text/plain", "");}, handleUploadFile);
+			handleUploadFile(request, filename, index, data, len, final);
+		});
+#endif
 
 	// list files in a directory
 	if ((event & Ev_ListFile) == Ev_ListFile)
@@ -913,7 +920,7 @@ void Server_CommonEvent(uint16_t event)
 #ifndef USE_ASYNC_WEBSERVER
 				pserver->client().setNoDelay(true);
 #endif
-				pserver->send_P(200, PSTR("text/html"), SSIDReset);
+				pserver->send(200, "text/html", SSIDReset);
 				FS_Partition->remove("/SSID.txt");
 				Auto_Reset();
 			});
@@ -1213,24 +1220,31 @@ void handleUploadFile(AsyncWebServerRequest *request, String thefile, size_t ind
 		request->_tempFile = Part->open(filename, "w");
 	}
 
-	if (len)
+	if (request->_tempFile)
 	{
-		// stream the incoming chunk to the opened file
-		request->_tempFile.write(data, len);
-		logmessage = "Writing file: " + String(filename) + " index=" + String(index) + " len=" + String(len);
-		print_debug(logmessage);
-	}
-
-	if (final)
-	{
-		// close the file handle as the upload is now done
-		request->_tempFile.close();
-		logmessage = "Upload Complete: " + String(filename) + ", size: " + String(index + len);
-		print_debug(logmessage);
-		if (ReloadPage)
+		if (len)
 		{
-			ReloadPage = false;
-			request->redirect("/");
+			// stream the incoming chunk to the opened file
+			request->_tempFile.write(data, len);
+			logmessage = "Writing file: " + String(filename) + " index=" + String(index) + " len=" + String(len);
+			print_debug(logmessage);
+		}
+
+		if (final)
+		{
+			// close the file handle as the upload is now done
+			request->_tempFile.close();
+			logmessage = "Upload Complete: " + String(filename) + ", size: " + String(index + len);
+			print_debug(logmessage);
+			delay(10);
+			if (ReloadPage)
+			{
+				print_debug("Reload /");
+				ReloadPage = false;
+				request->redirect("/index.html");
+			}
+			else
+				request->send(303);
 		}
 	}
 }
@@ -1285,13 +1299,19 @@ void handleUploadFile(CB_SERVER_PARAM)
 				print_debug("handleFileUpload Size: " + String(upload.totalSize));
 				if (ReloadPage)
 				{
+					print_debug("Reload /");
 					delay(500);  // Small delay before reload page
+// I don't know why this doesn't work for version > 3.0.3
+#if defined(ESP_IDF_VERSION) && (ESP_IDF_VERSION <= ESP_IDF_VERSION_VAL(5, 1, 4))
 					server.sendHeader("Location", "/");      // Redirect the client to the main page
 					server.send(303);
+#endif
 					ReloadPage = false;
 				}
+#if defined(ESP_IDF_VERSION) && (ESP_IDF_VERSION <= ESP_IDF_VERSION_VAL(5, 1, 4))
 				else
 					server.send(204, "text/plain", "");
+#endif
 			}
 			else
 			{
@@ -1518,7 +1538,7 @@ void handleSetDHCPIP(CB_SERVER_PARAM)
 #ifndef USE_ASYNC_WEBSERVER
 	pserver->client().setNoDelay(true);
 #endif
-	pserver->send_P(200, PSTR("text/html"), SSIDResponse);
+	pserver->send(200, "text/html", SSIDResponse);
 
 	if (DefaultAP)
 		Auto_Reset();
