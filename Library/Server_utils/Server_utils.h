@@ -29,7 +29,11 @@
 #define CB_SERVER_PARAM void
 #define SERVER_PARAM
 #ifdef USE_HTTPUPDATER
-#include <ESP8266HTTPUpdateServer.h>
+	#ifdef USE_ELEGANT_OTA
+	#include <ElegantOTA.h>
+	#else
+	#include <ESP8266HTTPUpdateServer.h>
+	#endif
 #endif
 #endif // ESP8266
 
@@ -46,22 +50,27 @@
 #endif
 
 #ifdef USE_HTTPUPDATER
-	#ifdef USE_ASYNC_WEBSERVER
-    #ifdef USE_FATFS
-			#warning "HTTPUpdateServer not available"
-		#else
-			#ifndef USE_SPIFFS
-			  #ifndef ESPASYNCHTTPUPDATESERVER_LITTLEFS
-				#error "ESPASYNCHTTPUPDATESERVER_LITTLEFS must be defined."
-				#endif
-			#endif
-			#include <ESPAsyncHTTPUpdateServer.h>
-		#endif
+	#ifdef USE_ELEGANT_OTA
+	#include <ElegantOTA.h>
 	#else
-	#include <HTTPUpdateServer.h>
-	#define UPDATER_DEBUG false
-	#endif
+		#ifdef USE_ASYNC_WEBSERVER
+			#ifdef USE_FATFS
+				#warning "HTTPUpdateServer not available"
+			#else
+				#ifndef USE_SPIFFS
+					#ifndef ESPASYNCHTTPUPDATESERVER_LITTLEFS
+					#error "ESPASYNCHTTPUPDATESERVER_LITTLEFS must be defined."
+					#endif
+				#endif
+				#include <ESPAsyncHTTPUpdateServer.h>
+			#endif
+		#else
+		#include <HTTPUpdateServer.h>
+		#define UPDATER_DEBUG false
+		#endif
+  #endif
 #endif
+
 #endif // ESP32
 
 #ifdef USE_MDNS
@@ -147,7 +156,9 @@ typedef enum
 	Ev_SetTime = 128,
 	Ev_GetTime = 256,
 	Ev_SetDHCPIP = 512,
-	Ev_ResetDHCPIP = 1024
+	Ev_ResetDHCPIP = 1024,
+	Ev_GetMACAddress = 2048,
+	Ev_GetESPMACAddress = 4096
 } Event_typedef;
 
 // Connexion Event callback
@@ -334,7 +345,9 @@ class ServerConnexion
 #endif
 };
 
-String GetIPaddress(void);
+const String GetIPaddress(void);
+const String GetMACaddress(void);
+bool getESPMacAddress(String &mac);
 
 void Server_CommonEvent(uint16_t event);
 void Auto_Reset(void);
@@ -342,4 +355,7 @@ void SSIDToFile(const String &filename, const String &ssidpwd);
 void SSIDToEEPROM(const String &ssid, const String &pwd);
 void DeleteSSID(void);
 const String getContentType(const String &filename);
+
+// Only for ElegantOTA
+void ElegantOTAloop(void);
 

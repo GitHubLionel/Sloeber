@@ -5,6 +5,11 @@
 #include "RTCLocal.h"		      // A pseudo RTC software library
 #endif
 #include "Debug_utils.h"		  // Some utils functions for debug
+#ifdef ESP8266
+#include <ESP8266WiFi.h>
+#else
+#include <esp_wifi.h>
+#endif
 
 #ifdef KEEP_ALIVE_USE_TASK
 #include "Tasks_utils.h"
@@ -31,16 +36,18 @@ WebServer *pserver = &server;
  * Note : there is 15 s for the reboot
  */
 #ifdef USE_HTTPUPDATER
-#ifdef ESP8266
-ESP8266HTTPUpdateServer httpUpdater(UPDATER_DEBUG);
-#endif
+	#ifndef USE_ELEGANT_OTA
+	#ifdef ESP8266
+	ESP8266HTTPUpdateServer httpUpdater(UPDATER_DEBUG);
+	#endif
 
-#ifdef ESP32
-#ifdef USE_ASYNC_WEBSERVER
-ESPAsyncHTTPUpdateServer httpUpdater;
-#else
-HTTPUpdateServer httpUpdater(UPDATER_DEBUG);
-#endif
+	#ifdef ESP32
+		#ifdef USE_ASYNC_WEBSERVER
+		ESPAsyncHTTPUpdateServer httpUpdater;
+		#else
+		HTTPUpdateServer httpUpdater(UPDATER_DEBUG);
+		#endif
+	#endif
 #endif
 const char *update_path = "/firmware";
 #endif
@@ -72,6 +79,42 @@ static const char SSIDResponse[] PROGMEM
 
 static const char SSIDReset[] PROGMEM
 		= "<META http-equiv=\"content-type\" content=\"text/html; charset=UTF-8\">SSID effacé. Redémarrage sur IP locale ...";
+
+#ifdef USE_ELEGANT_OTA
+unsigned long ota_progress_millis = 0;
+
+void onOTAStart() {
+  // Log when OTA has started
+	print_debug("OTA update started!");
+  // <Add your own code here>
+}
+
+void onOTAProgress(size_t current, size_t final) {
+  // Log every 1 second
+  if (millis() - ota_progress_millis > 1000) {
+    ota_progress_millis = millis();
+		String logmessage = "OTA Progress Current: " + String(current) + " bytes, Final: " + String(final) + " bytes";
+		print_debug(logmessage);
+  }
+}
+
+void onOTAEnd(bool success) {
+  // Log when OTA has finished
+  if (success) {
+  	print_debug("OTA update finished successfully!");
+  } else {
+  	print_debug("There was an error during OTA update!");
+  }
+  // <Add your own code here>
+}
+#endif
+
+void ElegantOTAloop(void)
+{
+#ifdef USE_ELEGANT_OTA
+  ElegantOTA.loop();
+#endif
+}
 
 // ********************************************************************************
 // ServerConnexion class section
@@ -387,6 +430,17 @@ bool ServerConnexion::Connexion(bool toUART)
 	print_debug(F("IP address: "));
 	print_debug(_IPaddress);
 
+	// Channel
+	print_debug(F("WiFi channel : "), false);
+	print_debug(String(WiFi.channel()));
+
+	// MAC address
+	print_debug(F("MAC address : "), false);
+	if (_IsSoftAP)
+		print_debug(WiFi.softAPmacAddress());
+	else
+		print_debug(WiFi.macAddress());
+
 	// Signal dBm
 	_Wifi_Signal = WiFi.RSSI();
 	print_debug(F("WiFi signal : "), false);
@@ -555,7 +609,16 @@ bool ServerConnexion::WaitForConnexion(Conn_typedef connexion, bool toUART)
 
 		// HTTP updater setup
 #ifdef USE_HTTPUPDATER
+#ifdef USE_ELEGANT_OTA
+	  ElegantOTA.begin(&server, update_path, update_username, update_password);    // Start ElegantOTA
+	  ElegantOTA.setAutoReboot(true);
+	  // ElegantOTA callbacks
+	  ElegantOTA.onStart(onOTAStart);
+	  ElegantOTA.onProgress(onOTAProgress);
+	  ElegantOTA.onEnd(onOTAEnd);
+#else
 		httpUpdater.setup(&server, update_path, update_username, update_password);
+#endif
 #endif
 
 	}
@@ -622,7 +685,7 @@ bool ServerConnexion::ExtractSSID_Password(void)
 /**
  * Return string IP=ipaddress
  */
-String GetIPaddress(void)
+const String GetIPaddress(void)
 {
 #ifdef ESP8266
 	if (WiFi.getMode() == WIFI_AP)
@@ -635,6 +698,14 @@ String GetIPaddress(void)
 	else
 		return "IP=" + WiFi.localIP().toString();
 #endif
+}
+
+/**
+ * Return MAC address
+ */
+const String GetMACaddress(void)
+{
+	return WiFi.BSSIDstr();
 }
 
 // ********************************************************************************
@@ -776,6 +847,35 @@ void Auto_Reset(void)
 #endif
 }
 
+/**
+ * Get MAC address of the ESP
+ * Should be called AFTER Wifi connexion for ESP32
+ */
+bool getESPMacAddress(String &mac)
+{
+#ifdef ESP8266
+	mac = WiFi.macAddress();
+	return true;
+#else
+	if (WiFi.getMode() == WIFI_MODE_AP)
+		mac = WiFi.softAPmacAddress();
+	else
+		mac = WiFi.macAddress();
+
+//	uint8_t baseMac[6];
+//	char buf[20] = {0};
+//	esp_err_t ret = esp_wifi_get_mac(WIFI_IF_STA, baseMac);
+//	if (ret == ESP_OK)
+//	{
+//		sprintf(buf, "%02X:%02X:%02X:%02X:%02X:%02X", baseMac[0], baseMac[1], baseMac[2], baseMac[3], baseMac[4],
+//				baseMac[5]);
+//		mac = String(buf);
+//	}
+//	return (ret == ESP_OK);
+		return true;
+#endif
+}
+
 // ********************************************************************************
 // Basic Task function to keep alive the connexion
 // ********************************************************************************
@@ -819,6 +919,8 @@ void handleGetTime(CB_SERVER_PARAM);
 void handleSetTime(CB_SERVER_PARAM);
 void handleReset(CB_SERVER_PARAM);
 void handleSetDHCPIP(CB_SERVER_PARAM);
+void handleGetMACAddress(CB_SERVER_PARAM);
+void handleGetESPMACAddress(CB_SERVER_PARAM);
 
 /**
  * Just the basic events for the server :
@@ -925,6 +1027,20 @@ void Server_CommonEvent(uint16_t event)
 				Auto_Reset();
 			});
 	}
+
+	// get MAC address
+	// Server side :
+	// xmlHttp.open("GET","/getMACAddress",true);
+	// xmlHttp.send(null);
+	if ((event & Ev_GetMACAddress) == Ev_GetMACAddress)
+		server.on("/getMACAddress", HTTP_GET, handleGetMACAddress);
+
+	// get ESP MAC address
+	// Server side :
+	// xmlHttp.open("GET","/getESPMACAddress",true);
+	// xmlHttp.send(null);
+	if ((event & Ev_GetESPMACAddress) == Ev_GetESPMACAddress)
+		server.on("/getESPMACAddress", HTTP_GET, handleGetESPMACAddress);
 }
 /**
  * Check if path=SSID filename
@@ -1301,16 +1417,26 @@ void handleUploadFile(CB_SERVER_PARAM)
 				{
 					print_debug("Reload /");
 					delay(500);  // Small delay before reload page
+#ifdef ESP8266
+					server.sendHeader("Location", "/");      // Redirect the client to the main page
+					server.send(303);
+#else
 // I don't know why this doesn't work for version > 3.0.3
 #if defined(ESP_IDF_VERSION) && (ESP_IDF_VERSION <= ESP_IDF_VERSION_VAL(5, 1, 4))
 					server.sendHeader("Location", "/");      // Redirect the client to the main page
 					server.send(303);
 #endif
+#endif
 					ReloadPage = false;
 				}
+#ifdef ESP8266
+				else
+					server.send(204, "text/plain", "");
+#else
 #if defined(ESP_IDF_VERSION) && (ESP_IDF_VERSION <= ESP_IDF_VERSION_VAL(5, 1, 4))
 				else
 					server.send(204, "text/plain", "");
+#endif
 #endif
 			}
 			else
@@ -1542,6 +1668,26 @@ void handleSetDHCPIP(CB_SERVER_PARAM)
 
 	if (DefaultAP)
 		Auto_Reset();
+}
+
+/**
+ * Handle Get MAC Address
+ */
+void handleGetMACAddress(CB_SERVER_PARAM)
+{
+	pserver->send(200, "text/plain", GetMACaddress());
+}
+
+/**
+ * Handle Get MAC Address
+ */
+void handleGetESPMACAddress(CB_SERVER_PARAM)
+{
+	String mac;
+	if (getESPMacAddress(mac))
+	  pserver->send(200, "text/plain", mac);
+	else
+		pserver->send(200, "text/plain", F("Fail to get ESP MAC address"));
 }
 
 /**

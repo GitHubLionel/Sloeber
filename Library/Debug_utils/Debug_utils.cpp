@@ -80,17 +80,22 @@ String verbose_print_reset_reason(esp_reset_reason_t reason)
 {
   switch (reason)
   {
-    case ESP_RST_UNKNOWN  : return(" Reset reason can not be determined");
-    case ESP_RST_POWERON  : return("Reset due to power-on event");
-    case ESP_RST_EXT  : return("Reset by external pin (not applicable for ESP32)");
-    case ESP_RST_SW  : return("Software reset via esp_restart");
-    case ESP_RST_PANIC  : return("Software reset due to exception/panic");
-    case ESP_RST_INT_WDT  : return("Reset (software or hardware) due to interrupt watchdog");
-    case ESP_RST_TASK_WDT  : return("Reset due to task watchdog");
-    case ESP_RST_WDT  : return("Reset due to other watchdogs");
-    case ESP_RST_DEEPSLEEP : return("Reset after exiting deep sleep mode");
-    case ESP_RST_BROWNOUT : return("Brownout reset (software or hardware)");
-    case ESP_RST_SDIO : return("Reset over SDIO");
+    case ESP_RST_UNKNOWN     : return ("Reset reason can not be determined");
+    case ESP_RST_POWERON     : return ("Reset due to power-on event");
+    case ESP_RST_EXT         : return ("Reset by external pin (not applicable for ESP32)");
+    case ESP_RST_SW          : return ("Software reset via esp_restart");
+    case ESP_RST_PANIC       : return ("Software reset due to exception/panic");
+    case ESP_RST_INT_WDT     : return ("Reset (software or hardware) due to interrupt watchdog");
+    case ESP_RST_TASK_WDT    : return ("Reset due to task watchdog");
+    case ESP_RST_WDT         : return ("Reset due to other watchdogs");
+    case ESP_RST_DEEPSLEEP   : return ("Reset after exiting deep sleep mode");
+    case ESP_RST_BROWNOUT    : return ("Brownout reset (software or hardware)");
+    case ESP_RST_SDIO        : return ("Reset over SDIO");
+    case ESP_RST_USB         : return ("Reset by USB peripheral");
+    case ESP_RST_JTAG        : return ("Reset by JTAG");
+    case ESP_RST_EFUSE       : return ("Reset due to efuse error");
+    case ESP_RST_PWR_GLITCH  : return ("Reset due to power glitch detected");
+    case ESP_RST_CPU_LOCKUP  : return ("Reset due to CPU lock up (double exception)");
     default : return("NO_MEAN");
   }
 }
@@ -492,14 +497,20 @@ void __attribute__((weak)) Auto_Reset(void)
 /**
  * should be redefined elsewhere
  */
-String __attribute__((weak)) GetIPaddress(void)
+const String __attribute__((weak)) GetIPaddress(void)
 {
 	return "";
+}
+
+bool __attribute__((weak)) getESPMacAddress(String &mac)
+{
+	return false;
 }
 
 /**
  * Check the UART UART_Message_Buffer to get basic message :
  * - GET_IP: Send current IP
+ * - GET_MAC: Send MAC address
  * - GET_TIME: Send Time
  * - RESET_ESP: Reset ESP
  * then send back the responce to UART
@@ -515,45 +526,51 @@ bool BasicAnalyseMessage(void)
 		return true;
 	}
 	else
-		if (strcmp((char*) UART_Message_Buffer, "GET_TIME") == 0)
+		if (strcmp((char*) UART_Message_Buffer, "GET_MAC") == 0)
 		{
-#ifdef USE_RTCLocal
-			printf_message_to_UART("TIME=" + String(RTC_Local.getFormatedDateTime(datetime)));
-#endif
+			String mac;
+			if (getESPMacAddress(mac))
+			  printf_message_to_UART(mac.c_str());
 			return true;
 		}
 		else
-			if (strcmp((char*) UART_Message_Buffer, "GET_DATE=") == 0)
+			if (strcmp((char*) UART_Message_Buffer, "GET_TIME") == 0)
 			{
 #ifdef USE_RTCLocal
-				printf_message_to_UART(
-						String(RTC_Local.getDateTime(datetime, false, '#')) + "#END_DATE\r\n", false);
+				printf_message_to_UART("TIME=" + String(RTC_Local.getFormatedDateTime(datetime)));
 #endif
 				return true;
 			}
 			else
-				if ((date = strstr((char*) UART_Message_Buffer, "DATE=")) != NULL)
+				if (strcmp((char*) UART_Message_Buffer, "GET_DATE=") == 0)
 				{
 #ifdef USE_RTCLocal
-					// Format DD/MM/YY#hh:mm:ss
-					date += 5;
-					strncpy(datetime, date, 17);
-					datetime[18] = 0;
-					RTC_Local.setDateTime(datetime, false, false);
-					// Sauvegarde de l'heure
-					RTC_Local.saveDateTime();
-					// Renvoie la nouvelle heure
-					printf_message_to_UART(
-							String(RTC_Local.getDateTime(datetime, false, '#')) + "#END_DATE\r\n", false);
+					printf_message_to_UART(String(RTC_Local.getDateTime(datetime, false, '#')) + "#END_DATE\r\n", false);
 #endif
 					return true;
 				}
 				else
-					if (strcmp((char*) UART_Message_Buffer, "RESET_ESP") == 0)
+					if ((date = strstr((char*) UART_Message_Buffer, "DATE=")) != NULL)
 					{
-						Auto_Reset();
+#ifdef USE_RTCLocal
+						// Format DD/MM/YY#hh:mm:ss
+						date += 5;
+						strncpy(datetime, date, 17);
+						datetime[18] = 0;
+						RTC_Local.setDateTime(datetime, false, false);
+						// Sauvegarde de l'heure
+						RTC_Local.saveDateTime();
+						// Renvoie la nouvelle heure
+						printf_message_to_UART(String(RTC_Local.getDateTime(datetime, false, '#')) + "#END_DATE\r\n", false);
+#endif
 						return true;
 					}
+					else
+						if (strcmp((char*) UART_Message_Buffer, "RESET_ESP") == 0)
+						{
+							Auto_Reset();
+							return true;
+						}
 	return false;
 }
 
