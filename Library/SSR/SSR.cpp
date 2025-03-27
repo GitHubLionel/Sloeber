@@ -76,8 +76,9 @@ volatile bool Top_CS_ZC_Mux = false;   // Top ZC
 #define P_MIN      0.0
 #define P_MAX    100.0
 
-// La puissance de la charge divisée par sa tension nominale
+// La puissance de la charge
 float Dump_Power = 0.0;
+// La puissance de la charge divisée par sa tension nominale
 float Dump_Power_Relatif = 0.0;
 
 // Le surplus cible du SSR pour le PID
@@ -92,6 +93,9 @@ volatile uint32_t SSR_COUNT = DELAY_MAX;
 
 // Le pourcentage d'utilisation du SSR
 volatile float P_100 = 0.0;
+
+// On a forcé le 100% si le surplus est supérieur à la charge
+bool Forced100 = false;
 
 // Timer params
 volatile bool Tim_Interrupt_Enabled = false;
@@ -802,12 +806,35 @@ void SSR_Update_Surplus_Timer(const float Cirrus_voltage, const float Cirrus_pow
 	if (!Is_SSR_enabled)
 		return;
 
+	// Si le surplus est supérieur à la charge, on passe direct à 100%
+	// Si on est en mode 100%, on vérifie qu'on a toujours du surplus
+	float delta = Cirrus_power_signed + Dump_Power;
+	if ((delta < 0) || Forced100)
+	{
+		// On passe en mode 100%
+		if (!Forced100)
+		{
+			Forced100 = true;
+			Set_Percent(100.0);
+			return;
+		}
+		// On est en 100%, on vérifie qu'il y a toujours du surplus
+		// sinon, on poursuit la routine
+		if (Cirrus_power_signed < 0)
+			return;
+		else
+		{
+			Forced100 = false;
+		}
+	}
+
 //  const float Kp = 0.2, Ki = 0.0001, Kd = 0.0;  // Bon Kd 0 ou 1
 	const float Kp = 0.2, Ki = 0.0001;  // Kd = 0.0;
 	// Timer interval: need to be adjusted ?
 	const float Dt = 100.0;
 	// Desired value: here we want zero to have zero surplus
 	float SetPoint = SSR_Target;
+	// The power of the dump according the current voltage
 	float New_Dump_Power = Cirrus_voltage * Dump_Power_Relatif;
 
 	// calculate the difference between the desired value and the actual value
@@ -830,13 +857,23 @@ void SSR_Update_Surplus_Timer(const float Cirrus_voltage, const float Cirrus_pow
 		Over_Count++;
 	}
 	else
+	{
 		if (TotalOutput > New_Dump_Power)
 		{
 			TotalOutput = New_Dump_Power;
 			Over_Count++;
+			// On a toujours du surplus, donc on bloque à 100%
+			if (Over_Count > TRY_MAX)
+			{
+				Restart_PID();
+				Forced100 = true;
+				Set_Percent(100.0);
+				return;
+			}
 		}
 		else
 			Over_Count = 0;
+	}
 
 	// On est toujours en erreur, on réinitialise
 	if (Over_Count > TRY_MAX)
