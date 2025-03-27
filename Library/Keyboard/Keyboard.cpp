@@ -117,7 +117,7 @@ bool Keyboard_Initialize(uint8_t nbButton, ADC_Sampling sampling, const KeyBoard
  * nbButton : number of button, max 4
  * interval : intervals to be considered, max to min : nbButton + 1 values
  * Ne pas oublier de mettre la fonction Keyboard_UpdateTime() dans le loop principal
- * IMPORTANT: ADC must be initialized before
+ * IMPORTANT: ADC must be initialized before if we have the define KEYBOARD_WITH_ADC
  */
 bool Keyboard_Initialize(uint8_t nbButton, const uint16_t interval[],
 		const KeyBoard_Click_cb &kbClick)
