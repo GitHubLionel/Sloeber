@@ -182,6 +182,7 @@ void RTCLocal::StartTime()
 	this->lasttimeNow = this->timeNow;
 	this->timeLast = this->timeNow - this->seconds;
 	(IsLeapYear(this->year)) ? this->month_day[1] = 29 : this->month_day[1] = 28;
+	this->MinuteOfTheDay = this->hours * 60 + this->minutes;
 
 	// On initialise le compteur pour avoir des tops à la minute
 	this->seconds_count = this->seconds;
