@@ -13,16 +13,29 @@
 #include "display.h"				  	// Display functions
 #include "CIRRUS.h"
 #include "Get_Data.h"
+#ifdef USE_DS
 #include "DS18B20.h"
+#endif
+#ifdef USE_TI
 #include "TeleInfo.h"
+#endif
 #include "SSR.h"
+#ifdef USE_KEYBOARD
 #include "Keyboard.h"
+#endif
+#ifdef USE_RELAY
 #include "Relay.h"
+#endif
 #include "iniFiles.h"
+#ifdef USE_ADC
 #include "ADC_utils.h"
+#endif
 #include "Fast_Printf.h"
 #include "Emul_PV.h"
 #include "Affichage.h"
+#ifdef USE_ESPNOW
+#include "ESPNow_utils.h"
+#endif
 
 /**
  * Define de debug
@@ -39,28 +52,8 @@
 #include "CIRRUS_Calibration.h"
 #endif
 
-// Use DS18B20
-#define USE_DS
-
-// Use Teleinfo
-#define USE_TI
-
-// Active le SSR
-#define USE_ZC_SSR
-
-// Active le relais
-#define USE_RELAY
-
-// Active le clavier
-#define USE_KEYBOARD
-
-// Active ADC
-#define USE_ADC
-
 // Liste des taches
 #include "Tasks_utils.h"       // Task list functions
-
-#define USE_IDLE_TASK	false
 
 /**
  * Ce programme executé par l'ESPxx fait le lien entre l'interface web et le hardware
@@ -130,7 +123,7 @@ void OnAfterConnexion(void);
 	//  ServerConnexion myServer(ISSOFTAP, "SoftAP", "", IPAddress(192, 168, 4, 2), IPAddress(192, 168, 4, 1));
 		#else
 	// Définir en dur le SSID et le pwd du réseau
-	ServerConnexion myServer(ISSOFTAP, "TP-Link_6C90", "77718983", OnAfterConnexion);
+	ServerConnexion myServer(ISSOFTAP, "TP-Link_8584", "88222462", OnAfterConnexion);
 	#endif
 #else
 // Connexion UART, File or EEPROM
@@ -159,15 +152,19 @@ volatile uint8_t count_Extra_Display = 0;
 // Address 40 : DS18B20 air
 // Address 82 : DS18B20 eau
 
+#ifdef USE_DS
 uint8_t DS_Count = 0;
 DS18B20 DS(DS18B20_GPIO);
+#endif
 
 // ********************************************************************************
 // Définition TeleInfo
 // ********************************************************************************
 
+#ifdef USE_TI
 bool TI_OK = false;
 TeleInfo TI(TI_RX_GPIO, 5000);
+#endif
 
 // ********************************************************************************
 // Définition Cirrus
@@ -241,7 +238,9 @@ uint16_t interval[] = {1250, 950, 650, 250};
 #endif
 
 bool ADC_OK = false;
+#ifdef USE_ADC
 ADC_Action_Enum ADC_Action = adc_Sigma;
+#endif
 
 // ********************************************************************************
 // Définition Fichier ini
@@ -254,6 +253,41 @@ IniFiles init_routeur = IniFiles("Conf.ini");
 // ********************************************************************************
 
 EmulPV_Class emul_PV = EmulPV_Class();
+
+// ********************************************************************************
+// Définition brodcast ESP NOW
+// ********************************************************************************
+
+#ifdef USE_ESPNOW
+
+// ESP Now routeur data type
+typedef struct __attribute__((packed))
+{
+		float power;
+} ESPNow_Routeur_mess_type;
+
+// Create a broadcast peer object
+ESP_NOW_Master_Peer *routeur_master = nullptr;
+
+void ESPNOW_Task_code(void *parameter)
+{
+	// ESP Now routeur data
+	ESPNow_Routeur_mess_type ESPNow_Data;
+
+	BEGIN_TASK_CODE("ESPNOW_Task");
+	for (EVER)
+	{
+		ESPNow_Data.power = Current_Data.get_total_power();
+		if (!routeur_master->send_message((uint8_t *) &ESPNow_Data, sizeof(ESPNow_Data)))
+		{
+//			log_e("Send error");
+		}
+		END_TASK_CODE(false);
+	}
+}
+
+#define ESPNOW_DATA_TASK {condCreate, "ESPNOW_Task", 4096, 3, 1000, CoreAny, ESPNOW_Task_code}
+#endif
 
 // ********************************************************************************
 // Functions prototype
@@ -477,6 +511,19 @@ void setup()
 	// Si on a changé de jour, ce sera sans effet
 	reboot_energy();
 
+	// ESP NOW master
+#ifdef USE_ESPNOW
+	routeur_master = new ESP_NOW_Master_Peer(WiFi.channel(), WIFI_IF_STA, NULL);
+	if (routeur_master->begin())
+		print_debug(F("==> Connected to ESP Now <=="));
+	else
+	{
+		print_debug(F("==> Connexion to ESP Now failed <=="));
+		delete routeur_master;
+		routeur_master = nullptr;
+	}
+#endif
+
 	// Initialisation des taches
 //	--- Memory free stack ---
 //	Memory_Task: 1404 / 4096
@@ -503,7 +550,9 @@ void setup()
 	TaskList.AddTask(CIRRUS_DATA_TASK(Cirrus_OK)); // Cirrus get data Task
 	TaskList.AddTask(DISPLAY_DATA_TASK);
 #ifdef USE_KEYBOARD
+#ifdef USE_ADC
 	if (ADC_Action == adc_Sigma)
+#endif
 	  TaskList.AddTask(KEYBOARD_DATA_TASK(true));
 #endif
 	TaskList.AddTask(LOG_DATA_TASK);  // Save log Task
@@ -511,6 +560,11 @@ void setup()
 	TaskList.AddTask(RELAY_DATA_TASK(true));
 #endif
 	TaskList.AddTask(SSR_BOOST_TASK);  // Boost SSR Task
+#ifdef USE_ESPNOW
+	if (routeur_master)
+		TaskList.AddTask(ESPNOW_DATA_TASK);
+#endif
+
 	// Create all the tasks
 	TaskList.Create(USE_IDLE_TASK);
 	TaskList.InfoTask();
@@ -641,6 +695,7 @@ void handleInitialization(CB_SERVER_PARAM)
 	// Relay part
 	String alarm = "";
 	String start = "", end = "";
+#ifdef USE_RELAY
 	for (int i = 0; i < Relay.size(); i++)
 	{
 		(Relay.getState(i)) ? alarm += "ON," : alarm += "OFF,";
@@ -649,6 +704,9 @@ void handleInitialization(CB_SERVER_PARAM)
 		Relay.getAlarm(i, Alarm2, start, end);
 		alarm += start + "," + end + ",";
 	}
+#else
+	alarm = "OFF,,,,,OFF,,,,,OFF,,,,,OFF,,,,";
+#endif
 	message += alarm;
 
 	// Puissance onduleur max, ciel, température
@@ -708,7 +766,11 @@ void handleLastData(CB_SERVER_PARAM)
 	pbuffer = Fast_Printf(pbuffer, (int) SSR_Get_State(), 0, "SSR=", "#", Buffer_End, &len);
 
 	// Etat des relais
+#ifdef USE_RELAY
 	pbuffer = Fast_Pos_Buffer(buffer, Relay.getAllState().c_str(), Buffer_End, &len);
+#else
+	pbuffer = Fast_Pos_Buffer(buffer, "OFF,OFF,OFF,OFF", Buffer_End, &len);
+#endif
 
 	// On a de nouvelles données pour le graphe
 	if (graphe)
@@ -898,7 +960,7 @@ void handleOperation(CB_SERVER_PARAM)
 		emul_PV.Init_From_Array(dataPV);
 		emul_PV.Save_To_File(init_routeur);
 
-		pserver->send_P(200, PSTR("text/html"), "<meta http-equiv=\"refresh\" content=\"0;url=/\">");
+		pserver->send(200, "text/html", "<meta http-equiv=\"refresh\" content=\"0;url=/\">");
 		return;
 	}
 

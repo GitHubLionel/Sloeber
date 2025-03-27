@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef USE_CONFIG_LIB_FILE
+#include "config_lib.h"
+#endif
+
 #include <stdint.h>
 #include <stdbool.h>
 #include "CIRRUS.h"

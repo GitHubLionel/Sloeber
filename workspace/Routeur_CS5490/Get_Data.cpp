@@ -6,11 +6,19 @@
 #include "Server_utils.h"			// Some utils functions for the server (pour Lock_File)
 #include "RTCLocal.h"					// A pseudo RTC software library
 #include "Partition_utils.h"	// Some utils functions for LittleFS/SPIFFS/FatFS
+#ifdef USE_DS
 #include "DS18B20.h"
+#endif
 
 // Use DS18B20
+#ifdef USE_DS
 extern uint8_t DS_Count;
 extern DS18B20 DS;
+#endif
+
+#ifdef USE_ESPNOW
+extern float ESPNow_Power;
+#endif
 
 // data au format CSV
 const String CSV_Filename = "/data.csv";
@@ -59,7 +67,7 @@ void __attribute__((weak)) print_debug(String mess, bool ln = true)
 }
 
 // ********************************************************************************
-// Exemple d'acquisition de données
+// Acquisition des données
 // ********************************************************************************
 
 /**
@@ -103,7 +111,11 @@ void Get_Data(void)
 #ifdef USE_SSR
 	// On choisi le premier channel qui mesure la consommation et le surplus
 	if (Gestion_SSR_CallBack != NULL)
+#ifdef USE_ESPNOW
+		Gestion_SSR_CallBack(Current_Data.Cirrus_ch1.Voltage, ESPNow_Power);
+#else
 		Gestion_SSR_CallBack(Current_Data.Cirrus_ch1.Voltage, Current_Data.Cirrus_ch1.ActivePower);
+#endif
 #endif
 
 //	uint32_t err = CS5490.GetErrorCount();
@@ -187,6 +199,11 @@ uint8_t Update_IHM(const char *first_text, const char *last_text, bool display)
 
 	sprintf(buffer, "T:%.2f", Current_Data.Cirrus_Temp);
 	IHM_Print(line++, (char*) buffer);
+
+#ifdef USE_ESPNOW
+	sprintf(buffer, "PNow:%.2f", ESPNow_Power);
+	IHM_Print(line++, (char*) buffer);
+#endif
 
 	if (strlen(last_text) > 0)
 	{

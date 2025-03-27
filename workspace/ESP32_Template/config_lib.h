@@ -45,6 +45,14 @@
 // Necessary for HTTPUPDATER with LITTLEFS in async server
 // MUST BE PUT IN DEFINE OF THE PROJECT
 //#define ESPASYNCHTTPUPDATESERVER_LITTLEFS
+//#define ESPASYNCHTTPUPDATESERVER_PRETTY // To have a better nice IHM
+
+// If USE_HTTPUPDATER is defined. Need ElegantOTA library
+//#define USE_ELEGANT_OTA
+// Don't forget to call ElegantOTAloop() in main loop
+// Necessary for ElegantOTA in async server
+// MUST BE PUT IN DEFINE OF THE PROJECT
+//#define ELEGANTOTA_USE_ASYNC_WEBSERVER=1
 
 /**********************************************************
  * MQTT define : MQTT_utils library
@@ -172,3 +180,8 @@
 //#define CIRRUS_TASK_DELAY	100    // The delay for the Cirrus task. Must be adapted according the time required of the GetData()
 //#define CIRRUS_USE_TASK      // A basic task to check Cirrus data every CIRRUS_TASK_DELAY ms
 //#define RELAY_USE_TASK       // A basic task to update Relay every minute
+
+/**********************************************************
+ * User define
+ * Add your define here
+ **********************************************************/

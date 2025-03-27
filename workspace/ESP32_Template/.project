@@ -39,7 +39,7 @@
 		<link>
 			<name>core/variant</name>
 			<type>2</type>
-			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp32/hardware/esp32/3.0.3/variants/uPesy_esp32_wroom_devkit</locationURI>
+			<locationURI>ECLIPSE_HOME/arduinoPlugin/packages/esp32/hardware/esp32/3.0.3/variants/esp32</locationURI>
 		</link>
 		<link>
 			<name>libraries/EEPROM</name>

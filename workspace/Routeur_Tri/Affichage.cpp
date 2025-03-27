@@ -7,21 +7,44 @@
 #include "Debug_utils.h"
 #include "display.h"
 #include "SSR.h"
-#include "Relay.h"
 #include "Get_Data.h"
+#ifdef USE_KEYBOARD
 #include "Keyboard.h"
+#endif
 #include "Tasks_utils.h"
 #include "Emul_PV.h"
-#include "misc.h"
+#ifdef USE_RELAY
+#include "Relay.h"
+#endif
+#ifdef USE_ADC
 #include "ADC_Utils.h"
+#endif
+
+// Pre ++ operator for any enum type but is not circular
+//https://stackoverflow.com/questions/36793526/how-to-create-a-template-operator-for-enums
+//template <class E, class = std::enable_if_t<std::is_enum<E>{}>>
+//E &operator ++ (E &e) {
+//    return e = static_cast<E>(
+//        static_cast<std::underlying_type_t<E>>(e) + 1
+//    );
+//}
 
 typedef enum
 {
 	menuData,
+#ifdef USE_RELAY
 	menuRelais,
+#endif
 	menuSSR,
 	menuWifi
 } Menu_enum;
+
+Menu_enum operator ++(Menu_enum &id, int)
+{
+	Menu_enum currentID = id;
+	id = static_cast<Menu_enum>((static_cast<int>(id) + 1) % (menuWifi + 1));
+	return (currentID);
+}
 
 typedef enum
 {
@@ -49,12 +72,16 @@ extern Data_Struct Current_Data;
 extern EmulPV_Class emul_PV;
 
 // Relais
+#ifdef USE_RELAY
 extern Relay_Class Relay;
 extern void UpdateLedRelayFacade(void);
+#endif
 
 // Use ADC
+#ifdef USE_ADC
 extern bool ADC_OK;
 extern ADC_Action_Enum ADC_Action; // Show PageTest
+#endif
 
 // Affichage
 #define COLUMN	5
@@ -81,8 +108,10 @@ void Show_Page2(void);
 void Show_Page3(void);
 void Show_Page4(void);
 void Show_Page5(void);
+#ifdef USE_RELAY
 void Show_Page_Relay(uint8_t cursor);
 void Show_Page_Relay_Action(uint8_t cursor);
+#endif
 void Show_Page_SSR(void);
 void Show_Page_SSR_Action(void);
 void Show_Page_Wifi(void);
@@ -92,6 +121,7 @@ void Show_Page_Wifi_Action(void);
 // Gestion IHM
 // *****************************************************************************
 
+#ifdef USE_KEYBOARD
 /**
  * Gestion des actions des boutons
  * - Bouton du haut : Action type Menu, sélection d'un menu avec ses pages
@@ -122,11 +152,13 @@ void UserKeyboardAction(Btn_Action Btn_Clicked, uint32_t count)
 			{
 				if (Menu == menuData)
 					current_page++;
+#ifdef USE_RELAY
 				else
 					if (Menu == menuRelais)
 					{
 						Cursor_Pos = (Cursor_Pos + 1) % Relay.size();
 					}
+#endif
 			}
 
 			break;
@@ -152,6 +184,7 @@ void UserKeyboardAction(Btn_Action Btn_Clicked, uint32_t count)
 						Action_Wifi = 0;
 						break;
 
+#ifdef USE_RELAY
 					case menuRelais:
 						if (Action_Needed)
 						{
@@ -165,6 +198,7 @@ void UserKeyboardAction(Btn_Action Btn_Clicked, uint32_t count)
 							Count_Action_Needed = DELAY_ACTION;
 						}
 						break;
+#endif
 
 					case menuWifi:
 						if (Action_Wifi == 1)
@@ -199,20 +233,19 @@ void UserKeyboardAction(Btn_Action Btn_Clicked, uint32_t count)
 				switch (Menu)
 				{
 					case menuData:
-						Menu = menuRelais;
 						Cursor_Pos = 0;
 						break;
+#ifdef USE_RELAY
 					case menuRelais:
-						Menu = menuSSR;
 						break;
+#endif
 					case menuSSR:
-						Menu = menuWifi;
 						break;
 					case menuWifi:
-						Menu = menuData;
 						current_page = Page1;
 						break;
 				}
+				Menu++;
 			}
 			break;
 		}
@@ -221,6 +254,7 @@ void UserKeyboardAction(Btn_Action Btn_Clicked, uint32_t count)
 			;
 	}
 }
+#endif
 
 /**
  * Gestion de l'affichage des pages oled en fonction des boutons pressés
@@ -246,9 +280,11 @@ void Display_Task_code(void *parameter)
 			case menuData:
 			{
 				Fast_Set_Decimal_Separator(',');
+#ifdef USE_ADC
 				if ((ADC_Action == adc_Raw) || (ADC_Action == adc_Zero))
 					Show_Page_Test();
 				else
+#endif
 					switch (current_page)
 					{
 						case Page1:
@@ -273,6 +309,7 @@ void Display_Task_code(void *parameter)
 				Fast_Set_Decimal_Separator('.');
 				break;
 			}
+#ifdef USE_RELAY
 			case menuRelais:
 			{
 				if (Action_Needed)
@@ -286,6 +323,7 @@ void Display_Task_code(void *parameter)
 					Show_Page_Relay(Cursor_Pos);
 				break;
 			}
+#endif
 			case menuSSR:
 			{
 				if (Action_Needed)
@@ -334,9 +372,9 @@ void Display_Task_code(void *parameter)
 // Une page pour faire des tests
 void Show_Page_Test(void)
 {
+#ifdef USE_ADC
 	uint8_t line = 0;
 	String Temp_str = "";
-
 	if (ADC_OK)
 	{
 		if (ADC_Action == adc_Raw)
@@ -360,6 +398,7 @@ void Show_Page_Test(void)
 				print_debug(zero);
 			}
 	}
+#endif
 }
 
 void Show_Page1(void)
@@ -500,6 +539,7 @@ void Show_Page5(void)
 	IHM_Print(line++, 10, set, false);
 }
 
+#ifdef USE_RELAY
 void Show_Page_Relay(uint8_t cursor)
 {
 	char R_ON[] = "Rx ON";
@@ -536,6 +576,7 @@ void Show_Page_Relay_Action(uint8_t cursor)
 
 	IHM_Print(5, 1, "OK pour confirmer", false);
 }
+#endif
 
 void Show_Page_SSR(void)
 {
@@ -567,12 +608,15 @@ void Show_Page_SSR_Action(void)
 
 void Show_Page_Wifi(void)
 {
+	String mac;
 	IHM_Print(1, 7, "Wifi", false);
 
 	IHM_Print(3, 1, myServer.IPaddress().c_str(), false);
 	IHM_Print(4, 1, myServer.getCurrentRSSI().c_str(), false);
+	if (getESPMacAddress(mac))
+	  IHM_Print(5, 1, mac.c_str(), false);
 
-	IHM_Print(6, 1, "Reset Wifi ?", false);
+	IHM_Print(7, 1, "Reset Wifi ?", false);
 }
 
 void Show_Page_Wifi_Action(void)

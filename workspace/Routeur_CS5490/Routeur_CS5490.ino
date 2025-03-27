@@ -10,13 +10,25 @@
 #include "Server_utils.h"			  // Some utils functions for the server
 #include "RTCLocal.h"					  // A pseudo RTC software library
 #include "Partition_utils.h"		// Some utils functions for LittleFS/SPIFFS/FatFS
-#include "display.h"					  // Display functions
+#include "display.h"				  	// Display functions
 #include "CIRRUS.h"
 #include "Get_Data.h"
+#ifdef USE_DS
 #include "DS18B20.h"
+#endif
+#ifdef USE_TI
+#include "TeleInfo.h"
+#endif
 #include "SSR.h"
+#ifdef USE_KEYBOARD
 #include "Keyboard.h"
+#endif
+#ifdef USE_RELAY
 #include "Relay.h"
+#endif
+#ifdef USE_ESPNOW
+#include "espnow.h"
+#endif
 
 /**
  * Define de debug
@@ -27,24 +39,6 @@
 //#define LOG_DEBUG
 //#define USE_SAVE_CRASH   // Permet de sauvegarder les données du crash
 #include "Debug_utils.h"		// Some utils functions for debug
-
-// Use DS18B20
-#define USE_DS
-
-// Use Teleinfo
-//#define USE_TI
-#ifdef USE_TI
-#include "TeleInfo.h"
-#endif
-
-// Active le SSR
-#define USE_ZC_SSR
-
-// Active le relais
-#define USE_RELAY
-
-// Active le clavier
-#define USE_KEYBOARD
 
 /**
  * Ce programme executé par l'ESPxx fait le lien entre l'interface web et le hardware
@@ -91,6 +85,7 @@
  * ATTENTION : Si on défini en même temps SERIAL_DEBUG, on peut avoir des comportements indéfinis.
  */
 //#define USE_UART
+
 /*********************************************************************************
  *                    *****  DEFINE NETWORK  *****
  *********************************************************************************
@@ -143,8 +138,8 @@ uint8_t count_Extra_Display = 0;
 // Address 82 : DS18B20 eau
 
 #ifdef USE_DS
-DS18B20 DS(DS18B20_GPIO);  // 2
 uint8_t DS_Count = 0;
+DS18B20 DS(DS18B20_GPIO);
 #endif
 
 // ********************************************************************************
@@ -152,8 +147,8 @@ uint8_t DS_Count = 0;
 // ********************************************************************************
 
 #ifdef USE_TI
-TeleInfo TI(TI_RX_GPIO, 5000);
 bool TI_OK = false;
+TeleInfo TI(TI_RX_GPIO, 5000);
 #endif
 
 // ********************************************************************************
@@ -204,6 +199,54 @@ Btn_Action Button;
 bool Toggle_Keyboard = true;
 String Keyboard_Txt = "";
 uint32_t Btn_K1_count = 0;
+#endif
+
+// ********************************************************************************
+// Définition brodcast ESP NOW
+// ********************************************************************************
+
+#ifdef USE_ESPNOW
+
+// ESP Now routeur data type
+typedef struct __attribute__((packed))
+{
+		float power;
+} ESPNow_Routeur_mess_type;
+
+// ESP Now routeur data
+float ESPNow_Power = 0;
+
+void OnReceiveFromMaster(uint8_t *mac, uint8_t *data, uint8_t len)
+{
+	//	ESPNow_Routeur_mess_type ESPNow_Data;
+	//	memcpy(&ESPNow_Data, data, sizeof(ESPNow_Data));
+	ESPNow_Routeur_mess_type *mess = (ESPNow_Routeur_mess_type*) data;
+	ESPNow_Power = mess->power;
+	(void) mac;
+	(void) len;
+}
+
+bool init_ESPNow()
+{
+	// Init ESP-NOW
+	if (esp_now_init() != 0)
+		return false;
+
+	// Set ESP-NOW Role
+	esp_now_set_self_role(ESP_NOW_ROLE_COMBO);
+
+//  // Once ESPNow is successfully Init, we will register for Send CB to
+//  // get the status of Transmitted packet
+//  esp_now_register_send_cb(OnDataSent);
+//
+//  // Register peer
+//  esp_now_add_peer(broadcastAddress, ESP_NOW_ROLE_COMBO, WiFi.channel(), NULL, 0);
+
+	// Register for a callback function that will be called when data is received
+	esp_now_register_recv_cb(OnReceiveFromMaster);
+	return true;
+}
+
 #endif
 
 // ********************************************************************************
@@ -351,6 +394,18 @@ void setup()
 
 	print_debug("*** Setup time : " + String(millis() - start_time) + " ms ***\r\n");
 	delay(2000);
+
+	// ESP NOW slave
+#ifdef USE_ESPNOW
+	if (init_ESPNow())
+	{
+		print_debug(F("==> Connected to ESP Now <=="));
+	}
+	else
+	{
+		print_debug(F("==> Connexion to ESP Now failed <=="));
+	}
+#endif
 }
 
 // The loop function is called in an endless loop
@@ -405,12 +460,14 @@ void loop()
 				if (Button == Btn_K2) // Bouton du milieu
 				{
 					IHM_DisplayOn();
+#ifdef USE_RELAY
 					Relay.setState(0, !Relay.getState(0));
 					if (Relay.getState(0))
 						Extra_str = "Relais ON";
 					else
 						Extra_str = "Relais OFF";
 					count_Extra_Display = EXTRA_TIMEOUT;
+#endif
 				}
 
 				if (Button == Btn_K1) // Bouton du bas
@@ -564,9 +621,11 @@ void handleInitialization(void)
 		message += "ON#";
 	else
 		message += "OFF#";
+#ifdef USE_RELAY
 	if (Relay.getState(0))
 		message += "ON#";
 	else
+#endif
 		message += "OFF#";
 #ifdef USE_KEYBOARD
 	if (Toggle_Keyboard)

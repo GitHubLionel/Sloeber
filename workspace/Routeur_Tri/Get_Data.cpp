@@ -6,9 +6,15 @@
 #include "Server_utils.h"			// Some utils functions for the server (pour Lock_File)
 #include "RTCLocal.h"					// A pseudo RTC software library
 #include "Partition_utils.h"	// Some utils functions for LittleFS/SPIFFS/FatFS
+#ifdef USE_DS
 #include "DS18B20.h"
+#endif
+#ifdef USE_TI
 #include "TeleInfo.h"
+#endif
+#ifdef USE_ADC
 #include "ADC_Utils.h"
+#endif
 #include "Fast_Printf.h"
 #include "Emul_PV.h"
 
@@ -17,12 +23,16 @@
 #endif
 
 // Use DS18B20
+#ifdef USE_DS
 extern uint8_t DS_Count;
 extern DS18B20 DS;
+#endif
 
 // Use TI
+#ifdef USE_TI
 extern bool TI_OK;
 extern TeleInfo TI;
+#endif
 
 // Use ADC
 extern bool ADC_OK;
@@ -44,6 +54,7 @@ Data_Struct Current_Data; //{0,{0}};
 // Les données actualisées pour le SSR
 #ifdef USE_SSR
 extern Gestion_SSR_TypeDef Gestion_SSR_CallBack;
+// For SSR_Compute_Dump_power()
 bool CIRRUS_get_rms_data(float *uRMS, float *pRMS);
 #endif
 
@@ -243,6 +254,7 @@ void Get_Data(void)
 #endif
 
 	// Talema
+#ifdef USE_ADC
 	if (ADC_OK)
 	{
 		ref_time = millis();
@@ -251,6 +263,7 @@ void Get_Data(void)
 		Current_Data.Talema_Energy += Current_Data.Talema_Power * ((ref_time - Talema_time) / 1000.0) / 3600.0;
 		Talema_time = ref_time;
 	}
+#endif
 
 	// Get extra data
 	GetExtraData();
@@ -299,17 +312,21 @@ void GetExtraData(void)
 {
 	if (ExtraDataCount > 0)
 	{
+#ifdef USE_DS
 		if (DS_Count > 0)
 		{
 			Current_Data.DS18B20_Int = DS.get_Temperature(0);
 			Current_Data.DS18B20_Ext = DS.get_Temperature(1);
 		}
+#endif
 		Current_Data.Prod_Th = emul_PV.Compute_Power_TH(RTC_Local.getSecondOfTheDay(), false);
+#ifdef USE_TI
 		if (TI_OK)
 		{
 			Current_Data.TI_Energy = (TI.getIndexWh() - Current_Data.TI_Counter);
 			Current_Data.TI_Power = TI.getPowerVA();
 		}
+#endif
 	}
 }
 
@@ -585,8 +602,10 @@ void onDaychange(uint8_t year, uint8_t month, uint8_t day)
 	Current_Data.Talema_Energy = 0.0;
 	CS5480.RestartEnergy();
 	CS5484.RestartEnergy();
+#ifdef USE_TI
 	if (TI_OK)
 		Current_Data.TI_Counter = TI.getIndexWh();
+#endif
 
 	// On archive le fichier data du jour en lui donnant le nom du jour
 	if (Data_Partition->exists(CSV_Filename))
