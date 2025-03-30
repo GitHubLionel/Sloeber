@@ -10,6 +10,8 @@
 //#define USE_NTP_SERVER=1  // 2 pour l'heure d'été
 #ifdef USE_NTP_SERVER
 #warning "Using NTP SERVER, you must include NTPClient library"
+// Set to 1 (winter) or 2 for summer or USE_NTP_SERVER value is used
+extern int8_t GLOBAL_NTP_SUMMER_HOUR;
 #endif
 
 // Nombre maximum de top qu'on peut définir

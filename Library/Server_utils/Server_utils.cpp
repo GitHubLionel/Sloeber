@@ -470,15 +470,19 @@ bool ServerConnexion::Connexion(bool toUART)
 
 	// Get Epoch time via NTP
 #if defined(USE_NTP_SERVER) && defined(USE_RTCLocal)
+	int8_t gmt = GLOBAL_NTP_SUMMER_HOUR;
+	if (gmt == -1)
+		gmt = USE_NTP_SERVER;
+
 	if (!_IsSoftAP)
 	{
 		print_debug(F("Get EpochTime"));
-		if (RTC_Local.setEpochTime(USE_NTP_SERVER))
+		if (RTC_Local.setEpochTime(gmt))
 			print_debug(F("Get EpochTime ended"));
 		else
 		{
 			print_debug(F("Get EpochTime, second try"));
-			if (RTC_Local.setEpochTime(USE_NTP_SERVER))
+			if (RTC_Local.setEpochTime(gmt))
 				print_debug(F("Get EpochTime ended"));
 			else
 				print_debug(F("Get EpochTime failed"));

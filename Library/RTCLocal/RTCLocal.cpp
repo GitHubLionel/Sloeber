@@ -6,6 +6,8 @@
 #include <WiFiUdp.h>
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org");
+// Set to 1 (winter) or 2 for summer or USE_NTP_SERVER value is used
+int8_t GLOBAL_NTP_SUMMER_HOUR = -1;
 #endif
 
 #ifdef RTC_USE_TASK

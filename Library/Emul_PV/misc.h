@@ -7,6 +7,8 @@
 
 typedef double TDateTime;
 
+extern uint8_t GLOBAL_SUMMER_HOUR;
+
 // Math functions
 double DegToRad(const double Degrees);
 double RadToDeg(const double Radians);

@@ -5,9 +5,9 @@
 
 /**
  * Variable globale indiquant si on est en heure d'été ou d'hiver
- * Hiver = 0;  Eté = 1
+ * Hiver = 1;  Eté = 2
  */
-volatile uint8_t GLOBAL_SUMMER_HOUR = 0;
+uint8_t GLOBAL_SUMMER_HOUR = 1;
 
 double DegToRad(const double Degrees) // { Radians := Degrees * PI / 180 }
 {
@@ -332,7 +332,7 @@ void SunHourToLocalTime(TDateTime *sunHour)
 {
   TDateTime dt = *sunHour;
 
-  *sunHour = IncHour(dt, 1+GLOBAL_SUMMER_HOUR);
+  *sunHour = IncHour(dt, GLOBAL_SUMMER_HOUR);
 }
 
 /**
@@ -343,7 +343,7 @@ void LocalTimeToSunHour(TDateTime *localHour)
 {
   TDateTime dt = *localHour;
 
-  *localHour = IncHour(dt, -(1+GLOBAL_SUMMER_HOUR));
+  *localHour = IncHour(dt, -(GLOBAL_SUMMER_HOUR));
 }
 
 void DecodeDMS(const double val, int16_t *Deg, uint16_t *Min, uint16_t *Sec)
