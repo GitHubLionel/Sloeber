@@ -58,6 +58,9 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/Emul_PV}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/libraries/WebServer/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/libraries/HTTPUpdateServer/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/libraries/ESPAsyncHTTPUpdateServer/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/libraries/Async_TCP/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/libraries/ESP_Async_WebServer/src}&quot;"/>
 								</option>
 								<inputType id="io.sloeber.compiler.cpp.sketch.input.314382407" name="CPP source files" superClass="io.sloeber.compiler.cpp.sketch.input"/>
 							</tool>
@@ -99,6 +102,9 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/Emul_PV}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/libraries/WebServer/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/libraries/HTTPUpdateServer/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/libraries/ESPAsyncHTTPUpdateServer/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/libraries/Async_TCP/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/libraries/ESP_Async_WebServer/src}&quot;"/>
 								</option>
 								<inputType id="io.sloeber.compiler.c.sketch.input.406145932" name="C Source Files" superClass="io.sloeber.compiler.c.sketch.input"/>
 							</tool>
@@ -140,6 +146,9 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/Emul_PV}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/libraries/WebServer/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/libraries/HTTPUpdateServer/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/libraries/ESPAsyncHTTPUpdateServer/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/libraries/Async_TCP/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/libraries/ESP_Async_WebServer/src}&quot;"/>
 								</option>
 								<inputType id="io.sloeber.compiler.S.sketch.input.1177578633" name="Assembly source files" superClass="io.sloeber.compiler.S.sketch.input"/>
 							</tool>
@@ -182,7 +191,7 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="libraries/ESPAsyncTCP/ssl|user_lib/CIRRUS/Simple_Get_Data.cpp|adc_test.cpp|adc_one.cpp|tasks - Copie|libraries/ESP32TimerInterrupt/utils|libraries/ESP32TimerInterrupt/platformio|libraries/FreeRTOS/doc|libraries/TimerInterrupt_Generic/src_h|libraries/TimerInterrupt_Generic/src_cpp|libraries/TimerInterrupt_Generic/platformio|libraries/TimerInterrupt_Generic/Packages_Patches|libraries/TimerInterrupt_Generic/LibraryPatches|libraries/TimerInterrupt/platformio|libraries/OneWire/util|libraries/OneWire/docs|libraries/LittleFS/lib|libraries/?*/**/?xamples/**|libraries/?*/**/?xtras/**|libraries/?*/**/test*/**|libraries/?*/**/third-party/**|libraries/**/._*|libraries/?*/utility/*/*" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="libraries/ESP_Async_WebServer/pioarduino_examples|libraries/ESP_Async_WebServer/idf_component_examples|libraries/ESP_Async_WebServer/docs|libraries/ESP_Async_WebServer/data|libraries/Async_TCP/idf_component_examples|libraries/ESPAsyncTCP/ssl|user_lib/CIRRUS/Simple_Get_Data.cpp|adc_test.cpp|adc_one.cpp|tasks - Copie|libraries/ESP32TimerInterrupt/utils|libraries/ESP32TimerInterrupt/platformio|libraries/FreeRTOS/doc|libraries/TimerInterrupt_Generic/src_h|libraries/TimerInterrupt_Generic/src_cpp|libraries/TimerInterrupt_Generic/platformio|libraries/TimerInterrupt_Generic/Packages_Patches|libraries/TimerInterrupt_Generic/LibraryPatches|libraries/TimerInterrupt/platformio|libraries/OneWire/util|libraries/OneWire/docs|libraries/LittleFS/lib|libraries/?*/**/?xamples/**|libraries/?*/**/?xtras/**|libraries/?*/**/test*/**|libraries/?*/**/third-party/**|libraries/**/._*|libraries/?*/utility/*/*" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>

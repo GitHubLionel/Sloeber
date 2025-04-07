@@ -218,6 +218,8 @@ extern volatile SemaphoreHandle_t topZC_Semaphore;
 extern void onCirrusZC(void);
 #endif
 
+SSR_Action_typedef lastAction;
+
 // ********************************************************************************
 // Définition Relais, Clavier, ADC
 // ********************************************************************************
@@ -305,6 +307,15 @@ void onNewDaychange(uint8_t year, uint8_t month, uint8_t day)
 {
 	// Mise à jour des données pour le nouveau jour
 	emul_PV.setDateTime();
+}
+
+// Save the dump power in the ini file
+void onDumpComputed(float power)
+{
+	TaskList.ResumeTask("CIRRUS_Task");
+	init_routeur.WriteFloat("SSR", "P_CE", power);
+	// Restaure la dernière action
+	SSR_Set_Action(lastAction, true);
 }
 
 // ********************************************************************************
@@ -439,8 +450,8 @@ void setup()
 
 //	SSR_Compute_Dump_power();
 
-	SSR_Action_typedef action = (SSR_Action_typedef) init_routeur.ReadInteger("SSR", "Action", 1); // Par défaut Percent, voir page web
-	SSR_Set_Action(action);
+	lastAction = (SSR_Action_typedef) init_routeur.ReadInteger("SSR", "Action", 1); // Par défaut Percent, voir page web
+	SSR_Set_Action(lastAction);
 
 	// NOTE : le SSR est éteint, on le démarre dans la page web
 	if (init_routeur.ReadBool("SSR", "StateOFF", true)) // Etat par défaut: OFF
@@ -485,6 +496,7 @@ void setup()
 #endif
 
 	// **** 9- Initialisation installation PV
+	emul_PV.setSummerTime(USE_NTP_SERVER == 2);
 	emul_PV.Init_From_IniData(init_routeur);
 	emul_PV.Set_DayParameters(acBleuProfond, 35, 0.75);
 
@@ -560,6 +572,7 @@ void setup()
 	TaskList.AddTask(RELAY_DATA_TASK(true));
 #endif
 	TaskList.AddTask(SSR_BOOST_TASK);  // Boost SSR Task
+	TaskList.AddTask(SSR_DUMP_TASK);  // Dump SSR Task
 #ifdef USE_ESPNOW
 	if (routeur_master)
 		TaskList.AddTask(ESPNOW_DATA_TASK);
@@ -574,6 +587,7 @@ void setup()
 		ADC_Begin(1891); // 1892
 	}
 #endif
+
 	// Actualise la date
 	emul_PV.setDateTime();
 }
@@ -899,11 +913,12 @@ void handleOperation(CB_SERVER_PARAM)
     // Test puissance CE
 	if (pserver->hasArg("CheckPower"))
 	{
+		// Sauvegarde de l'action en cours
+		lastAction = SSR_Get_Action();
+		// On arrête l'acquisition des données (et donc l'action SSR en cours)
 		TaskList.SuspendTask("CIRRUS_Task");
-		delay(200);
-		double power = SSR_Compute_Dump_power();
-		TaskList.ResumeTask("CIRRUS_Task");
-		init_routeur.WriteFloat("SSR", "P_CE", power);
+		delay(20);
+		TaskList.ResumeTask("SSR_DUMP_Task");
 	}
 
 	// Gestion dimmer en pourcentage
