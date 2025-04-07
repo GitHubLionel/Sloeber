@@ -65,7 +65,7 @@
  * RTC define : RTCLocal library
  * By default, global instance RTC_Local is created
  **********************************************************/
-#define USE_NTP_SERVER	1 // 1 or 2 for summer time
+#define USE_NTP_SERVER	2 // 1 or 2 for summer time
 //#define RTC_USE_CORRECTION
 
 /**********************************************************
@@ -159,6 +159,7 @@
 #define KEYBOARD_USE_TASK    // A basic task to check keyboard every 10 ms
 #define CIRRUS_TASK_DELAY	100    // The delay for the Cirrus task. Must be adapted according the time required of the GetData()
 #define CIRRUS_USE_TASK      // A basic task to check Cirrus data every CIRRUS_TASK_DELAY ms
+#define SSR_USE_TASK         // Task for boost and dump
 #define RELAY_USE_TASK       // A basic task to update Relay every minute
 
 /**********************************************************
