@@ -41,6 +41,19 @@ DS18B20::~DS18B20()
 	}
 }
 
+// function to print a device address
+void printAddress(DeviceAddress deviceAddress)
+{
+	char buf[50] = {0};
+	int j = 0;
+	print_debug("DS : ", false);
+  for (uint8_t i = 0; i < 8; i++)
+  {
+    j += snprintf(buf + j, 3, "%.2X", deviceAddress[i]);
+  }
+  print_debug(buf);
+}
+
 /**
  * Initialize all the DS18B20 sensors
  * Precision : 9 (lower) to 12 (higher) resolution
@@ -63,24 +76,24 @@ uint8_t DS18B20::Initialize(uint8_t precision)
 	sensors->begin();
 
 	// Device found ?
-	DS_Found = sensors->getDeviceCount();
+	uint8_t ds_count = sensors->getDeviceCount();
 	print_debug("DS found : ", false);
-	print_debug(DS_Found, true);
-	if (DS_Found > 0)
+	print_debug(ds_count, true);
+	if (ds_count > 0)
 	{
-		if (!sensors->getAddress(deviceAddress, 0))
-			DS_Found = 0;
-		else
+		uint8_t id = 0;
+		for (uint8_t i = 0; i < ds_count; i++)
 		{
-			sensors->setResolution(deviceAddress, precision);
-			for (int i = 0; i < DS_Found; i++)
+			if (sensors->getAddress(deviceAddress[id], i))
 			{
-				print_debug("DS : ", false);
-				print_debug(deviceAddress[i], true);
+				printAddress(deviceAddress[id]);
+				sensors->setResolution(deviceAddress[id], precision);
+				DS_Found++;
+				id++;
 			}
-			// Demande de températures
-			sensors->requestTemperatures();
 		}
+		// Demande de températures
+		sensors->requestTemperatures();
 	}
 	return DS_Found;
 }
@@ -104,8 +117,8 @@ void DS18B20::check_dallas(void)
 		{
 			for (int i = 0; i < DS_Found; i++)
 			{
-				temp = sensors->getTempCByIndex(i);
-				if (temp != -127.0)
+				temp = sensors->getTempC(deviceAddress[i]);
+				if (temp != DEVICE_DISCONNECTED_C)
 				{
 					DS_Temp[i] = temp;
 #ifdef DALLAS_DEBUG

@@ -32,7 +32,7 @@ class DS18B20
 		// Dallas Temperature sensors
 		DallasTemperature *sensors = NULL;
 		// arrays to hold device address
-		DeviceAddress deviceAddress;
+		DeviceAddress deviceAddress[DS18B20_MAX];
 
 		uint8_t OWbus;
 		float DS_Temp[DS18B20_MAX];
@@ -43,6 +43,11 @@ class DS18B20
 		~DS18B20();
 		uint8_t Initialize(uint8_t precision);
 		void check_dallas(void);
+
+		uint8_t getCount(void)
+		{
+			return DS_Found;
+		}
 
 		float get_Temperature(uint8_t id);
 		String get_Temperature_Str(uint8_t id);
