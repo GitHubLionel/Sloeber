@@ -449,7 +449,7 @@ float SSR_Compute_Dump_power(float default_Power)
 		CIRRUS_get_rms_data(&urms, &prms);
 		cumul_p += prms;
 		cumul_u += urms;
-		vTaskDelay(pdMS_TO_TICKS(150));
+		delay(150);
 	}
 
 	initial_p = cumul_p / count_max;
@@ -458,8 +458,7 @@ float SSR_Compute_Dump_power(float default_Power)
 
 	// On allume le SSR et on refait une mesure
 	SSR_Set_Action(SSR_Action_FULL, true);
-//	delay(2000); // Pour stabiliser
-	vTaskDelay(pdMS_TO_TICKS(2000));
+	delay(2000); // Pour stabiliser
 
 	cumul_p = 0;
 	cumul_u = 0;
@@ -468,7 +467,7 @@ float SSR_Compute_Dump_power(float default_Power)
 		CIRRUS_get_rms_data(&urms, &prms);
 		cumul_p += prms;
 		cumul_u += urms;
-		vTaskDelay(pdMS_TO_TICKS(150));
+		delay(150);
 	}
 
 	// On éteint le SSR
