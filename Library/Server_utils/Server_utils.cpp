@@ -257,7 +257,7 @@ void WiFiEvent(WiFiEvent_t event)
 			print_debug(WiFi.localIP().toString());
 			break;
 		case ARDUINO_EVENT_WIFI_STA_LOST_IP:
-			print_debug("Lost IP address and IP address is reset to 0");
+//			print_debug("Lost IP address and IP address is reset to 0");
 			break;
 		case ARDUINO_EVENT_WPS_ER_SUCCESS:
 			print_debug("WiFi Protected Setup (WPS): succeeded in enrollee mode");
