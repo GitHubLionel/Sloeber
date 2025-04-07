@@ -28,9 +28,20 @@ typedef enum
 	SSR_Action_Dimme
 } SSR_Action_typedef;
 
+#ifdef SSR_USE_TASK
 // Task to boost the SSR (Full load) for 1 hour
 #define SSR_BOOST_TASK	{condSuspended, "SSR_BOOST_Task", 4096, 3, 3600 * 1000, Core0, SSR_Boost_Task_code}
 void SSR_Boost_Task_code(void *parameter);
+
+// Task to compute dump power
+#define SSR_DUMP_TASK	{condSuspended, "SSR_DUMP_Task", 4096, 3, 150, Core0, SSR_Dump_Task_code}
+void SSR_Dump_Task_code(void *parameter);
+
+extern void onDumpComputed(float power);
+#else
+#define SSR_BOOST_TASK {}
+#define SSR_DUMP_TASK	{}
+#endif
 
 // Fonction d'action
 typedef void (*Gestion_SSR_TypeDef)(const float, const float);

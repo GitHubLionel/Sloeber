@@ -39,7 +39,7 @@ volatile SemaphoreHandle_t topZC_Semaphore;
 #endif
 #endif  // ESP32
 
-#ifdef ESP32
+#ifdef SSR_USE_TASK
 #include "Tasks_utils.h"
 #endif
 
@@ -78,7 +78,7 @@ volatile bool Top_CS_ZC_Mux = false;   // Top ZC
 
 // La puissance de la charge
 float Dump_Power = 0.0;
-// La puissance de la charge divisée par sa tension nominale
+// La puissance de la charge divisée par sa tension nominale (~ courant)
 float Dump_Power_Relatif = 0.0;
 
 // Le surplus cible du SSR pour le PID
@@ -151,9 +151,9 @@ void PrintVal(const char *text, float val, bool integer)
 {
 	char buffer[50];
 	if (integer)
-		sprintf(buffer, "%s: %d\r\n", text, (int) val);
+		sprintf(buffer, "%s: %d", text, (int) val);
 	else
-		sprintf(buffer, "%s: %.3f\r\n", text, val);
+		sprintf(buffer, "%s: %.3f", text, val);
 	PrintTerminal(buffer);
 }
 
@@ -428,8 +428,9 @@ void SSR_Initialize(uint8_t ZC_Pin, uint8_t SSR_Pin, int8_t LED_Pin)
  * Dans le principe, on détermine la tension et la puissance en cours,
  * puis on démarre la charge à fond. Par différence, on déduit la puissance de la charge.
  * Doit être exécutée avant de lancer la régulation.
- * Si on connait la charge, on peut directement utiliser SSR_Set_Dump_Power
+ * Si on connait la charge, on peut directement utiliser SSR_Set_Dump_Powe()
  * Note : utilise le channel 1 du cirrus
+ * Note2 : Ne pas utiliser cette méthode si on utilise des tasks
  */
 float SSR_Compute_Dump_power(float default_Power)
 {
@@ -443,34 +444,31 @@ float SSR_Compute_Dump_power(float default_Power)
 	SSR_Action_typedef action = current_action;
 
 	// On récupère la puissance et la tension initiale sur 3 s
-	CIRRUS_get_rms_data(&urms, &prms);
-	cumul_p = prms;
-	cumul_u = urms;
-	for (int i = 1; i < count_max; i++)
+	for (int i = 0; i < count_max; i++)
 	{
-		delay(150);
 		CIRRUS_get_rms_data(&urms, &prms);
 		cumul_p += prms;
 		cumul_u += urms;
+		vTaskDelay(pdMS_TO_TICKS(150));
 	}
 
 	initial_p = cumul_p / count_max;
 	initial_u = cumul_u / count_max;
-	PrintVal("Puissance sans charge", initial_p, false);
+	PrintVal("Puissance sans charge (W)", initial_p, false);
 
 	// On allume le SSR et on refait une mesure
 	SSR_Set_Action(SSR_Action_FULL, true);
-	delay(2000); // Pour stabiliser
+//	delay(2000); // Pour stabiliser
+	vTaskDelay(pdMS_TO_TICKS(2000));
 
-	CIRRUS_get_rms_data(&urms, &prms);
-	cumul_p = prms;
-	cumul_u = urms;
-	for (int i = 1; i < count_max; i++)
+	cumul_p = 0;
+	cumul_u = 0;
+	for (int i = 0; i < count_max; i++)
 	{
-		delay(150);
 		CIRRUS_get_rms_data(&urms, &prms);
 		cumul_p += prms;
 		cumul_u += urms;
+		vTaskDelay(pdMS_TO_TICKS(150));
 	}
 
 	// On éteint le SSR
@@ -489,9 +487,9 @@ float SSR_Compute_Dump_power(float default_Power)
 		else
 			Dump_Power_Relatif = Dump_Power / 230.0;
 	}
-	PrintVal("Puissance de la charge", final_p - initial_p, false);
-	PrintVal("Résistance de la charge", (final_u * final_u) /(final_p - initial_p), false);
-	PrintVal("Puissance de la charge relative", Dump_Power_Relatif, false);
+	PrintVal("Puissance de la charge (W)", final_p - initial_p, false);
+	PrintVal("Resistance de la charge (ohm)", (final_u * final_u) /(final_p - initial_p), false);
+	PrintVal("Courant de la charge relative (A)", Dump_Power_Relatif, false);
 
 	// Restaure current action
 	SSR_Set_Action(action);
@@ -508,7 +506,6 @@ float SSR_Compute_Dump_power(float default_Power)
  * 	- SSR_Action_Dimme: SSR de façon à avoir seulement un pourcentage de la charge
  * Arrête le SSR s'il est actif.
  * Appeler SSR_Enable() pour (re)démarrer le SSR ou mettre restart à true
- *
  */
 void SSR_Set_Action(SSR_Action_typedef do_action, bool restart)
 {
@@ -886,7 +883,7 @@ void SSR_Update_Surplus_Timer(const float Cirrus_voltage, const float Cirrus_pow
 // Task function to save the log
 // ********************************************************************************
 
-#ifdef ESP32
+#ifdef SSR_USE_TASK
 // Task to start SSR full load for one hour
 void SSR_Boost_Task_code(void *parameter)
 {
@@ -904,6 +901,95 @@ void SSR_Boost_Task_code(void *parameter)
 		{
 			SSR_Set_Action(SSR_Action_Surplus, true);
 			SSR_Stop = true;
+		}
+		END_TASK_CODE(SSR_Stop);
+	}
+}
+
+// Task to compute dump power
+void SSR_Dump_Task_code(void *parameter)
+{
+	typedef enum
+	{
+		dumpInitial,
+		dumpPause,
+		dumpFinal
+	} DumpStep;
+
+	BEGIN_TASK_CODE("SSR_DUMP_Task");
+#define count_max   20
+	int count = 0;
+	float urms, prms;
+	float cumul_p = 0.0;
+	float cumul_u = 0.0;
+	float initial_p, initial_u, final_p, final_u;
+	DumpStep step = dumpInitial;
+	bool SSR_Stop = false;
+
+	for (EVER)
+	{
+		SSR_Stop = false;
+		CIRRUS_get_rms_data(&urms, &prms);
+		cumul_p += prms;
+		cumul_u += urms;
+		count++;
+		switch (step)
+		{
+			case dumpInitial: // Détermination de la puissance initial en cours
+				if (count == count_max)
+				{
+					initial_p = cumul_p / count_max;
+					initial_u = cumul_u / count_max;
+					PrintVal("Puissance sans charge (W)", initial_p, false);
+					cumul_p = 0;
+					cumul_u = 0;
+					count = 0;
+					step = dumpPause;
+
+					// On allume le SSR full load
+					SSR_Set_Action(SSR_Action_FULL, true);
+				}
+				break;
+
+			case dumpPause: // Pour stabiliser après le démarrage de la charge
+				if (count == count_max)
+				{
+					cumul_p = 0;
+					cumul_u = 0;
+					count = 0;
+					step = dumpFinal;
+				}
+				break;
+
+			case dumpFinal: // Détermination de la puissance final avec la charge
+				if (count == count_max)
+				{
+					// On éteint le SSR
+					SSR_Set_Action(SSR_Action_OFF);
+
+					final_p = cumul_p / count_max;
+					final_u = cumul_u / count_max;
+
+					Dump_Power_Relatif = (final_p - initial_p) / ((initial_u + final_u) / 2.0);
+
+					PrintVal("Puissance de la charge (W)", final_p - initial_p, false);
+					PrintVal("Resistance de la charge (ohm)", (final_u * final_u) / (final_p - initial_p), false);
+					PrintVal("Courant de la charge relative (A)", Dump_Power_Relatif, false);
+
+					// La charge ne devait pas être branchée, on utilise la puissance par défaut
+					if (Dump_Power_Relatif < 0.5)
+					{
+						Dump_Power_Relatif = Dump_Power / 230.0;
+					}
+
+					cumul_p = 0;
+					cumul_u = 0;
+					count = 0;
+					step = dumpInitial;
+					SSR_Stop = true;
+
+					onDumpComputed(final_p - initial_p);
+				}
 		}
 		END_TASK_CODE(SSR_Stop);
 	}
