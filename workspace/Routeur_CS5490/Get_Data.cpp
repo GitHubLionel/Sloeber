@@ -36,6 +36,8 @@ bool Data_acquisition = false;
 // Les données actualisées pour le SSR
 #ifdef USE_SSR
 extern Gestion_SSR_TypeDef Gestion_SSR_CallBack;
+// For SSR_Compute_Dump_power()
+bool CIRRUS_get_rms_data(float *uRMS, float *pRMS);
 #endif
 
 // Gestion énergie
@@ -145,6 +147,13 @@ void Get_Data(void)
 
 	Data_acquisition = false;
 }
+
+#ifdef USE_SSR
+bool CIRRUS_get_rms_data(float *uRMS, float *pRMS)
+{
+	return CS5490.get_rms_data(uRMS, pRMS);
+}
+#endif
 
 // ********************************************************************************
 // Affichage des données

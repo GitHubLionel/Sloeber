@@ -176,6 +176,7 @@ CIRRUS_Communication CS_Com = CIRRUS_Communication(csSerial, CIRRUS_RESET_GPIO);
 CIRRUS_CS5490 CS5490 = CIRRUS_CS5490(CS_Com);
 
 bool Cirrus_OK = false;
+bool Cirrus_acquisition = true;
 
 // To access cirrus data
 extern volatile Data_Struct Current_Data;
@@ -367,7 +368,7 @@ void setup()
 
 	SSR_Set_Action(SSR_Action_Percent);  // Par défaut à 10%, voir page web
 //	SSR_Set_Percent(20);
-			// NOTE : le SSR est éteint, on le démarre dans la page web
+// NOTE : le SSR est éteint, on le démarre dans la page web
 #endif
 
 	// **** 8- Initialisation Clavier, relais
@@ -421,11 +422,11 @@ void loop()
 #ifdef USE_ZC_SSR
 	if (ZC_Top_Xms())
 	{
-		if (Cirrus_OK)
+		if (Cirrus_OK && Cirrus_acquisition)
 			Get_Data();
 	}
 #else
-	if (uptodate)
+	if (uptodate && Cirrus_acquisition)
 		Simple_Get_Data(); // Utilise Simple_Get_Data.cpp
 #endif
 
@@ -498,7 +499,7 @@ void loop()
 				Btn_K1_count = 0;
 			}
 		}
-#endif
+#endif // USE_KEYBOARD
 
 		// Lecture température
 #ifdef USE_DS
@@ -506,7 +507,7 @@ void loop()
 			DS.check_dallas();
 #endif
 
-		if (Cirrus_OK)
+		if (Cirrus_OK && Cirrus_acquisition)
 			line = Update_IHM(RTC_Local.the_time(), "", false);
 		else
 		{
@@ -704,40 +705,56 @@ void handleOperation(void)
 #endif
 
 #ifdef USE_ZC_SSR
-	// La puissance du CE pour le mode zéro
-	if (server.hasArg("CEPower"))
-	{
-		float power = server.arg("CEPower").toFloat();
-		SSR_Set_Dump_Power(power);
-	}
-
 	// Change le mode d'action Pourcent/Zéro
 	// Ne pas oublier de redémarrer le SSR après
-	if (server.hasArg("SSRType"))
+	if (pserver->hasArg("SSRAction"))
 	{
-		if (server.arg("SSRType") == "true")
+		if (pserver->arg("SSRAction") == "percent")
 			SSR_Set_Action(SSR_Action_Percent);
 		else
-			SSR_Set_Action(SSR_Action_Surplus);
+			if (pserver->arg("SSRAction") == "zero")
+				SSR_Set_Action(SSR_Action_Surplus);
+			else
+				SSR_Set_Action(SSR_Action_FULL);
+	}
+
+	// La puissance du CE pour le mode zéro
+	if (pserver->hasArg("CEPower"))
+	{
+		float power = pserver->arg("CEPower").toFloat();
+		SSR_Set_Dump_Power(power);
+
+		print_debug("Operation: " + pserver->argName((int) 1) + "=" + pserver->arg((int) 1));
+		float target = pserver->arg("SSRTarget").toFloat();
+		SSR_Set_Target(target);
+	}
+
+    // Test puissance CE
+	if (pserver->hasArg("CheckPower"))
+	{
+		// On arrête l'acquisition des données (et donc l'action SSR en cours)
+		Cirrus_acquisition = false;
+		SSR_Compute_Dump_power();
+		Cirrus_acquisition = true;
 	}
 
 	// Gestion dimmer en pourcentage
-	if (server.hasArg("Dimmer") && (SSR_Get_Action() == SSR_Action_Percent))
+	if (pserver->hasArg("Pourcent") && (SSR_Get_Action() == SSR_Action_Percent))
 	{
-		float percent = server.arg("Dimmer").toFloat();
+		float percent = pserver->arg("Pourcent").toFloat();
 		SSR_Set_Percent(percent);
-//		SSR_Set_Dimme_Target(percent * 10);
 	}
 
 	// Allume ou éteint le SSR
-	if (server.hasArg("Toggle_SSR"))
+	if (pserver->hasArg("Toggle_SSR"))
 	{
-		if (SSR_Get_State())
-		{
-			SSR_Disable();
-		}
-		else
-			SSR_Enable();
+		(SSR_Get_State() == SSR_OFF) ? SSR_Enable() : SSR_Disable();
+	}
+
+	// Boost le SSR pour une heure
+	if (pserver->hasArg("Boost_SSR"))
+	{
+//		TaskList.ResumeTask("SSR_BOOST_Task");
 	}
 #endif
 

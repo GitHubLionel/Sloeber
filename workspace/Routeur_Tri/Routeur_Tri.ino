@@ -221,7 +221,8 @@ extern volatile SemaphoreHandle_t topZC_Semaphore;
 extern void onCirrusZC(void);
 #endif
 
-SSR_Action_typedef lastAction;
+SSR_Action_typedef lastSSRAction = SSR_Action_OFF;
+bool lastSSRState = false;
 
 // ********************************************************************************
 // Définition Relais, Clavier, ADC
@@ -326,7 +327,7 @@ void onDumpComputed(float power)
 	TaskList.ResumeTask("CIRRUS_Task");
 	init_routeur.WriteFloat("SSR", "P_CE", power);
 	// Restaure la dernière action
-	SSR_Set_Action(lastAction, true);
+	SSR_Set_Action(lastSSRAction, lastSSRState);
 }
 
 // ********************************************************************************
@@ -495,14 +496,11 @@ void setup()
 
 	//	SSR_Compute_Dump_power();
 
-	lastAction = (SSR_Action_typedef)init_routeur.ReadInteger("SSR", "Action", 1); // Par défaut Percent, voir page web
-	SSR_Set_Action(lastAction);
+	lastSSRAction = (SSR_Action_typedef) init_routeur.ReadInteger("SSR", "Action", 1); // Par défaut Percent, voir page web
+	SSR_Set_Action(lastSSRAction);
 
 	// NOTE : le SSR est éteint, on le démarre dans la page web
-	if (init_routeur.ReadBool("SSR", "StateOFF", true)) // Etat par défaut: OFF
-		SSR_Disable();
-	else
-		SSR_Enable();
+	(init_routeur.ReadBool("SSR", "StateOFF", true)) ? SSR_Disable() : SSR_Enable();
 #else
 	topZC_Semaphore = xSemaphoreCreateBinary();
 	CS5480.ZC_Initialize(ZERO_CROSS_GPIO, onCirrusZC);
@@ -638,6 +636,7 @@ void setup()
 		ADC_Begin(1794); //1796
 	}
 #endif
+
 	// Actualise la date
 	emul_PV.setDateTime();
 }
@@ -986,7 +985,10 @@ void handleOperation(CB_SERVER_PARAM)
 	if (pserver->hasArg("CheckPower"))
 	{
 		// Sauvegarde de l'action en cours
-		lastAction = SSR_Get_Action();
+		lastSSRAction = SSR_Get_Action();
+		lastSSRState = SSR_Get_State() != SSR_OFF;
+		// On éteint le SSR
+		SSR_Set_Action(SSR_Action_OFF);
 		// On arrête l'acquisition des données (et donc l'action SSR en cours)
 		TaskList.SuspendTask("CIRRUS_Task");
 		delay(20);
@@ -1004,10 +1006,7 @@ void handleOperation(CB_SERVER_PARAM)
 	// Allume ou éteint le SSR
 	if (pserver->hasArg("Toggle_SSR"))
 	{
-		if (SSR_Get_State() == SSR_OFF)
-			SSR_Enable();
-		else
-			SSR_Disable();
+		(SSR_Get_State() == SSR_OFF) ? SSR_Enable() : SSR_Disable();
 		init_routeur.WriteBool("SSR", "StateOFF", (SSR_Get_State() == SSR_OFF));
 	}
 
