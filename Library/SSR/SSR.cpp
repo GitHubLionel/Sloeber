@@ -442,6 +442,10 @@ float SSR_Compute_Dump_power(float default_Power)
 
 	// Save current action
 	SSR_Action_typedef action = current_action;
+	bool SSR_active = (SSR_Get_State() != SSR_OFF);
+
+	// On éteint le SSR
+	SSR_Set_Action(SSR_Action_OFF);
 
 	// On récupère la puissance et la tension initiale sur 3 s
 	for (int i = 0; i < count_max; i++)
@@ -475,8 +479,9 @@ float SSR_Compute_Dump_power(float default_Power)
 
 	final_p = cumul_p / count_max;
 	final_u = cumul_u / count_max;
+	float deltaP = final_p - initial_p;
 
-	Dump_Power_Relatif = (final_p - initial_p) / ((initial_u + final_u) / 2.0);
+	Dump_Power_Relatif = deltaP / ((initial_u + final_u) / 2.0);
 
 	// La charge ne devait pas être branchée, on utilise la puissance par défaut
 	if (Dump_Power_Relatif < 0.5)
@@ -486,14 +491,14 @@ float SSR_Compute_Dump_power(float default_Power)
 		else
 			Dump_Power_Relatif = Dump_Power / 230.0;
 	}
-	PrintVal("Puissance de la charge (W)", final_p - initial_p, false);
-	PrintVal("Resistance de la charge (ohm)", (final_u * final_u) /(final_p - initial_p), false);
+	PrintVal("Puissance de la charge (W)", deltaP, false);
+	PrintVal("Resistance de la charge (ohm)", (final_u * final_u) / deltaP, false);
 	PrintVal("Courant de la charge relative (A)", Dump_Power_Relatif, false);
 
 	// Restaure current action
-	SSR_Set_Action(action);
+	SSR_Set_Action(action, SSR_active);
 
-	return final_p - initial_p;
+	return deltaP;
 }
 
 /**
@@ -968,11 +973,12 @@ void SSR_Dump_Task_code(void *parameter)
 
 					final_p = cumul_p / count_max;
 					final_u = cumul_u / count_max;
+					float deltaP = final_p - initial_p;
 
-					Dump_Power_Relatif = (final_p - initial_p) / ((initial_u + final_u) / 2.0);
+					Dump_Power_Relatif = deltaP / ((initial_u + final_u) / 2.0);
 
-					PrintVal("Puissance de la charge (W)", final_p - initial_p, false);
-					PrintVal("Resistance de la charge (ohm)", (final_u * final_u) / (final_p - initial_p), false);
+					PrintVal("Puissance de la charge (W)", deltaP, false);
+					PrintVal("Resistance de la charge (ohm)", (final_u * final_u) / deltaP, false);
 					PrintVal("Courant de la charge relative (A)", Dump_Power_Relatif, false);
 
 					// La charge ne devait pas être branchée, on utilise la puissance par défaut
@@ -987,7 +993,7 @@ void SSR_Dump_Task_code(void *parameter)
 					step = dumpInitial;
 					SSR_Stop = true;
 
-					onDumpComputed(final_p - initial_p);
+					onDumpComputed(deltaP);
 				}
 		}
 		END_TASK_CODE(SSR_Stop);
