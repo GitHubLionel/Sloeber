@@ -96,7 +96,7 @@ int Action_Wifi = 0;
 
 #define DELAY_LCD_ON   600  // 10 minutes
 #define DELAY_PAGE     120  // 2 minutes
-#define DELAY_ACTION    10  // 10 secondes
+#define DELAY_ACTION     5  // 5 secondes pour valider une action
 
 int Count_Action_Needed = 0;
 
@@ -111,8 +111,8 @@ void Show_Page5(void);
 void Show_Page_Relay(uint8_t cursor);
 void Show_Page_Relay_Action(uint8_t cursor);
 #endif
-void Show_Page_SSR(void);
-void Show_Page_SSR_Action(void);
+void Show_Page_SSR(uint8_t cursor);
+void Show_Page_SSR_Action(uint8_t cursor);
 void Show_Page_Wifi(void);
 void Show_Page_Wifi_Action(void);
 
@@ -149,15 +149,29 @@ void UserKeyboardAction(Btn_Action Btn_Clicked, uint32_t count)
 		{
 			if (count == 1)
 			{
-				if (Menu == menuData)
-					current_page++;
-#ifdef USE_RELAY
+				if (Action_Needed)
+				{
+					Cursor_Pos = 0;
+					Action_Needed = false;
+				}
 				else
-					if (Menu == menuRelais)
+				{
+					switch (Menu)
 					{
-						Cursor_Pos = (Cursor_Pos + 1) % Relay.size();
-					}
+						case menuData:
+							current_page++;
+							break;
+#ifdef USE_RELAY
+						case menuRelais:
+							Cursor_Pos = (Cursor_Pos + 1) % Relay.size();
+							break;
 #endif
+						case menuSSR:
+							Cursor_Pos = (Cursor_Pos + 1) % 2;
+						default:
+							;
+					}
+				}
 			}
 
 			break;
@@ -170,15 +184,34 @@ void UserKeyboardAction(Btn_Action Btn_Clicked, uint32_t count)
 				switch (Menu)
 				{
 					case menuData:
+						Action_Needed = false;
+						Action_Wifi = 0;
+						break;
 					case menuSSR:
 						if (Action_Needed)
 						{
-							TaskList.ResumeTask("SSR_BOOST_Task");
+							if (SSR_Get_Action() == SSR_Action_Surplus)
+							{
+								if (Cursor_Pos == 0)
+								{
+									SSR_Set_Action(SSR_Action_FULL, true);
+									TaskList.ResumeTask("SSR_BOOST_Task");
+								}
+								else
+									(SSR_Get_State() == SSR_OFF) ? SSR_Enable() : SSR_Disable();
+							}
+							else
+							{
+								TaskList.SuspendTask("SSR_BOOST_Task");
+								SSR_Set_Action(SSR_Action_Surplus, true);
+							}
 							Action_Needed = false;
+							Cursor_Pos = 0;
 						}
 						else
 						{
-							Action_Needed = (SSR_Get_Action() == SSR_Action_Surplus);
+							Action_Needed = true;
+							Count_Action_Needed = DELAY_ACTION;
 						}
 						Action_Wifi = 0;
 						break;
@@ -189,12 +222,14 @@ void UserKeyboardAction(Btn_Action Btn_Clicked, uint32_t count)
 						{
 							Relay.toggleState(Cursor_Pos);
 							Action_Needed = false;
+							Cursor_Pos = 0;
 						}
 						else
 						{
 							Action_Needed = true;
 							Count_Action_Needed = DELAY_ACTION;
 						}
+						Action_Wifi = 0;
 						break;
 #endif
 
@@ -208,6 +243,7 @@ void UserKeyboardAction(Btn_Action Btn_Clicked, uint32_t count)
 							Action_Wifi++;
 							Count_Action_Needed = DELAY_ACTION;
 						}
+						Action_Needed = false;
 						break;
 				}
 			}
@@ -226,24 +262,27 @@ void UserKeyboardAction(Btn_Action Btn_Clicked, uint32_t count)
 		{
 			if (count == 1)
 			{
-				Action_Needed = false;
 				Action_Wifi = 0;
-				switch (Menu)
+				Cursor_Pos = 0;
+				if (!Action_Needed)
 				{
-					case menuData:
-						Cursor_Pos = 0;
-						break;
+					switch (Menu)
+					{
+						case menuData:
+							break;
 #ifdef USE_RELAY
-					case menuRelais:
-						break;
+						case menuRelais:
+							break;
 #endif
-					case menuSSR:
-						break;
-					case menuWifi:
-						current_page = Page1;
-						break;
+						case menuSSR:
+							break;
+						case menuWifi:
+							current_page = Page1;
+							break;
+					}
+					Menu++;
 				}
-				Menu++;
+				Action_Needed = false;
 			}
 			break;
 		}
@@ -313,8 +352,7 @@ void Display_Task_code(void *parameter)
 				if (Action_Needed)
 				{
 					Show_Page_Relay_Action(Cursor_Pos);
-					Count_Action_Needed--;
-					if (Count_Action_Needed == 0)
+					if (--Count_Action_Needed == 0)
 						Action_Needed = false;
 				}
 				else
@@ -326,13 +364,12 @@ void Display_Task_code(void *parameter)
 			{
 				if (Action_Needed)
 				{
-					Show_Page_SSR_Action();
-					Count_Action_Needed--;
-					if (Count_Action_Needed == 0)
+					Show_Page_SSR_Action(Cursor_Pos);
+					if (--Count_Action_Needed == 0)
 						Action_Needed = false;
 				}
 				else
-					Show_Page_SSR();
+					Show_Page_SSR(Cursor_Pos);
 				break;
 			}
 			case menuWifi:
@@ -340,8 +377,7 @@ void Display_Task_code(void *parameter)
 				if (Action_Wifi > 0)
 				{
 					Show_Page_Wifi_Action();
-					Count_Action_Needed--;
-					if (Count_Action_Needed == 0)
+					if (--Count_Action_Needed == 0)
 						Action_Wifi = 0;
 				}
 				else
@@ -565,30 +601,51 @@ void Show_Page_Relay_Action(uint8_t cursor)
 }
 #endif
 
-void Show_Page_SSR(void)
+void Show_Page_SSR(uint8_t cursor)
 {
 	IHM_Print(1, 3, "Regulation", false);
 
 	switch (SSR_Get_Action())
 	{
 		case SSR_Action_Surplus:
-			IHM_Print(3, 1, "SSR ON", false);
-			IHM_Print(5, 1, "Forcer CE (1 h)", false);
+			if (SSR_Get_State() != SSR_OFF)
+				IHM_Print(3, 1, "SSR ON", false);
+			else
+				IHM_Print(3, 1, "SSR OFF", false);
+			IHM_Print(5, 1, "Boost CE (1 h)", false);
+			IHM_Print(6, 1, "Toggle SSR", false);
+			// Affichage du cursor
+			IHM_Print(5 + cursor, 16, "#", false);
 			break;
 		case SSR_Action_FULL:
 			IHM_Print(3, 1, "SSR FULL 1h", false);
+			IHM_Print(5, 1, "Stop Boost CE", false);
+			// Affichage du cursor
+			IHM_Print(5, 16, "#", false);
 			break;
 		default:
 			IHM_Print(3, 1, "SSR OFF", false);
 	}
-//	IHM_Print(6, TaskList.GetIdleStr().c_str(), false);
 }
 
-void Show_Page_SSR_Action(void)
+void Show_Page_SSR_Action(uint8_t cursor)
 {
 	IHM_Print(1, 1, "Confirmation", false);
 
-	IHM_Print(3, 1, "Forcer CE (1 h)", false);
+	switch (SSR_Get_Action())
+	{
+		case SSR_Action_Surplus:
+			if (cursor == 0)
+				IHM_Print(3, 1, "Boost CE (1 h)", false);
+			else
+				IHM_Print(3, 1, "Toggle SSR", false);
+			break;
+		case SSR_Action_FULL:
+			IHM_Print(3, 1, "Stop Boost CE", false);
+			break;
+		default:
+			;
+	}
 
 	IHM_Print(5, 1, "OK pour confirmer", false);
 }
@@ -601,7 +658,7 @@ void Show_Page_Wifi(void)
 	IHM_Print(3, 1, myServer.IPaddress().c_str(), false);
 	IHM_Print(4, 1, myServer.getCurrentRSSI().c_str(), false);
 	if (getESPMacAddress(mac))
-	  IHM_Print(5, 1, mac.c_str(), false);
+		IHM_Print(5, 1, mac.c_str(), false);
 
 	IHM_Print(7, 1, "Reset Wifi ?", false);
 }

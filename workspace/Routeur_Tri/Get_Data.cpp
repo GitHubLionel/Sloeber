@@ -26,6 +26,8 @@
 #ifdef USE_DS
 extern uint8_t DS_Count;
 extern DS18B20 DS;
+uint8_t idTempInt = 0;
+uint8_t idTempExt = 1;
 #endif
 
 // Use TI
@@ -35,7 +37,9 @@ extern TeleInfo TI;
 #endif
 
 // Use ADC
+#ifdef USE_ADC
 extern bool ADC_OK;
+#endif
 
 // Data PV
 extern EmulPV_Class emul_PV;
@@ -68,7 +72,9 @@ bool Data_acquisition = false;
 
 // Gestion énergie
 uint32_t Cumul_time = millis();
+#ifdef USE_ADC
 uint32_t Talema_time = millis();
+#endif
 Talema_Params_Typedef TalemaParams = {Phase1};
 float *TalemaPhase = &Current_Data.Phase1.Voltage;
 
@@ -303,8 +309,8 @@ void Get_Data(void)
 #ifdef USE_SSR
 bool CIRRUS_get_rms_data(float *uRMS, float *pRMS)
 {
-	CS5480.SelectChannel(Channel_1);
-	return CS5480.get_rms_data(uRMS, pRMS);
+	CIRRUS_CS548x *CurrentCirrus = (CIRRUS_CS548x*) CS_Com.SelectCirrus(1, Channel_1);
+	return CurrentCirrus->get_rms_data(uRMS, pRMS);
 }
 #endif
 
@@ -315,11 +321,11 @@ void GetExtraData(void)
 #ifdef USE_DS
 		if (DS_Count > 0)
 		{
-			Current_Data.DS18B20_Int = DS.get_Temperature(0);
-			Current_Data.DS18B20_Ext = DS.get_Temperature(1);
+			Current_Data.DS18B20_Int = DS.get_Temperature(idTempInt);
+			Current_Data.DS18B20_Ext = DS.get_Temperature(idTempExt);
 		}
 #endif
-		Current_Data.Prod_Th = emul_PV.Compute_Power_TH(RTC_Local.getSecondOfTheDay(), false);
+		Current_Data.Prod_Th = emul_PV.Compute_Power_TH(RTC_Local.getSecondOfTheDay());
 #ifdef USE_TI
 		if (TI_OK)
 		{

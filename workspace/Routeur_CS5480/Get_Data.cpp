@@ -26,6 +26,8 @@
 #ifdef USE_DS
 extern uint8_t DS_Count;
 extern DS18B20 DS;
+uint8_t idTempInt = 0;
+uint8_t idTempExt = 1;
 #endif
 
 // Use TI
@@ -35,7 +37,9 @@ extern TeleInfo TI;
 #endif
 
 // Use ADC
+#ifdef USE_ADC
 extern bool ADC_OK;
+#endif
 
 // Data PV
 extern EmulPV_Class emul_PV;
@@ -66,7 +70,9 @@ extern CIRRUS_CS548x CS5480;
 bool Data_acquisition = false;
 
 // Gestion énergie
+#ifdef USE_ADC
 uint32_t Talema_time = millis();
+#endif
 
 // Gestion log pour le graphique
 volatile Graphe_Data log_cumul;
@@ -221,11 +227,11 @@ void GetExtraData(void)
 #ifdef USE_DS
 		if (DS_Count > 0)
 		{
-			Current_Data.DS18B20_Int = DS.get_Temperature(0);
-			Current_Data.DS18B20_Ext = DS.get_Temperature(1);
+			Current_Data.DS18B20_Int = DS.get_Temperature(idTempInt);
+			Current_Data.DS18B20_Ext = DS.get_Temperature(idTempExt);
 		}
 #endif
-		Current_Data.Prod_Th = emul_PV.Compute_Power_TH(RTC_Local.getSecondOfTheDay(), false);
+		Current_Data.Prod_Th = emul_PV.Compute_Power_TH(RTC_Local.getSecondOfTheDay());
 #ifdef USE_TI
 		if (TI_OK)
 		{
@@ -299,11 +305,13 @@ uint8_t Update_IHM(const char *first_text, const char *last_text, bool display)
 	sprintf(buffer, "Irms2:%.2f  ", Current_Data.Cirrus_ch2.Current);
 	IHM_Print(line++, (char*) buffer);
 
+#ifdef USE_ADC
 	if (ADC_OK)
 	{
 		sprintf(buffer, "Talema:%.2f   ", Current_Data.Talema_Current);
 		IHM_Print(line++, (char*) buffer);
 	}
+#endif
 
 	if (strlen(last_text) > 0)
 	{

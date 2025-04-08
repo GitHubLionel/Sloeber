@@ -1013,6 +1013,7 @@ void handleOperation(CB_SERVER_PARAM)
 	// Boost le SSR pour une heure
 	if (pserver->hasArg("Boost_SSR"))
 	{
+		SSR_Set_Action(SSR_Action_FULL, true);
 		TaskList.ResumeTask("SSR_BOOST_Task");
 	}
 #endif
