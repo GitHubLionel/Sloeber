@@ -335,16 +335,13 @@ double EmulPV_Class::Power(TDateTime aDateSun)
 /**
  * Calcul de la puissance théorique à une heure donnée (en seconde) du jour courant
  */
-double EmulPV_Class::Compute_Power_TH(uint32_t daytime_s, bool summer_hour)
+double EmulPV_Class::Compute_Power_TH(uint32_t daytime_s)
 {
 	TDateTime dt;
 	int32_t time_s = daytime_s;
 
 	// Décalage heure solaire d'été
-	if (summer_hour)
-		time_s -= 7200;
-	else
-		time_s -= 3600;
+	time_s -= 3600 * GLOBAL_SUMMER_HOUR;
 
 	if (time_s > 0)
 	{

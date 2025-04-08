@@ -106,7 +106,7 @@ class EmulPV_Class
 
 		double Irradiance(TDateTime aDateSun);
 		double Power(TDateTime aDateSun);
-		double Compute_Power_TH(uint32_t daytime_s, bool summer_hour);
+		double Compute_Power_TH(uint32_t daytime_s);
 
 		template <typename T> void Fill_Power_Day(uint32_t daytime_minute, uint32_t nb_data, T *data);
 
@@ -151,7 +151,7 @@ void EmulPV_Class::Fill_Power_Day(uint32_t daytime_minute, uint32_t nb_data, T *
 	for (uint32_t i = 0; i < nb_data; i++)
 	{
 		uint32_t step = (daytime_minute * i) / nb_data;
-		data[i] = (T) Compute_Power_TH(step * 60, false);
+		data[i] = (T) Compute_Power_TH(step * 60);
 	}
 }
 
