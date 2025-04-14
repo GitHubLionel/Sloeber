@@ -65,29 +65,30 @@ Menu : Sloeber/preferences/Platforms and boards
   - Apply and close et attendre, c'est long !! (surveiller en bas à droite la progression)
 
 <b>Pour l'ESP32 :</b><br>
-Si on veut la version 2.0.14 (unofficial) de l'ESP32 : <br>
-Menu : Sloeber/preferences/Third party index url's
-  - Rajouter la ligne : https://espressif.github.io/arduino-esp32/package_esp32_index.json
-  - Apply et attendre la fin<br>
-  
-Sinon : <br>
 Menu : Sloeber/preferences/Platforms and boards
-  - Sélectionner esp32/esp32/3.0.3 (s'y a deux sections esp32, prendre la section qui va bien)
-  - Apply and close et attendre, c'est très long !! (surveiller en bas à droite la progression)
+  - Sélectionner esp32/esp32/3.2.0 (s'il y a deux sections esp32, prendre la section qui va bien)
+  - Apply and close et <b>attendre</b>, c'est très long !! (surveiller en bas à droite la progression et attendre)
   - En cas d'erreur comme celle-ci : <br>
 ![ESP32_Problem](./ESP32_Problem.png "Error")<br>
 Faut aller chercher le fichier corrompu sur le site <a href="https://docs.espressif.com/projects/esp-idf/zh_CN/v4.4.3/esp32s2/api-guides/tools/idf-tools.html#riscv32-esp-elf" target="_blank">d'Espressif</a> (bien vérifier le sha après téléchargement). Puis copier ce fichier dans le dossier "arduinoPlugin\downloads" de Sloeber.<br>
 Refaire la manip d'installation en faisant en premier une désinstallation (décocher puis Apply and close).<br>
-  - Pour les anciennes versions (exemple 2.0.11), y a un bug à corriger. Dans le dossier "arduinoPlugin\packages\esp32\hardware\esp32\2.0.11" (ou 2.0.14) de Sloeber :
+  - Pour les anciennes versions < 3.0 (exemple 2.0.11), y a un bug à corriger. Dans le dossier "arduinoPlugin\packages\esp32\hardware\esp32\2.0.11" (ou 2.0.14) de Sloeber :
     - Supprimer le fichier platform.sloeber.txt
     - Rajouter les deux lignes suivantes à la fin du fichier platform.txt :<br>
     recipe.hooks.prebuild.7.pattern=bash -c "[ -f "{build.path}"/file_opts ] || touch "{build.path}"/file_opts"<br>
 recipe.hooks.prebuild.7.pattern.windows=cmd /c if not exist "{build.path}\file_opts" type nul > "{build.path}\file_opts"
-  - Pour les versions 3.x, dans les projets il faut rajouter des variables dans l'environnement du build :
+  - Pour les versions >= 3.0, dans les projets il faut rajouter des variables dans l'environnement du build :
     - Menu Project/Properties/"C/C++ Build"/Environment
     - Ajouter : build.fqbn => \\"ESP32:esp32:esp32\\"
     - Ajouter ou modifier (rajouter des \\") : build.variant => \\"esp32\\"
     - Ajouter : runtime.os => \\"FreeRTOS\\"<br>
+  - Pour <b>les versions > 3.0.3 et < 3.2.0 </b>, faut corriger un bug dans le fichier esp32-hal-uart.c (le faire dans un projet, dossier core/core). Mettre en commentaire les lignes 523-534 (directive SOC_UART_SUPPORT_XTAL_CLK) et rajouter la ligne : uart_config.source_clk = UART_SCLK_DEFAULT;
+
+<br>
+Si on veut la version 2.0.14 (unofficial) de l'ESP32 : <br>
+Menu : Sloeber/preferences/Third party index url's
+  - Rajouter la ligne : https://espressif.github.io/arduino-esp32/package_esp32_index.json
+  - Apply et attendre la fin<br> 
 
 <b>Pour les librairies :</b><br>
 Menu : Sloeber/preferences/Library Manager
@@ -97,11 +98,11 @@ Menu : Sloeber/preferences/Library Manager
     - Apply et attendre (surveiller en bas à droite la progression)
   - sélectionner Timing/NTPClient (Default) v3.2.1 (pour récupérer l'heure Internet)
     - Apply et attendre (surveiller en bas à droite la progression)
-  - sélectionner Communication/AsyncTCP (Default) v1.1.4 (pour le serveur asynchrone)
+  - sélectionner Other/Async TCP v3.3.6 (pour le serveur asynchrone)
     - Apply et attendre (surveiller en bas à droite la progression)
-  - sélectionner Communication/ESPAsyncWebServer (Default) v3.1.0 (pour le serveur asynchrone)
+  - sélectionner Other/ESP Async WebServer (Attention à l'orthographe) v3.7.2 (pour le serveur asynchrone)
     - Apply et attendre (surveiller en bas à droite la progression)
-  - sélectionner Other/ESPAsyncHTTPUpdateServer (Default) v2.0.0 (pour le upload avec le serveur asynchrone)
+  - sélectionner Other/ESPAsyncHTTPUpdateServer v2.0.0 (pour le upload avec le serveur asynchrone)
     - Apply et attendre (surveiller en bas à droite la progression)
   - sélectionner Other/EspSaveCrash (Default) v1.3.0 (uniquement <b>ESP8266</b>)
     - Apply et attendre (surveiller en bas à droite la progression)
@@ -119,6 +120,12 @@ Project/Properties/Sloeber onglet "Compile Options" :
 - Rajouter les directives dans "append to C and C++" sous la forme : -Ddirective.
 Exemple : -DOLED_SSD1327
 - Voir en fin de page la liste des directives pour les librairies perso.
+
+---
+### Pour ajouter un numéro de version au bin
+- Menu Project Properties-> C/C++ Build -> Build variables, ajouter une variable contenant le numéro de version. Par exemple : Project_Version / string / V1.0
+- Menu Project Properties-> Sloeber -> Compile Options, ajouter au "append to link" : -DVERSION=${Project_Version}
+- Menu Project Properties-> C/C++ Build -> Setting onglet "Build Artifact", ajouter ${Project_Version} : ${ProjName}_${Project_Version}
 
 ---
 ### Pour les librairies perso
@@ -223,23 +230,14 @@ Pour uploader à partir d'une page web
 Dans le cas où on veut un web server asynchrone<br>
 ASync :
 - Menu Arduino/preferences/Library Manager
-  - sélectionner Communication/ESPAsyncTCP v1.2.4
-  - sélectionner Communication/ESPAsyncWebSrv v1.2.7
+  - sélectionner Other/Async TCP v3.3.6
+  - sélectionner Other/ESP Async WebServer v3.7.2
   - Apply and Close et attendre (surveiller en bas à droite la progression)<br>
-  
-ou autre solution (déconseillée), récupérer :
-  - ESPAsyncTCP : <a href="https://github.com/me-no-dev/ESPAsyncTCP" target="_blank">https://github.com/me-no-dev/ESPAsyncTCP</a>
-  - ESPAsyncWebServer : <a href="https://github.com/me-no-dev/ESPAsyncWebServer" target="_blank">https://github.com/me-no-dev/ESPAsyncWebServer</a><br>
-Dézipper et copier les dossiers (virer le mot master) dans le dossier "arduinoPlugin\libraries" de Sloeber<br>
-**IMPORTANT** : Dans le dossier ESPAsyncTCP, supprimer le dossier ssl
 
 OTA : Ajout de la librairie "ElegantOTA"
 - Menu Arduino/preferences/Library Manager
-  - sélectionner Communication/ElegantOTA v3.1.2
+  - sélectionner Communication/ElegantOTA v3.1.6
   - Apply and Close et attendre (surveiller en bas à droite la progression)
-  - Dans le fichier ElegantOTA.h, corriger la ligne 52 : remplacer ESPAsyncWebServer par ESPAsyncWebSrv si nécessaire.
-
-Dans les projets avec ESPAsyncTCP et ESPAsyncWebServer, ajouter la librairie "Hash" au projet.
 
 ---
 ### Création du filesystem LittleFS ou SPIFFS ou FatFS (dossier Data du projet)
@@ -284,10 +282,10 @@ Une alternative est de juste définir la directive USE_CONFIG_LIB_FILE et de cop
 - Server (librairie Server_utils)
   - Utilise la librairie Preferences pour sauvegarder le SSID dans la flash (Sloeber : EEPROM, Preferences)
   - Utilise la librairie Update pour l'upload des fichiers (Sloeber : Update)
-  - USE_ASYNC_WEBSERVER pour avoir un serveur asynchrone. Uniquement <b>ESP32</b> (Sloeber : AsyncTCP et ESPAsyncWebServer, sinon WebServer pour la version synchrone) 
+  - USE_ASYNC_WEBSERVER pour avoir un serveur asynchrone. Uniquement <b>ESP32</b> (Sloeber : "Async TCP" et "ESP Async WebServer", sinon WebServer pour la version synchrone) 
   - USE_RTCLocal (par défaut)
   - USE_GZ_FILE pour utiliser les fichiers zippés (.gz)
-  - USE_HTTPUPDATER pour l'upload du firwmare et du filesystem. <b>ESP8266</b> (Sloeber : ESP8266HTTPUpdateServer); <b>ESP32</b> (Sloeber : HTTPUpdateServer ou <a href="https://github.com/IPdotSetAF/ESPAsyncHTTPUpdateServer" target="_blank">ESPAsyncHTTPUpdateServer</a> pour la version asynchrone)
+  - USE_HTTPUPDATER pour l'upload du firwmare et du filesystem. <b>ESP8266</b> (Sloeber : ESP8266HTTPUpdateServer); <b>ESP32</b> (Sloeber : HTTPUpdateServer ou ESPAsyncHTTPUpdateServer pour la version asynchrone)
 - Task (librairie Task_utils) : gestion d'une liste de taches
   - RUN_TASK_MEMORY=true pour utiliser la tache "Memory" permettant de surveiller la stack des taches
   - Il y a plusieurs define permettant d'effectuer des taches de base dans certaine librairie :
