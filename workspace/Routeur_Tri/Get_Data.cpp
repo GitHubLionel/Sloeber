@@ -85,6 +85,9 @@ bool log_new_data = false;
 // Sauvegarde du log
 volatile SemaphoreHandle_t logSemaphore = NULL;
 
+// Sauvegarde du log
+extern volatile SemaphoreHandle_t ESPNowSemaphore;
+
 // Phase du CE
 Phase_ID Phase_CE = Phase1;
 float *VoltageForCE = &Current_Data.Phase1.Voltage;
@@ -301,6 +304,10 @@ void Get_Data(void)
 //		append_data();
 		if (logSemaphore != NULL)
 			xSemaphoreGive(logSemaphore);
+
+		// Donnée prête pour l'ESP Now
+		if (ESPNowSemaphore != NULL)
+			xSemaphoreGive(ESPNowSemaphore);
 	}
 
 	Data_acquisition = false;

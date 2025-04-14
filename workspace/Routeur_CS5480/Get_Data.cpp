@@ -513,6 +513,7 @@ void AddFileToListFile(listFile_typedef &list, const String &file)
 	{
 		String old_file = list.front();
 		list.pop_front();
+		print_debug("remove: " + old_file);
 		Data_Partition->remove(old_file);
 	}
 }

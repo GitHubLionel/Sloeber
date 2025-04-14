@@ -283,24 +283,33 @@ typedef struct __attribute__((packed))
 // Create a broadcast peer object
 ESP_NOW_Master_Peer *routeur_master = nullptr;
 
+// Semaphore indiquant que la puissance est disponible
+volatile SemaphoreHandle_t ESPNowSemaphore = NULL;
+
 void ESPNOW_Task_code(void *parameter)
 {
+	// Create the semaphore
+	ESPNowSemaphore = xSemaphoreCreateBinary();
+
 	// ESP Now routeur data
 	ESPNow_Routeur_mess_type ESPNow_Data;
 
 	BEGIN_TASK_CODE("ESPNOW_Task");
 	for (EVER)
 	{
-		ESPNow_Data.power = Current_Data.get_total_power();
-		if (!routeur_master->send_message((uint8_t *) &ESPNow_Data, sizeof(ESPNow_Data)))
+		if (xSemaphoreTake(ESPNowSemaphore, 0) == pdTRUE)
 		{
-//			log_e("Send error");
+			ESPNow_Data.power = Current_Data.get_total_power();
+			if (!routeur_master->send_message((uint8_t *) &ESPNow_Data, sizeof(ESPNow_Data)))
+			{
+				print_debug("ESP Now send error");
+			}
 		}
 		END_TASK_CODE(false);
 	}
 }
 
-#define ESPNOW_DATA_TASK {condCreate, "ESPNOW_Task", 4096, 3, 500, CoreAny, ESPNOW_Task_code}
+#define ESPNOW_DATA_TASK {condCreate, "ESPNOW_Task", 4096, 3, 20, CoreAny, ESPNOW_Task_code}
 #endif
 
 // ********************************************************************************

@@ -17,7 +17,7 @@
 /**********************************************************
  * Debug and UART define : Debug_utils library
  **********************************************************/
-#define SERIAL_DEBUG
+//#define SERIAL_DEBUG
 #define LOG_DEBUG
 //#define USE_UART // Beware if SERIAL_DEBUG is also defined since all two use Serial0
 #define UART_BAUD	115200
