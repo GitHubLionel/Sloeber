@@ -527,7 +527,7 @@ bool FillListFile(bool data_partition, const String &dir, const listFile_typedef
 			const char *filename = file.name();
 			if (checkFile(filename, skipfile))
 			{
-				list.push_back((String) filename);
+				list.push_back("/" + (String) filename);
 			}
 		}
 		file.close();
