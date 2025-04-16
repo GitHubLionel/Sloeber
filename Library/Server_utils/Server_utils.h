@@ -51,6 +51,7 @@
 
 #ifdef USE_HTTPUPDATER
 	#ifdef USE_ELEGANT_OTA
+  #warning "See corrections to apply : https://github.com/ayushsharma82/ElegantOTA/issues/254"
 	#include <ElegantOTA.h>
 	#else
 		#ifdef USE_ASYNC_WEBSERVER
