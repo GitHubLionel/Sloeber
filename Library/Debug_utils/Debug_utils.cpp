@@ -504,6 +504,7 @@ const String __attribute__((weak)) GetIPaddress(void)
 
 bool __attribute__((weak)) getESPMacAddress(String &mac)
 {
+	(void) mac;
 	return false;
 }
 
