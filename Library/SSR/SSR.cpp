@@ -116,7 +116,13 @@ static float TotalOutput = 0.0;
 static uint8_t Over_Count = 0;
 
 // La tension et la puissance en cours fournies par le Cirrus ou autre
-extern bool CIRRUS_get_rms_data(float *uRMS, float *pRMS);
+// Cette fonction devra être redéfinie ailleurs suivant la configuration du Cirrus
+bool __attribute__((weak)) CIRRUS_get_rms_data(float *uRMS, float *pRMS)
+{
+	*uRMS = 230;
+	*pRMS = 0;
+	return true;
+}
 
 // Fonction de gestion du SSR en mode dimme ou surplus
 volatile Gestion_SSR_TypeDef Gestion_SSR_CallBack = NULL;
