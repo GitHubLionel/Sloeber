@@ -1,8 +1,5 @@
 #pragma once
 
-#include "Arduino.h"
-#include <stdint.h>
-
 // Top level commands:
 #define REGISTER_READ   0b00000000    // 0x00
 #define REGISTER_WRITE  0b01000000    // 0x40

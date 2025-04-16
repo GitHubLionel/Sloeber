@@ -135,26 +135,6 @@ typedef enum
 	CIRRUS_RegBit_Error
 } CIRRUS_RegBit;
 
-//typedef enum
-//{
-//	CIRRUS_Do1_Interrupt,
-//	CIRRUS_Do1_Energy,
-//	CIRRUS_Do2_Energy,
-//	CIRRUS_Do3_Energy,
-//	CIRRUS_Do1_P1Sign,
-//	CIRRUS_Do1_P2Sign,
-//	CIRRUS_Do1_V1Zero,
-//	CIRRUS_Do1_V2Sign,
-//	CIRRUS_Do_Nothing
-//} CIRRUS_Do_Action_Simple;
-//
-//typedef enum
-//{
-//	CIRRUS_DO1,
-//	CIRRUS_DO2,
-//	CIRRUS_DO3
-//} CIRRUS_DO_Number;
-
 /**
  * Enumération des actions sur les DO
  */
@@ -178,17 +158,46 @@ typedef enum
 	CIRRUS_DO_Interrupt
 } CIRRUS_DO_Mode;
 
+/**
+ * Enumération des interruptions, Page 0 registre 3
+ */
 typedef enum
 {
-	CIRRUS_OFF = 0,
-	CIRRUS_ON
+	CIRRUS_INT_NONE = 0,
+	CIRRUS_INT_RX_TO = 0x000001,
+	CIRRUS_INT_RX_CSUM_ERR = 0x000004,
+	CIRRUS_INT_IC = 0x000008,
+	CIRRUS_INT_FUP = 0x000010,
+	CIRRUS_INT_TUP = 0x000020,
+	CIRRUS_INT_VSAG = 0x000040,
+	CIRRUS_INT_IOC = 0x000100,
+	CIRRUS_INT_VOR = 0x000400,
+	CIRRUS_INT_IOR = 0x001000,
+	CIRRUS_INT_POR = 0x004000,
+	CIRRUS_INT_VSWELL = 0x010000,
+	CIRRUS_INT_MIPS = 0x040000,
+	CIRRUS_INT_WOF = 0x200000,
+	CIRRUS_INT_CRDY = 0x400000,
+	CIRRUS_INT_DRDY = 0x800000
+} CIRRUS_INT_Mask;
+
+/**
+ * State enumeration for EPG and DO mode of Config1 register
+ */
+typedef enum
+{
+	CIRRUS_DO_OFF = 0,
+	CIRRUS_DO_ON
 } CIRRUS_DO_OnOff;
 
+/**
+ * Typedef of struct of Config1 register DO mode
+ */
 typedef struct
 {
 		union
 		{
-				CIRRUS_DO_OnOff EPG[4] = {CIRRUS_OFF};
+				CIRRUS_DO_OnOff EPG[4] = {CIRRUS_DO_OFF};
 				struct
 				{
 						CIRRUS_DO_OnOff EPG1;
@@ -199,7 +208,7 @@ typedef struct
 		};
 		union
 		{
-				CIRRUS_DO_OnOff DO[4] = {CIRRUS_OFF};
+				CIRRUS_DO_OnOff DO[4] = {CIRRUS_DO_OFF};
 				struct
 				{
 						CIRRUS_DO_OnOff DO1;
@@ -548,8 +557,8 @@ typedef std::deque<CIRRUS_Base*> CirrusList;
 // Callback pour le changement de jour : pour minuit et la mise à jour date
 typedef void (*CIRRUS_selectchange_cb)(CIRRUS_Base &cirrus);
 
-// Callback for Zero cross
-typedef void (*onZCcallback)(void);
+// Callback for DO interruption (for Zero cross, Interrupt, EPG, Sign, ...)
+typedef void (*onDO_INT_callback)(void);
 
 /**
  * Cirrus Communication class
@@ -811,6 +820,7 @@ class CIRRUS_Base
 		// Set settings
 		void set_settle_time_ms(float owr_samples);
 		void set_sample_count(uint32_t N);
+		void set_interrupt_mask(uint32_t mask);
 		void set_calibration_scale(float scale);
 
 		// print prototype
@@ -842,10 +852,17 @@ class CIRRUS_Base
 		// The pin to select the Cirrus in case we have several Cirrus
 		uint8_t Cirrus_Pin = 0;
 
+		// Generic initialization for DO pin action with interruption
+		void DO_Interrupt_Initialize(uint8_t DO_Pin, onDO_INT_callback onInterrupt_cb);
+
 		// Zero cross initialization
 		// ZC callback must be declared with IRAM_ATTR directive
-		void ZC_Initialize(uint8_t ZC_Pin, onZCcallback onZC);
+		void ZC_Initialize(uint8_t ZC_Pin, onDO_INT_callback onZC);
 
+		// Interrupt initialization
+		// mask is a combination of CIRRUS_INT_Mask enumeration (use | operator)
+		// Interrupt callback must be declared with IRAM_ATTR directive
+		void Interrupt_Initialize(uint8_t INT_Pin, onDO_INT_callback onINT, uint32_t mask = CIRRUS_INT_NONE);
 	protected:
 
 // ********************************************************************************

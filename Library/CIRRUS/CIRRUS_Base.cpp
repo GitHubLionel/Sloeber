@@ -116,7 +116,7 @@ void Config1_Register::SetConfig1(uint32_t config1_hex)
 /**
  * Set EPG block
  * id: 1..4
- * state: CIRRUS_ON / CIRRUS_OFF
+ * state: CIRRUS_DO_ON / CIRRUS_DO_OFF
  */
 void Config1_Register::SetEPG(uint8_t id, CIRRUS_DO_OnOff state)
 {
@@ -126,7 +126,7 @@ void Config1_Register::SetEPG(uint8_t id, CIRRUS_DO_OnOff state)
 /**
  * Set DO pin mode
  * id: 1..4
- * state: CIRRUS_ON / CIRRUS_OFF
+ * state: CIRRUS_DO_ON / CIRRUS_DO_OFF
  */
 void Config1_Register::SetDO(uint8_t id, CIRRUS_DO_OnOff state)
 {
@@ -151,24 +151,24 @@ void Config1_Register::DO_Config1(Config1_Struct_typedef DO_struct)
 	lsb = msb = hsb = 0;
 
 	// EPG
-	if (DO_struct.EPG1 == CIRRUS_ON)
+	if (DO_struct.EPG1 == CIRRUS_DO_ON)
 		hsb = 0b00000001;
-	if (DO_struct.EPG2 == CIRRUS_ON)
+	if (DO_struct.EPG2 == CIRRUS_DO_ON)
 		hsb = hsb | 0b00000010;
-	if (DO_struct.EPG3 == CIRRUS_ON)
+	if (DO_struct.EPG3 == CIRRUS_DO_ON)
 		hsb = hsb | 0b00000100;
-	if (DO_struct.EPG4 == CIRRUS_ON)
+	if (DO_struct.EPG4 == CIRRUS_DO_ON)
 		hsb = hsb | 0b00001000;
 	hsb = hsb << 4;
 
 	// DO
-	if (DO_struct.DO1 == CIRRUS_ON)
+	if (DO_struct.DO1 == CIRRUS_DO_ON)
 		hsb = hsb | 0b00000001;
-	if (DO_struct.DO2 == CIRRUS_ON)
+	if (DO_struct.DO2 == CIRRUS_DO_ON)
 		hsb = hsb | 0b00000010;
-	if (DO_struct.DO3 == CIRRUS_ON)
+	if (DO_struct.DO3 == CIRRUS_DO_ON)
 		hsb = hsb | 0b00000100;
-	if (DO_struct.DO4 == CIRRUS_ON)
+	if (DO_struct.DO4 == CIRRUS_DO_ON)
 		hsb = hsb | 0b00001000;
 
 	// Do Mode
@@ -220,7 +220,7 @@ char *Config1_Register::Print_Config1(char *mess)
 	{
 		strcat(mess, "EPG");
 		strcat(mess, digit[i]);
-		if (config1_struct.EPG[i] == CIRRUS_ON)
+		if (config1_struct.EPG[i] == CIRRUS_DO_ON)
 			strcat(mess, " = ON");
 		else
 			strcat(mess, " = OFF");
@@ -232,7 +232,7 @@ char *Config1_Register::Print_Config1(char *mess)
 	{
 		strcat(mess, "DO");
 		strcat(mess, digit[i]);
-		if (config1_struct.DO[i] == CIRRUS_ON)
+		if (config1_struct.DO[i] == CIRRUS_DO_ON)
 			strcat(mess, " = ON");
 		else
 			strcat(mess, " = OFF");
@@ -623,24 +623,45 @@ bool CIRRUS_Base::TryConnexion()
 }
 
 /**
+ * Generic initialization for DO pin action with interruption
+ * Interrupt callback must be declared with IRAM_ATTR directive
+ */
+void CIRRUS_Base::DO_Interrupt_Initialize(uint8_t DO_Pin, onDO_INT_callback onInterrupt_cb)
+{
+	// Attach interruption on DO pin (Zero Cross, Interrupt, ...)
+	// DO pin INPUT_PULLUP
+	pinMode(DO_Pin, INPUT_PULLUP);
+	attachInterrupt(digitalPinToInterrupt(DO_Pin), onInterrupt_cb, RISING);
+}
+
+/**
  * Initialise the interruption attached to the ZC pin
  * We can use a Semaphore in the callback. For example:
  * volatile SemaphoreHandle_t topZC_Semaphore;
  * ...
  * void IRAM_ATTR onCirrusZC(void)
-		{
-			xSemaphoreGiveFromISR(topZC_Semaphore, NULL);
-		}
- *	and in the setup
- *	topZC_Semaphore = xSemaphoreCreateBinary();
- *	CIRRUS_Base.ZC_Initialize(ZERO_CROSS_GPIO, onCirrusZC);
+	 {
+		 xSemaphoreGiveFromISR(topZC_Semaphore, NULL);
+	 }
+ * and in the setup :
+ * topZC_Semaphore = xSemaphoreCreateBinary();
+ * CIRRUS_Base.ZC_Initialize(ZERO_CROSS_GPIO, onCirrusZC);
  */
-void CIRRUS_Base::ZC_Initialize(uint8_t ZC_Pin, onZCcallback onZC)
+void CIRRUS_Base::ZC_Initialize(uint8_t ZC_Pin, onDO_INT_callback onZC)
 {
-	// Interruption zero-cross Cirrus, callback onCirrusZC
-	// Zero cross pin INPUT_PULLUP
-	pinMode(ZC_Pin, INPUT_PULLUP);
-	attachInterrupt(digitalPinToInterrupt(ZC_Pin), onZC, RISING);
+	DO_Interrupt_Initialize(ZC_Pin, onZC);
+}
+
+/**
+ * Initialise the interruption for the interrupt mode according the Interrupt mask (Page0, register 3)
+ * mask is a combination of CIRRUS_INT_Mask enumeration (use | operator). Default CIRRUS_INT_NONE
+ * Interrupt callback must be declared with IRAM_ATTR directive
+ * Read Status register (page0, address 23) to know which flag rise the interruption
+ */
+void CIRRUS_Base::Interrupt_Initialize(uint8_t INT_Pin, onDO_INT_callback onINT, uint32_t mask)
+{
+	DO_Interrupt_Initialize(INT_Pin, onINT);
+	set_interrupt_mask(mask);
 }
 
 // ********************************************************************************
@@ -2029,6 +2050,17 @@ void CIRRUS_Base::set_sample_count(uint32_t N)
 		N = 100;
 	int_to_blist(N, &bn);
 	write_register(P16_SampleCount, PAGE16, &bn);
+}
+
+/**
+ * Set interrupt mask for interrupt do mode
+ * mask is a combination of CIRRUS_INT_Mask enumeration (use | operator)
+ */
+void CIRRUS_Base::set_interrupt_mask(uint32_t mask)
+{
+	Bit_List reg;
+	reg.Bit32 = mask;
+	write_register(P0_Mask, PAGE0, &reg);
 }
 
 /*
