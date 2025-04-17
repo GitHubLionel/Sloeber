@@ -423,6 +423,9 @@ bool ServerConnexion::Connexion(bool toUART)
 	FirstConnexion = false;
 	GLOBAL_PRINT_DEBUG = true;
 
+#ifdef USE_ASYNC_WEBSERVER
+	print_debug(F("Use Async Webserver"));
+#endif
 	// Print local IP address
 	print_debug(F("WiFi connected in "), false);
 	print_debug(String(millis() - time), false);

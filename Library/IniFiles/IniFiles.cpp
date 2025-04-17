@@ -212,7 +212,7 @@ bool IniFiles::ReadFile(void)
 	TRecord *lRecord;
 	char line[INI_MAX_LINESIZE];
 
-	if (FFileName == NULL)
+	if ((FFileName == NULL) || (!FS_Partition->exists(FFileName)))
 		return false;
 
 	File stream = FS_Partition->open(FFileName, "r");

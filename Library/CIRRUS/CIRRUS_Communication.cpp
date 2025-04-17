@@ -556,21 +556,10 @@ void CIRRUS_Communication::COM_ChangeCirrus(uint8_t *Request)
 #ifdef LOG_CIRRUS_CONNECT
 //#define DEBUG_CONNECT
 
-// This boolean must be defined with the Get_Data() function
-extern bool Data_acquisition;
 void CIRRUS_Communication::Do_Lock_IHM(bool op)
 {
 	if (op)
 	{
-		// Wait until current data acquisition is ended
-		while (Data_acquisition)
-		{
-#ifdef ESP8266
-		  yield();
-#else
-			taskYIELD();
-#endif
-		}
 		CIRRUS_Lock_IHM++;
 	}
 	else
