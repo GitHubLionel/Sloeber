@@ -69,7 +69,7 @@
 		#include <HTTPUpdateServer.h>
 		#define UPDATER_DEBUG false
 		#endif
-  #endif
+	#endif
 #endif
 
 #endif // ESP32
@@ -156,11 +156,16 @@ typedef enum
 	Ev_ResetESP = 64,
 	Ev_SetTime = 128,
 	Ev_GetTime = 256,
-	Ev_SetDHCPIP = 512,
-	Ev_ResetDHCPIP = 1024,
-	Ev_GetMACAddress = 2048,
-	Ev_GetESPMACAddress = 4096
+	Ev_SetSSID = 512,
+	Ev_ResetSSID = 1024,
+	Ev_SetDHCP = 2048,
+	Ev_GetMACAddress = 4096,
+	Ev_GetESPMACAddress = 8192
 } Event_typedef;
+
+// Default events
+const uint32_t default_Events = Ev_LoadPage | Ev_GetFile | Ev_DeleteFile | Ev_UploadFile |
+		Ev_SetSSID | Ev_ResetSSID | Ev_SetDHCP;
 
 // Connexion Event callback
 typedef void (*onConnexionEvent)();
@@ -200,8 +205,7 @@ class ServerSettings
 				_IsSoftAP(true), _SSID(""), _PWD(""), _onAfterConnexion(NULL)
 		{
 		}
-		ServerSettings(bool IsSoftAP, const String ssid, const String pwd,
-				const onConnexionEvent &afterConnexion_cb = NULL) :
+		ServerSettings(bool IsSoftAP, const String ssid, const String pwd, const onConnexionEvent &afterConnexion_cb = NULL) :
 				_IsSoftAP(IsSoftAP), _SSID(ssid), _PWD(pwd), _onAfterConnexion(afterConnexion_cb)
 		{
 		}
@@ -209,8 +213,8 @@ class ServerSettings
 		bool _IsSoftAP;
 		String _SSID;
 		String _PWD;
-		IPAddress _ip;
-		IPAddress _gateway;
+		IPAddress _ip = INADDR_NONE;
+		IPAddress _gateway = INADDR_NONE;
 		onConnexionEvent _onBeforeConnexion = NULL;
 		onConnexionEvent _onAfterConnexion;
 
@@ -229,12 +233,13 @@ class ServerConnexion
 {
 	private:
 		bool _IsSoftAP = true;
+		bool _useDHCP = true;
 		String _SSID = "";
 		String _PWD = "";
 		String _mDNSHostName = "ESP_DNS";
-		IPAddress _ip;
-		IPAddress _gateway;
-		IPAddress subnet = IPAddress(255, 255, 255, 0);
+		IPAddress _ip = INADDR_NONE;
+		IPAddress _gateway = INADDR_NONE;
+		IPAddress _subnet = IPAddress(255, 255, 255, 0);
 		String _IPaddress = "";
 		int8_t _Wifi_Signal = 0;
 		// Boolean to wait for network
@@ -254,18 +259,17 @@ class ServerConnexion
 			_IsSoftAP = IsSoftAP;
 			_onAfterConnexion = afterConnexion_cb;
 		}
-		ServerConnexion(bool IsSoftAP, const String &ssid, const String &pwd,
-				const onConnexionEvent &afterConnexion_cb = NULL) :
+		ServerConnexion(bool IsSoftAP, const String &ssid, const String &pwd, const onConnexionEvent &afterConnexion_cb =
+				NULL) :
 				ServerConnexion(IsSoftAP, afterConnexion_cb)
 		{
 			setSSID_PWD(ssid, pwd);
 		}
-		ServerConnexion(bool IsSoftAP, const String &ssid, const String &pwd, const IPAddress &ip,
-				const IPAddress &gateway, const onConnexionEvent &afterConnexion_cb = NULL) :
+		ServerConnexion(bool IsSoftAP, const String &ssid, const String &pwd, const IPAddress &ip, const IPAddress &gateway,
+				const onConnexionEvent &afterConnexion_cb = NULL) :
 				ServerConnexion(IsSoftAP, ssid, pwd, afterConnexion_cb)
 		{
-			_ip = ip;
-			_gateway = gateway;
+			setIPAddress(ip, gateway);
 		}
 
 		~ServerConnexion();
@@ -284,9 +288,27 @@ class ServerConnexion
 
 		bool WaitForConnexion(Conn_typedef connexion, bool toUART = false);
 
-		void setSubnet(const IPAddress &_subnet)
+		void setIPAddress(const IPAddress &ip)
 		{
-			subnet = _subnet;
+			_ip = ip;
+			// Create gateway from ip address
+			_gateway = IPAddress(_ip[0], _ip[1], _ip[2], 1);
+			_useDHCP = (_ip == INADDR_NONE);
+		}
+
+		void setIPAddress(const IPAddress &ip, const IPAddress &gateway)
+		{
+			_ip = ip;
+			_gateway = gateway;
+			_useDHCP = (_ip == INADDR_NONE);
+		}
+
+		/**
+		 * Set subnet mask. Default is 255.255.255.0
+		 */
+		void setSubnet(const IPAddress &subnet)
+		{
+			_subnet = subnet;
 		}
 
 		void setSSID_PWD(const String &ssid, const String &pwd)
@@ -302,6 +324,7 @@ class ServerConnexion
 
 		bool SSIDFromFile(const String &filename);
 		bool SSIDFromEEPROM();
+		bool DHCPFromEEPROM();
 
 		bool Connexion(bool toUART = false);
 		bool IsConnected(void) const
@@ -326,6 +349,7 @@ class ServerConnexion
 		}
 		String getCurrentRSSI(void) const;
 
+		String getDHCP() const;
 		String getGateway() const;
 		String getMAC() const;
 
@@ -336,8 +360,8 @@ class ServerConnexion
 		void setSSID_FileName(const String &name);
 
 // UART functions
-		void StreamUARTMessage(const String &ContentType, const onTimeOut &TimeOut_cb = NULL,
-				uint32_t timeout = STREAM_TIMEOUT, HardwareSerial *Serial_Message = &Serial);
+		void StreamUARTMessage(const String &ContentType, const onTimeOut &TimeOut_cb = NULL, uint32_t timeout =
+				STREAM_TIMEOUT, HardwareSerial *Serial_Message = &Serial);
 
 #ifdef USE_ASYNC_WEBSERVER
 		void SendDefaultXML(AsyncWebServerRequest *request);
@@ -350,7 +374,7 @@ const String GetIPaddress(void);
 const String GetMACaddress(void);
 bool getESPMacAddress(String &mac);
 
-void Server_CommonEvent(uint16_t event);
+void Server_CommonEvent(uint32_t event = default_Events);
 void Auto_Reset(void);
 void SSIDToFile(const String &filename, const String &ssidpwd);
 void SSIDToEEPROM(const String &ssid, const String &pwd);

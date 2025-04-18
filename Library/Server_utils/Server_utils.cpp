@@ -72,7 +72,7 @@ String SSID_FileName = SSID_FILE;
 bool DefaultAP = false;
 // EEPROM Storage
 bool Use_EEPROM = false;
-Preferences *credential = NULL;
+static Preferences credential;
 
 static const char SSIDResponse[] PROGMEM
 		= "<META http-equiv=\"content-type\" content=\"text/html; charset=UTF-8\">SSID enregistré, redémarrez sur la nouvelle IP ...";
@@ -154,16 +154,29 @@ bool ServerConnexion::SSIDFromFile(const String &filename)
 
 bool ServerConnexion::SSIDFromEEPROM()
 {
-	if (!credential)
-		return false;
-
-	credential->begin("credentials", false);
-	_SSID = credential->getString("ssid", "");
-	_PWD = credential->getString("password", "");
-	credential->end();
+	credential.begin("credentials", true);
+	_SSID = credential.getString("ssid", "");
+	_PWD = credential.getString("password", "");
+	credential.end();
 	return ((!_SSID.isEmpty()) && (!_PWD.isEmpty()));
 }
 
+bool ServerConnexion::DHCPFromEEPROM()
+{
+	credential.begin("credentials", true);
+	_useDHCP = credential.getBool("useDHCP", true);
+#ifdef ESP8266
+	_ip = IPAddress((const uint8_t *)(credential.getString("ip", "").c_str()));
+	_gateway = IPAddress((const uint8_t *)(credential.getString("gateway", "").c_str()));
+	_subnet = IPAddress((const uint8_t *)(credential.getString("subnet", "255.255.255.0").c_str()));
+#else
+	_ip = IPAddress(credential.getString("ip", "").c_str());
+	_gateway = IPAddress(credential.getString("gateway", "").c_str());
+	_subnet = IPAddress(credential.getString("subnet", "255.255.255.0").c_str());
+#endif
+	credential.end();
+	return true;
+}
 /**
  * Write SSID and password to a file
  * String must be as : SSID#pwd
@@ -187,12 +200,20 @@ void SSIDToFile(const String &filename, const String &ssidpwd)
 
 void SSIDToEEPROM(const String &ssid, const String &pwd)
 {
-	if (!credential)
-		return;
-	credential->begin("credentials", false);
-	credential->putString("ssid", ssid);
-	credential->putString("password", pwd);
-	credential->end();
+	credential.begin("credentials", false);
+	credential.putString("ssid", ssid);
+	credential.putString("password", pwd);
+	credential.end();
+}
+
+void DHCPToEEPROM(bool useDHCP, const String &ip, const String &gateway, const String &subnet)
+{
+	credential.begin("credentials", false);
+	credential.putBool("useDHCP", useDHCP);
+	credential.putString("ip", ip);
+	credential.putString("gateway", gateway);
+	credential.putString("subnet", subnet);
+	credential.end();
 }
 
 void DeleteSSID(void)
@@ -200,10 +221,8 @@ void DeleteSSID(void)
 	while (Lock_File)
 		;
 	FS_Partition->remove(SSID_FILE);
-	if (credential)
-	{
-		SSIDToEEPROM("", "");
-	}
+	SSIDToEEPROM("", "");
+	DHCPToEEPROM(true, "", "", "");
 	print_debug(F("SSID reset"));
 }
 
@@ -321,11 +340,6 @@ void WiFiEvent(WiFiEvent_t event)
 
 ServerConnexion::~ServerConnexion()
 {
-	if (credential)
-	{
-		delete credential;
-		credential = NULL;
-	}
 }
 
 /**
@@ -355,12 +369,12 @@ bool ServerConnexion::Connexion(bool toUART)
 	{
 		WiFi.mode(WIFI_AP);
 #ifdef ESP8266
-		if ((_ip.isSet()) && (_gateway.isSet()))
-			WiFi.softAPConfig(_ip, _gateway, subnet);
+		if (!_useDHCP)
+			WiFi.softAPConfig(_ip, _gateway, _subnet);
 		WiFi.onSoftAPModeStationDisconnected(&onStationDisconnected);
 #else
-		if ((!_ip.toString().equals("0.0.0.0")) && (!_gateway.toString().equals("0.0.0.0")))
-			WiFi.softAPConfig(_ip, _gateway, subnet);
+		if (!_useDHCP)
+			WiFi.softAPConfig(_ip, _gateway, _subnet);
 #endif
 		if (!WiFi.softAP(_SSID, _PWD))
 		{
@@ -374,12 +388,12 @@ bool ServerConnexion::Connexion(bool toUART)
 		uint8_t count = 0;
 		WiFi.mode(WIFI_STA);
 #ifdef ESP8266
-		if ((_ip.isSet()) && (_gateway.isSet()))
-			WiFi.config(_ip, _gateway, subnet);
+		if (!_useDHCP)
+			WiFi.config(_ip, _gateway, _subnet);
 		WiFi.onStationModeDisconnected(&onWifiDisconnected);
 #else
-		if ((!_ip.toString().equals("0.0.0.0")) && (!_gateway.toString().equals("0.0.0.0")))
-			WiFi.config(_ip, _gateway, subnet);
+		if (!_useDHCP)
+			WiFi.config(_ip, _gateway, _subnet);
 #endif
 		WiFi.begin(_SSID, _PWD);
 		WiFi.setSleep(false);
@@ -553,8 +567,6 @@ bool ServerConnexion::WaitForConnexion(Conn_typedef connexion, bool toUART)
 		case Conn_EEPROM:
 			print_debug(F("EEPROM connexion mode."));
 			tryMax = 1;
-			if (!credential)
-				credential = new Preferences();
 			Use_EEPROM = true;
 			break;
 		default:
@@ -647,6 +659,24 @@ bool ServerConnexion::DefaultAPConnexion()
 String ServerConnexion::getCurrentRSSI(void) const
 {
 	return "RSSI: " + (String) WiFi.RSSI() + " dBm";
+}
+
+String ServerConnexion::getDHCP() const
+{
+	String ip;
+#ifdef ESP8266
+	if (WiFi.getMode() == WIFI_AP)
+	  ip = WiFi.softAPIP().toString();
+	else
+		ip = WiFi.localIP().toString();
+#else
+	if (WiFi.getMode() == WIFI_MODE_AP)
+		ip = WiFi.softAPIP().toString();
+	else
+		ip = WiFi.localIP().toString();
+#endif
+	String dhcp = (_useDHCP) ? "1," : "0,";
+	return dhcp + ip + "," + _subnet.toString() + "," + _gateway.toString() + ",";
 }
 
 String ServerConnexion::getGateway() const
@@ -879,7 +909,7 @@ bool getESPMacAddress(String &mac)
 //		mac = String(buf);
 //	}
 //	return (ret == ESP_OK);
-		return true;
+	return true;
 #endif
 }
 
@@ -916,7 +946,8 @@ void handleNotFound(CB_SERVER_PARAM);
 void handleGetFile(CB_SERVER_PARAM);
 void handleDeleteFile(CB_SERVER_PARAM);
 #ifdef USE_ASYNC_WEBSERVER
-void handleUploadFile(AsyncWebServerRequest *request, String thefile, size_t index, uint8_t *data, size_t len, bool final);
+void handleUploadFile(AsyncWebServerRequest *request, String thefile, size_t index, uint8_t *data, size_t len,
+		bool final);
 #else
 void handleUploadFile();
 #endif
@@ -925,7 +956,8 @@ void handleCreateFile(CB_SERVER_PARAM);
 void handleGetTime(CB_SERVER_PARAM);
 void handleSetTime(CB_SERVER_PARAM);
 void handleReset(CB_SERVER_PARAM);
-void handleSetDHCPIP(CB_SERVER_PARAM);
+void handleSetSSID(CB_SERVER_PARAM);
+void handleSetDHCP(CB_SERVER_PARAM);
 void handleGetMACAddress(CB_SERVER_PARAM);
 void handleGetESPMACAddress(CB_SERVER_PARAM);
 
@@ -939,20 +971,20 @@ void handleGetESPMACAddress(CB_SERVER_PARAM);
  * - create a file
  * - soft reset ESP
  * - set time : update RTCLocal
- * - set network with DHCPIP
- * - reset DHCPIP
+ * - set network with SSID
+ * - reset SSID
  * @param event : a combinaison of Event_typedef
  */
-void Server_CommonEvent(uint16_t event)
+void Server_CommonEvent(uint32_t event)
 {
 	if (DefaultAP)
 	{
 		// Toutes les requêtes redirigées sur une seule réponse
 		server.onNotFound(handleDefaultAP);
 
-		// set DHCPIP
-		if ((event & Ev_SetDHCPIP) == Ev_SetDHCPIP)
-			server.on("/setDHCPIP", HTTP_POST, handleSetDHCPIP);
+		// set SSID
+		if ((event & Ev_SetSSID) == Ev_SetSSID)
+			server.on("/setSSID", HTTP_POST, handleSetSSID);
 
 		return;
 	}
@@ -1015,14 +1047,14 @@ void Server_CommonEvent(uint16_t event)
 	if ((event & Ev_GetTime) == Ev_GetTime)
 		server.on("/getTime", HTTP_GET, handleGetTime);
 
-	// set DHCPIP
-	if ((event & Ev_SetDHCPIP) == Ev_SetDHCPIP)
-		server.on("/setDHCPIP", HTTP_POST, handleSetDHCPIP);
+	// set SSID
+	if ((event & Ev_SetSSID) == Ev_SetSSID)
+		server.on("/setSSID", HTTP_POST, handleSetSSID);
 
-	// reset DHCPIP
-	if ((event & Ev_ResetDHCPIP) == Ev_ResetDHCPIP)
+	// reset SSID
+	if ((event & Ev_ResetSSID) == Ev_ResetSSID)
 	{
-		server.on("/resetDHCPIP", HTTP_GET, [&](CB_SERVER_PARAM)
+		server.on("/resetSSID", HTTP_GET, [&](CB_SERVER_PARAM)
 		{
 			if ( !pserver->authenticate(update_username, update_password))
 			return pserver->requestAuthentication();
@@ -1034,6 +1066,10 @@ void Server_CommonEvent(uint16_t event)
 				Auto_Reset();
 			});
 	}
+
+	// set DHCP
+	if ((event & Ev_SetDHCP) == Ev_SetDHCP)
+		server.on("/setDHCP", HTTP_POST, handleSetDHCP);
 
 	// get MAC address
 	// Server side :
@@ -1309,8 +1345,8 @@ void handleGetFile(CB_SERVER_PARAM)
  * 	server.on("/", HTTP_POST, [](){ server.send(200, "text/plain", ""); }, handleUploadFile);
  */
 #ifdef USE_ASYNC_WEBSERVER
-void handleUploadFile(AsyncWebServerRequest *request, String thefile, size_t index, uint8_t *data,
-		size_t len, bool final)
+void handleUploadFile(AsyncWebServerRequest *request, String thefile, size_t index, uint8_t *data, size_t len,
+		bool final)
 {
 	String logmessage = "";
 	String filename = thefile;
@@ -1645,28 +1681,31 @@ void handleReset(CB_SERVER_PARAM)
 }
 
 /**
- * Handle the set DHCPIP with POST method :
+ * Handle the set SSID with POST method :
  * The file is copied in the root folder
  * HTML side :
- <form method="POST"  action="/setDHCPIP">
- <input type="text" name="networkNameDHCP">
- <input type="text" name="networkPasswordDHCP">
+ <form method="POST"  action="/setSSID">
+ <input type="text" name="networkNameSSID">
+ <input type="text" name="networkPasswordSSID">
  <input type="submit" value="Enregistrer">
  </form>
  * Server side :
- * 	server.on("/setDHCPIP", HTTP_POST, handleSetDHCPIP);
+ * 	server.on("/setSSID", HTTP_POST, handleSetSSID);
  */
-void handleSetDHCPIP(CB_SERVER_PARAM)
+void handleSetSSID(CB_SERVER_PARAM)
 {
 	RETURN_BAD_ARGUMENT();
 
-	if (SSID_FileName != "")
-	{
-		if (Use_EEPROM)
-			SSIDToEEPROM(pserver->arg((int) 0), pserver->arg((int) 1));
-		else
-			SSIDToFile(SSID_FileName, pserver->arg((int) 0) + "#" + pserver->arg((int) 1));
-	}
+	String ssid = pserver->arg("networkNameSSID");
+	String pwd = pserver->arg("networkPasswordSSID");
+
+	if (Use_EEPROM)
+		SSIDToEEPROM(ssid, pwd);
+	else
+		if (SSID_FileName != "")
+		{
+			SSIDToFile(SSID_FileName, ssid + "#" + pwd);
+		}
 
 #ifndef USE_ASYNC_WEBSERVER
 	pserver->client().setNoDelay(true);
@@ -1675,6 +1714,24 @@ void handleSetDHCPIP(CB_SERVER_PARAM)
 
 	if (DefaultAP)
 		Auto_Reset();
+}
+
+/**
+ * Handle set DHCP params
+ */
+void handleSetDHCP(CB_SERVER_PARAM)
+{
+	RETURN_BAD_ARGUMENT();
+
+	bool useDHCP = pserver->arg("DHCP").toInt() == 1;
+	String ip = pserver->arg("IP");
+	String gateway = pserver->arg("GATEWAY");
+	String mask = pserver->arg("MASK");
+	String dns1 = pserver->arg("DNS1");
+	String dns2 = pserver->arg("DNS2");
+	DHCPToEEPROM(useDHCP, ip, gateway, mask);
+
+	pserver->send(204, "text/html", "");
 }
 
 /**
@@ -1692,7 +1749,7 @@ void handleGetESPMACAddress(CB_SERVER_PARAM)
 {
 	String mac;
 	if (getESPMacAddress(mac))
-	  pserver->send(200, "text/plain", mac);
+		pserver->send(200, "text/plain", mac);
 	else
 		pserver->send(200, "text/plain", F("Fail to get ESP MAC address"));
 }
