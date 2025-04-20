@@ -4,8 +4,6 @@
 #if defined(USE_NTP_SERVER)
 #include <NTPClient.h>
 #include <WiFiUdp.h>
-WiFiUDP ntpUDP;
-NTPClient timeClient(ntpUDP, "pool.ntp.org");
 // Set to 1 (winter) or 2 for summer or USE_NTP_SERVER value is used
 int8_t GLOBAL_NTP_SUMMER_HOUR = -1;
 #endif
@@ -276,6 +274,10 @@ void RTCLocal::setDateTime(const char *time, bool with_epoch, bool default_forma
  */
 bool RTCLocal::setEpochTime(int8_t gmt)
 {
+	WiFiUDP ntpUDP;
+	NTPClient timeClient(ntpUDP, "pool.ntp.org");
+	delay(1000);
+
 	// Start the timeClient
 	timeClient.begin();
 	timeClient.setTimeOffset(3600 * gmt);
