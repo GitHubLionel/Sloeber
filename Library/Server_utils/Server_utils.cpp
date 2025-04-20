@@ -5,11 +5,6 @@
 #include "RTCLocal.h"		      // A pseudo RTC software library
 #endif
 #include "Debug_utils.h"		  // Some utils functions for debug
-#ifdef ESP8266
-#include <ESP8266WiFi.h>
-#else
-#include <esp_wifi.h>
-#endif
 
 #ifdef KEEP_ALIVE_USE_TASK
 #include "Tasks_utils.h"
@@ -120,15 +115,13 @@ void ElegantOTAloop(void)
 // ServerConnexion class section
 // ********************************************************************************
 
-void ServerConnexion::begin(ServerSettings &settings)
+void ServerConnexion::begin(const ServerSettings &settings)
 {
-	_IsSoftAP = settings._IsSoftAP;
-	_SSID = settings._SSID;
-	_PWD = settings._PWD;
-	_ip = settings._ip;
-	_gateway = settings._gateway;
-	_onBeforeConnexion = settings._onBeforeConnexion;
-	_onAfterConnexion = settings._onAfterConnexion;
+	_IsSoftAP = settings.IsSoftAP;
+	setSSID_PWD(settings.SSID, settings.PWD);
+	setIPAddress(settings.ip, settings.gateway);
+	setOnBeforeConnexion(settings.getOnBeforeConnexion());
+	setOnAfterConnexion(settings.getOnAfterConnexion());
 }
 
 /**
@@ -165,15 +158,22 @@ bool ServerConnexion::DHCPFromEEPROM()
 {
 	credential.begin("credentials", true);
 	_useDHCP = credential.getBool("useDHCP", true);
+	if (!_useDHCP)
+	{
 #ifdef ESP8266
-	_ip = IPAddress((const uint8_t *)(credential.getString("ip", "").c_str()));
-	_gateway = IPAddress((const uint8_t *)(credential.getString("gateway", "").c_str()));
-	_subnet = IPAddress((const uint8_t *)(credential.getString("subnet", "255.255.255.0").c_str()));
+		_ip = IPAddress((const uint8_t *)(credential.getString("ip", "").c_str()));
+		_gateway = IPAddress((const uint8_t *)(credential.getString("gateway", "").c_str()));
+		_subnet = IPAddress((const uint8_t *)(credential.getString("subnet", "255.255.255.0").c_str()));
+		_dns1 = IPAddress((const uint8_t *)(credential.getString("dns1", _gateway.toString()).c_str()));
+		_dns2 = IPAddress((const uint8_t *)(credential.getString("dns2", "255.255.255.255").c_str()));
 #else
-	_ip = IPAddress(credential.getString("ip", "").c_str());
-	_gateway = IPAddress(credential.getString("gateway", "").c_str());
-	_subnet = IPAddress(credential.getString("subnet", "255.255.255.0").c_str());
+		_ip = IPAddress(credential.getString("ip", "").c_str());
+		_gateway = IPAddress(credential.getString("gateway", "").c_str());
+		_subnet = IPAddress(credential.getString("subnet", "255.255.255.0").c_str());
+		_dns1 = IPAddress(credential.getString("dns1", _gateway.toString()).c_str());
+		_dns2 = IPAddress(credential.getString("dns2", "255.255.255.255").c_str());
 #endif
+	}
 	credential.end();
 	return true;
 }
@@ -206,13 +206,33 @@ void SSIDToEEPROM(const String &ssid, const String &pwd)
 	credential.end();
 }
 
-void DHCPToEEPROM(bool useDHCP, const String &ip, const String &gateway, const String &subnet)
+void DHCPToEEPROM(bool useDHCP, const String &ip, const String &gateway, const String &subnet,
+		const String &dns1, const String &dns2)
 {
 	credential.begin("credentials", false);
 	credential.putBool("useDHCP", useDHCP);
-	credential.putString("ip", ip);
-	credential.putString("gateway", gateway);
-	credential.putString("subnet", subnet);
+	if (useDHCP)
+	{
+		credential.remove("ip");
+		credential.remove("gateway");
+		credential.remove("subnet");
+		credential.remove("dns1");
+		credential.remove("dns2");
+	}
+	else
+	{
+		credential.putString("ip", ip);
+		credential.putString("gateway", gateway);
+		credential.putString("subnet", subnet);
+		if (dns1.isEmpty())
+			credential.remove("dns1");
+		else
+		  credential.putString("dns1", dns1);
+		if (dns2.isEmpty())
+			credential.remove("dns2");
+		else
+			credential.putString("dns2", dns2);
+	}
 	credential.end();
 }
 
@@ -222,7 +242,7 @@ void DeleteSSID(void)
 		;
 	FS_Partition->remove(SSID_FILE);
 	SSIDToEEPROM("", "");
-	DHCPToEEPROM(true, "", "", "");
+	DHCPToEEPROM(true, "", "", "", "", "");
 	print_debug(F("SSID reset"));
 }
 
@@ -374,7 +394,7 @@ bool ServerConnexion::Connexion(bool toUART)
 		WiFi.onSoftAPModeStationDisconnected(&onStationDisconnected);
 #else
 		if (!_useDHCP)
-			WiFi.softAPConfig(_ip, _gateway, _subnet);
+			WiFi.softAPConfig(_ip, _gateway, _subnet, _dns1);
 #endif
 		if (!WiFi.softAP(_SSID, _PWD))
 		{
@@ -389,11 +409,11 @@ bool ServerConnexion::Connexion(bool toUART)
 		WiFi.mode(WIFI_STA);
 #ifdef ESP8266
 		if (!_useDHCP)
-			WiFi.config(_ip, _gateway, _subnet);
+			WiFi.config(_ip, _gateway, _subnet, _dns1);
 		WiFi.onStationModeDisconnected(&onWifiDisconnected);
 #else
 		if (!_useDHCP)
-			WiFi.config(_ip, _gateway, _subnet);
+			WiFi.config(_ip, _gateway, _subnet, _dns1);
 #endif
 		WiFi.begin(_SSID, _PWD);
 		WiFi.setSleep(false);
@@ -544,7 +564,7 @@ void ServerConnexion::KeepAlive(void)
  */
 bool ServerConnexion::WaitForConnexion(Conn_typedef connexion, bool toUART)
 {
-	uint32_t tryMax, trycount = 0;
+	uint32_t trycount = 0;
 
 	// Evènement à faire avant d'essayer la connexion
 	if (_onBeforeConnexion != NULL)
@@ -554,37 +574,16 @@ bool ServerConnexion::WaitForConnexion(Conn_typedef connexion, bool toUART)
 	{
 		case Conn_Inline:
 			print_debug(F("Inline connexion mode."));
-			tryMax = 3;
+			while (WaitForNetWork && (trycount++ < 3)) // 3 try
+			{
+				WaitForNetWork = !Connexion(toUART);
+			}
 			break;  // 30 secondes
 		case Conn_UART:
 			print_debug(F("UART connexion mode."));
-			tryMax = 100;
-			break;  // 25 secondes max
-		case Conn_File:
-			print_debug(F("File connexion mode."));
-			tryMax = 1;
-			break;
-		case Conn_EEPROM:
-			print_debug(F("EEPROM connexion mode."));
-			tryMax = 1;
-			Use_EEPROM = true;
-			break;
-		default:
-			tryMax = 1;
-	}
-
-	while (WaitForNetWork && (trycount++ < tryMax))
-	{
-		switch (connexion)
-		{
-			case Conn_Inline:
+			while (WaitForNetWork && (trycount++ < 100)) // 100 try
 			{
-				WaitForNetWork = !Connexion(toUART);
-				break;
-			}
-			case Conn_UART:
-			{
-				// On attend la transmission du SSID et password au format SSID#pwd
+				// Wait for the transmission of SSID and password in format SSID#pwd
 				if (CheckUARTMessage())
 				{
 					if (ExtractSSID_Password())
@@ -592,42 +591,45 @@ bool ServerConnexion::WaitForConnexion(Conn_typedef connexion, bool toUART)
 				}
 				// Temporisation
 				delay(250);
-				break;
 			}
-			case Conn_File:
+			break;  // 25 secondes max
+		case Conn_File:
+			print_debug(F("File connexion mode."));
+			// If file contain SSID and password in format SSID#pwd
+			if (SSIDFromFile(SSID_File))
 			{
-				// Si le fichier contenait le SSID et le password au format SSID#pwd
-				if (SSIDFromFile(SSID_File))
-				{
-					WaitForNetWork = !Connexion(toUART);
-				}
-				else
-				{
-					print_debug(F("File not found or invalid SSID/password"));
-					WaitForNetWork = !DefaultAPConnexion();
-				}
-				break;
+				WaitForNetWork = !Connexion(toUART);
 			}
-			case Conn_EEPROM:
+			else
 			{
-				// Si le fichier contenait le SSID et le password au format SSID#pwd
-				if (SSIDFromEEPROM())
-				{
-					WaitForNetWork = !Connexion(toUART);
-				}
-				else
-				{
-					print_debug(F("EEPROM empty or invalid SSID/password"));
-					WaitForNetWork = !DefaultAPConnexion();
-				}
-				break;
+				print_debug(F("File not found or invalid SSID/password"));
+				WaitForNetWork = !DefaultAPConnexion();
 			}
-			default:
-				print_debug(F("Unknown connexion method"));
-		}
+			break;
+		case Conn_EEPROM:
+			print_debug(F("EEPROM connexion mode."));
+			Use_EEPROM = true;
+			// If SSID and password is in EEPROM
+			if (SSIDFromEEPROM())
+			{
+				DHCPFromEEPROM();
+				WaitForNetWork = !Connexion(toUART);
+			}
+			else
+			{
+				print_debug(F("EEPROM empty or invalid SSID/password"));
+				WaitForNetWork = !DefaultAPConnexion();
+			}
+			break;
+		default:
+			WaitForNetWork = true;
+			print_debug(F("Unknown connexion method"));
+	}
 
-		// HTTP updater setup
+	// HTTP updater setup
 #ifdef USE_HTTPUPDATER
+	if (!WaitForNetWork)
+	{
 #ifdef USE_ELEGANT_OTA
 	  ElegantOTA.begin(&server, update_path, update_username, update_password);    // Start ElegantOTA
 	  ElegantOTA.setAutoReboot(true);
@@ -638,9 +640,8 @@ bool ServerConnexion::WaitForConnexion(Conn_typedef connexion, bool toUART)
 #else
 		httpUpdater.setup(&server, update_path, update_username, update_password);
 #endif
-#endif
-
 	}
+#endif
 	return WaitForNetWork;
 }
 
@@ -663,20 +664,24 @@ String ServerConnexion::getCurrentRSSI(void) const
 
 String ServerConnexion::getDHCP() const
 {
-	String ip;
+	IPAddress ip;
 #ifdef ESP8266
 	if (WiFi.getMode() == WIFI_AP)
-	  ip = WiFi.softAPIP().toString();
+	  ip = WiFi.softAPIP();
 	else
-		ip = WiFi.localIP().toString();
+		ip = WiFi.localIP();
 #else
 	if (WiFi.getMode() == WIFI_MODE_AP)
-		ip = WiFi.softAPIP().toString();
+		ip = WiFi.softAPIP();
 	else
-		ip = WiFi.localIP().toString();
+		ip = WiFi.localIP();
 #endif
 	String dhcp = (_useDHCP) ? "1," : "0,";
-	return dhcp + ip + "," + _subnet.toString() + "," + _gateway.toString() + ",";
+	IPAddress gateway = _gateway;
+	// Create a gateway from ip
+	if (_useDHCP)
+		gateway = IPAddress(ip[0], ip[1], ip[2], 1);
+	return dhcp + ip.toString() + "," + _subnet.toString() + "," + gateway.toString();
 }
 
 String ServerConnexion::getGateway() const
@@ -1729,9 +1734,9 @@ void handleSetDHCP(CB_SERVER_PARAM)
 	String mask = pserver->arg("MASK");
 	String dns1 = pserver->arg("DNS1");
 	String dns2 = pserver->arg("DNS2");
-	DHCPToEEPROM(useDHCP, ip, gateway, mask);
+	DHCPToEEPROM(useDHCP, ip, gateway, mask, dns1, dns2);
 
-	pserver->send(204, "text/html", "");
+	pserver->send(200, "text/html", "");
 }
 
 /**

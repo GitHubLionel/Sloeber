@@ -202,31 +202,43 @@ class ServerSettings
 {
 	public:
 		ServerSettings() :
-				_IsSoftAP(true), _SSID(""), _PWD(""), _onAfterConnexion(NULL)
+				IsSoftAP(true), SSID(""), PWD(""), _onAfterConnexion(NULL)
 		{
 		}
 		ServerSettings(bool IsSoftAP, const String ssid, const String pwd, const onConnexionEvent &afterConnexion_cb = NULL) :
-				_IsSoftAP(IsSoftAP), _SSID(ssid), _PWD(pwd), _onAfterConnexion(afterConnexion_cb)
+				IsSoftAP(IsSoftAP), SSID(ssid), PWD(pwd), _onAfterConnexion(afterConnexion_cb)
 		{
 		}
 
-		bool _IsSoftAP;
-		String _SSID;
-		String _PWD;
-		IPAddress _ip = INADDR_NONE;
-		IPAddress _gateway = INADDR_NONE;
-		onConnexionEvent _onBeforeConnexion = NULL;
-		onConnexionEvent _onAfterConnexion;
+		bool IsSoftAP;
+		String SSID;
+		String PWD;
+		IPAddress ip = INADDR_NONE;
+		IPAddress gateway = INADDR_NONE;
 
 		void setOnBeforeConnexion(const onConnexionEvent &callback)
 		{
 			_onBeforeConnexion = callback;
 		}
 
+		onConnexionEvent getOnBeforeConnexion(void) const
+		{
+			return _onBeforeConnexion;
+		}
+
 		void setOnAfterConnexion(const onConnexionEvent &callback)
 		{
 			_onAfterConnexion = callback;
 		}
+
+		onConnexionEvent getOnAfterConnexion(void) const
+		{
+			return _onAfterConnexion;
+		}
+
+	private:
+		onConnexionEvent _onBeforeConnexion = NULL;
+		onConnexionEvent _onAfterConnexion;
 };
 
 class ServerConnexion
@@ -239,7 +251,11 @@ class ServerConnexion
 		String _mDNSHostName = "ESP_DNS";
 		IPAddress _ip = INADDR_NONE;
 		IPAddress _gateway = INADDR_NONE;
+		// subnet mask
 		IPAddress _subnet = IPAddress(255, 255, 255, 0);
+		// dns1. By default is equal to gateway
+		IPAddress _dns1 = INADDR_NONE;
+		IPAddress _dns2 = IPAddress(255, 255, 255, 255);
 		String _IPaddress = "";
 		int8_t _Wifi_Signal = 0;
 		// Boolean to wait for network
@@ -284,7 +300,7 @@ class ServerConnexion
 			_onAfterConnexion = callback;
 		}
 
-		void begin(ServerSettings &settings);
+		void begin(const ServerSettings &settings);
 
 		bool WaitForConnexion(Conn_typedef connexion, bool toUART = false);
 
@@ -293,6 +309,7 @@ class ServerConnexion
 			_ip = ip;
 			// Create gateway from ip address
 			_gateway = IPAddress(_ip[0], _ip[1], _ip[2], 1);
+			_dns1 = _gateway;
 			_useDHCP = (_ip == INADDR_NONE);
 		}
 
@@ -300,6 +317,7 @@ class ServerConnexion
 		{
 			_ip = ip;
 			_gateway = gateway;
+			_dns1 = _gateway;
 			_useDHCP = (_ip == INADDR_NONE);
 		}
 
@@ -339,7 +357,7 @@ class ServerConnexion
 		{
 			return _IPaddress;
 		}
-		bool ISSoftAP()
+		bool ISSoftAP() const
 		{
 			return _IsSoftAP;
 		}
