@@ -188,5 +188,8 @@
 // Use ESP Now
 #define USE_ESPNOW
 
+// Use keep alive task
+#define USE_KEEPALIVE_TASK
+
 // Show Idle task
 #define USE_IDLE_TASK	false

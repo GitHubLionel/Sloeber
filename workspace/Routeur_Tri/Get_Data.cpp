@@ -304,11 +304,11 @@ void Get_Data(void)
 //		append_data();
 		if (logSemaphore != NULL)
 			xSemaphoreGive(logSemaphore);
-
-		// Donnée prête pour l'ESP Now
-		if (ESPNowSemaphore != NULL)
-			xSemaphoreGive(ESPNowSemaphore);
 	}
+
+	// Donnée prête pour l'ESP Now
+//	if (ESPNowSemaphore != NULL)
+//		xSemaphoreGive(ESPNowSemaphore);
 
 	Data_acquisition = false;
 }

@@ -297,7 +297,7 @@ void ESPNOW_Task_code(void *parameter)
 	BEGIN_TASK_CODE("ESPNOW_Task");
 	for (EVER)
 	{
-		if (xSemaphoreTake(ESPNowSemaphore, 0) == pdTRUE)
+//		if (xSemaphoreTake(ESPNowSemaphore, 0) == pdTRUE)
 		{
 			ESPNow_Data.power = Current_Data.get_total_power();
 			if (!routeur_master->send_message((uint8_t *) &ESPNow_Data, sizeof(ESPNow_Data)))
@@ -309,7 +309,7 @@ void ESPNOW_Task_code(void *parameter)
 	}
 }
 
-#define ESPNOW_DATA_TASK {condCreate, "ESPNOW_Task", 4096, 3, 20, CoreAny, ESPNOW_Task_code}
+#define ESPNOW_DATA_TASK {condCreate, "ESPNOW_Task", 4096, 3, 100, CoreAny, ESPNOW_Task_code}
 #endif
 
 // ********************************************************************************
@@ -610,7 +610,9 @@ void setup()
 //	ESPNOW_Task: 3068 / 4096
 	TaskList.AddTask(RTC_DATA_TASK); // RTC Task
 	TaskList.AddTask(UART_DATA_TASK); // UART Task
+#ifdef USE_KEEPALIVE_TASK
 	TaskList.AddTask(KEEP_ALIVE_DATA_TASK); // Keep alive Wifi Task
+#endif
 #ifdef USE_DS
 	TaskList.AddTask(DS18B20_DATA_TASK(DS_Count > 0)); // DS18B20 Task
 #endif
@@ -676,9 +678,7 @@ void loop()
 void OnAfterConnexion(void)
 {
 	// Server default events
-	Server_CommonEvent(
-			Ev_LoadPage | Ev_GetFile | Ev_DeleteFile | Ev_UploadFile | Ev_ListFile | Ev_ResetESP
-					| Ev_SetTime | Ev_GetTime | Ev_SetDHCPIP | Ev_ResetDHCPIP);
+	Server_CommonEvent(default_Events | Ev_ListFile | Ev_ResetESP | Ev_SetTime | Ev_GetTime);
 
 	// Server specific events (voir le javascript)
 	server.on("/getUARTData", HTTP_GET, [](CB_SERVER_PARAM)
@@ -792,6 +792,9 @@ void handleInitialization(CB_SERVER_PARAM)
 
 	// Soleil
 	message += '#' + (String) emul_PV.SunRise_SunSet();
+
+	// DHCP
+	message += '#' + myServer.getDHCP();
 
 //	print_debug(message);
 

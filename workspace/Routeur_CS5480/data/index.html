@@ -408,6 +408,42 @@
     <div class="div_space">
       <button class="myButton" onclick="doToggle('Oled')">Toggle Oled</button>
     </div>
+
+    <div class="div_space">
+      <fieldset>
+        <table style="margin-left: auto; margin-right: auto; margin-bottom: 10px">
+          <tbody>
+            <tr>
+              <th class="" scope="col"><label for="dhcp"><span>Utilise DHCP</span></label></th>
+              <th class="" scope="col"><div class="checkbox"><input type="checkbox" name="dhcp" id="dhcp" checked="checked" onclick="dhcpVisibility()"></div></th>
+            </tr>
+
+            <tr class="dhcp_fixe fixe" style="display: table-row;">
+              <td class=""><label for="ip_fixe"><span>IP Fixe</span></label></td>
+              <td class=""><input type="text" id="ip_fixe" maxlength="15" value="192.168.1.100"></td>
+            </tr>
+            <tr class="dhcp_fixe fixe" style="display: table-row;">
+              <td class=""><label for="masque"><span>Masque</span></label></td>
+              <td class=""><input type="text" id="masque" maxlength="15" value="255.255.255.0" title="Généralement 255.255.255.0"></td>
+            </tr>
+            <tr class="dhcp_fixe fixe" style="display: table-row;">
+              <td class=""><label for="passerelle"><span>Passerelle</span></label></td>
+              <td class=""><input type="text" id="passerelle" maxlength="15" value="192.168.1.1" title="Généralement comme l'IP mais se terminant par .1"></td>
+            </tr>
+            <tr class="dhcp_fixe fixe" style="display: table-row;">
+              <td class=""><label for="dns1"><span>DNS 1</span></label></td>
+              <td class=""><input type="text" id="dns1" maxlength="15" value="192.168.1.1" title="Généralement comme la passerelle. Optionnel."></td>
+            </tr>
+            <tr class="dhcp_fixe fixe" style="display: table-row;">
+              <td class=""><label for="dns2"><span>DNS 2</span></label></td>
+              <td class=""><input type="text" id="dns2" maxlength="15" value="255.255.255.255" title="Généralement 255.255.255.255. Optionnel."></td>
+            </tr>
+        </tbody>
+      </table>
+      <button class="myButton" id="button" onclick="sendDHCP()"><span>Enregistrer les modifications</span></button>
+    </fieldset>
+  </div>
+
   </div>
 
   <div id="chartMenu" class="context-menu" style="display: none">

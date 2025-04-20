@@ -250,6 +250,10 @@ button {
   margin: 0 auto 3rem;
 }
 
+.dhcp_fixe {
+  display: none !important;
+}
+
 /* Graphe */
 .padCanvas {
   padding: 0px 10px 5px 10px;

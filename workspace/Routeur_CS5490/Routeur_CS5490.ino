@@ -158,7 +158,7 @@ TeleInfo TI(TI_RX_GPIO, 5000);
 //CIRRUS_Calib_typedef CS_Calib = {260.00, 16.50, 0x3BF15A, 0x43E86F, 0x000000, 0x000000, 0x000000};
 //CIRRUS_Calib_typedef CS_Calib = {260.00, 16.50, 0x380B99, 0x3FE3E9, 0x084BDE, 0x000000, 0x000000};
 CIRRUS_Calib_typedef CS_Calib = {260.00, 16.50, 0x380B99, 0xC8B5CA, 0x1A04A6, 0x000080, 0x800000};
-CIRRUS_Config_typedef CS_Config = {0xC02000, 0x00EEEB, 0x10020A, 0x000001, 0x800000, 0x000000};
+CIRRUS_Config_typedef CS_Config = {0xC02000, 0x00EEEB, 0x10020A, 0x000001, 0x800000, 0x000000}; // 0x00EEEF = interrupt
 
 #ifdef CIRRUS_USE_UART
 #if CIRRUS_UART_HARD == 1
@@ -565,9 +565,7 @@ void loop()
 void OnAfterConnexion(void)
 {
 	// Server default events
-	Server_CommonEvent(
-			Ev_LoadPage | Ev_GetFile | Ev_DeleteFile | Ev_UploadFile | Ev_ListFile | Ev_ResetESP
-					| Ev_SetTime | Ev_GetTime | Ev_SetDHCPIP | Ev_ResetDHCPIP);
+	Server_CommonEvent(default_Events | Ev_ListFile | Ev_ResetESP | Ev_SetTime | Ev_GetTime);
 
 	// Server specific events (voir le javascript)
 	server.on("/getUARTData", HTTP_GET, []()
@@ -634,6 +632,9 @@ void handleInitialization(void)
 	else
 #endif
 		message += "OFF";
+
+	// DHCP
+	message += '#' + myServer.getDHCP();
 
 	server.send(200, "text/plain", message);
 }

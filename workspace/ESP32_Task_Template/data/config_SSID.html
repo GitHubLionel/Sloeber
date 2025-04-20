@@ -20,14 +20,14 @@
 <body>
 
   <div class="formulaire" style="">
-      <form method="POST" action="/setDHCPIP">
+      <form method="POST" action="/setSSID">
           <div class="">            
-              <input type="text" placeholder="Nom du réseau (SSID)" name="networkNameDHCP" value="" pattern=".{5,30}" required title="Nom entre 5 et 30 caractères">
+              <input type="text" placeholder="Nom du réseau (SSID)" name="networkNameSSID" value="" pattern=".{5,30}" required title="Nom réseau entre 5 et 30 caractères">
           </div>        
           <div class="">            
-              <input type="password" placeholder="Mot de passe" name="networkPasswordDHCP" value="" pattern=".{8,63}" required title="Mot entre 8 et 63 caractères">
+              <input type="password" placeholder="Mot de passe" name="networkPasswordSSID" value="" pattern=".{8,63}" required title="Mot entre 8 et 63 caractères">
           </div>        
-          <input class="" type="submit" name="saveDHCP" value="Enregistre et redémarre">
+          <input class="" type="submit" name="saveSSID" value="Enregistre et redémarre">
       </form>      
   </div>
 
