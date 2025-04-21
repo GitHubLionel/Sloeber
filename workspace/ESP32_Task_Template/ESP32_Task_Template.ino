@@ -262,8 +262,7 @@ void loop()
 void OnAfterConnexion(void)
 {
 	// Server default events
-	Server_CommonEvent(Ev_LoadPage | Ev_GetFile | Ev_DeleteFile | Ev_UploadFile |
-			Ev_ListFile | Ev_ResetESP | Ev_SetTime | Ev_GetTime | Ev_SetDHCPIP | Ev_ResetDHCPIP);
+	Server_CommonEvent(default_Events | Ev_ListFile | Ev_ResetESP | Ev_SetTime | Ev_GetTime);
 
 	// Server specific events (voir le javascript)
 	server.on("/getUARTData", HTTP_GET, [](CB_SERVER_PARAM)
