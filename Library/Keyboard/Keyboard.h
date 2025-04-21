@@ -40,6 +40,7 @@ extern const char *Btn_Texte[BTN_MAX];
 #define DEBOUNCING_US      200000  // Minimum time in us between two button click readings
 #endif
 
+// Number of debounce in one second
 #define SECOND_TO_DEBOUNCING(second)	(((second) * 1000) / DEBOUNCING_MS)
 
 // Callback to be executed if button is clicked
@@ -61,12 +62,12 @@ bool Keyboard_Initialize(uint8_t nbButton, ADC_Sampling sampling = ADC_10bits,
 		const KeyBoard_Click_cb &kbClick = NULL);
 bool Keyboard_Initialize(uint8_t nbButton, const uint16_t interval[],
 		const KeyBoard_Click_cb &kbClick = NULL);
+
 // La mise à jour en fond de tache à mettre dans la boucle loop
 void Keyboard_UpdateTime(void);
 // La fonction de test pour voir si on a appuyé sur le clavier
 bool Check_Keyboard(Btn_Action *Btn);
 void SetKeyBoardCallback(const KeyBoard_Click_cb &kbClick);
-void Check_Btn_Clicked(unsigned long ms);
 
 // fonctions annexes
 Btn_Action Btn_Click();

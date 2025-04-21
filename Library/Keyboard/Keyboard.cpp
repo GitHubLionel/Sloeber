@@ -5,6 +5,9 @@
 
 #ifdef KEYBOARD_USE_TASK
 #include "Tasks_utils.h"
+#define DEBOUNCING_STEP	DEBOUNCING_US
+#else
+#define DEBOUNCING_STEP	DEBOUNCING_MS
 #endif
 
 const char *Btn_Texte[BTN_MAX] = {"NO btn pressed", "K1 pressed", "K2 pressed", "K3 pressed",
@@ -17,7 +20,6 @@ static uint8_t Btn_Count = 0;
 static bool Keyboard_Initialized = false;
 volatile Btn_Action Btn_Clicked = Btn_NOP;
 volatile Btn_Action Last_Btn_Clicked = Btn_NOP;
-volatile uint32_t Btn_Clicked_count = 0;
 volatile uint16_t last_ADC = 0;
 
 static uint32_t ADC_res = 1023;  // Echantillonnage 10 bits
@@ -39,6 +41,7 @@ void Btn_Definition_2B();
 void Btn_Definition_3B();
 void Btn_Definition_4B();
 Btn_Action RawToBtn(uint16_t val);
+void Check_Btn_Clicked(unsigned long time);
 
 // Function for debug message, may be redefined elsewhere
 void __attribute__((weak)) print_debug(const char *mess, bool ln = true)
@@ -258,32 +261,35 @@ void Btn_Definition_4B()
 // Gestion clavier
 // ********************************************************************************
 
-void Check_Btn_Clicked(unsigned long ms)
+/**
+ * Check if button was clicked.
+ * time is in us when use task (esp_timer_get_time() function). Use DEBOUNCING_US.
+ * time is in ms otherwise. Use DEBOUNCING_MS.
+ */
+void Check_Btn_Clicked(unsigned long time)
 {
-	static unsigned long lastTimeRead = millis();
 	static unsigned long Start_click = 0;
+	static uint32_t Btn_Clicked_count = 0;
 	static uint64_t cumul = 0;
 	static uint64_t count = 0;
 	uint16_t raw = 0;
-
-	lastTimeRead = ms;
 
 	// Read raw adc value and test is in the minimal interval
 	if (Btn_Click_Val(&raw))
 	{
 		// We start a cumul
 		if (count == 0)
-			Start_click = lastTimeRead;
+			Start_click = time;
 
 		cumul += raw;
 		count++;
 
 		// Ok, we have a real click
-		if (lastTimeRead - Start_click > DEBOUNCING_US)
+		if (time - Start_click > DEBOUNCING_STEP)
 		{
 			Btn_Clicked = RawToBtn(cumul / count);
 			if (Last_Btn_Clicked == Btn_Clicked)
-				Btn_Clicked_count = Btn_Clicked_count + 1;
+				Btn_Clicked_count++;
 			else
 			{
 				Last_Btn_Clicked = Btn_Clicked;
@@ -308,35 +314,18 @@ void Check_Btn_Clicked(unsigned long ms)
 
 Btn_Action Btn_Click()
 {
-	uint8_t i;
-	Btn_Action btn = Btn_NOP;
-	uint16_t val = Btn_Click_Val();
-
-	// On a appuyé sur un bouton
-	if (val > Low_sampling[Btn_Count - 1])
-	{ // si différent de 0
-		for (i = 0; i < Btn_Count; i++)
-		{ // parcours des valeurs
-			if (val >= Low_sampling[i])
-			{ // test si supérieur à valeur concernée
-				btn = (Btn_Action) (Btn_Count - i);
-				break; //sortie de boucle
-			}
-		}
-	}
-	last_ADC = val;
-	return btn;
+	last_ADC = Btn_Click_Val();
+	return RawToBtn(last_ADC);
 }
 
 Btn_Action RawToBtn(uint16_t val)
 {
-	uint8_t i;
 	Btn_Action btn = Btn_NOP;
 
 	// On a appuyé sur un bouton
 	if (val > Low_sampling[Btn_Count - 1])
 	{ // si différent de 0
-		for (i = 0; i < Btn_Count; i++)
+		for (uint8_t i = 0; i < Btn_Count; i++)
 		{ // parcours des valeurs
 			if (val >= Low_sampling[i])
 			{ // test si supérieur à valeur concernée
