@@ -133,17 +133,17 @@ void WatchDog_Init(uint32_t WDT_TIMEOUT_ms)
 {
 	// https://github.com/espressif/esp-idf/blob/v5.2.2/examples/system/task_watchdog/main/task_watchdog_example_main.c
   //Watchdog initialisation
-  esp_task_wdt_deinit();
+  esp_task_wdt_deinit(); // @suppress("Invalid arguments")
   // Initialisation de la structure de configuration pour la WDT
-  esp_task_wdt_config_t wdt_config = {
+  esp_task_wdt_config_t wdt_config = { // @suppress("Type cannot be resolved")
     .timeout_ms = WDT_TIMEOUT_ms,                     // TimeOut in ms
     .idle_core_mask = (1 << portNUM_PROCESSORS) - 1,  // Bitmask of all cores
     .trigger_panic = true                             // Enable panic to restart ESP32
   };
   // Initialisation de la WDT avec la structure de configuration
-  ESP_ERROR_CHECK(esp_task_wdt_init(&wdt_config));
-  esp_task_wdt_add(NULL);  //add current thread to WDT watch
-  esp_task_wdt_reset();
+  ESP_ERROR_CHECK(esp_task_wdt_init(&wdt_config)); // @suppress("Invalid arguments")
+  esp_task_wdt_add(NULL);  //add current thread to WDT watch // @suppress("Invalid arguments")
+  esp_task_wdt_reset(); // @suppress("Invalid arguments")
   delay(1);  //VERY VERY IMPORTANT for Watchdog Reset
 }
 #endif
