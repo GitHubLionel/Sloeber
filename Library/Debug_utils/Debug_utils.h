@@ -74,6 +74,12 @@ void print_crash(void);
 #endif
 
 /**
+ * Auto reset the ESP8266/ESP32.
+ * This weakly function just call reset (ESP8266) or restart (ESP32)
+ */
+bool Auto_Reset(void);
+
+/**
  * Some UART functions used in another library
  */
 bool CheckUARTMessage(HardwareSerial *Serial_Message = &Serial);

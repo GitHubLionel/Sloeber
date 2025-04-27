@@ -484,7 +484,7 @@ bool CheckUARTMessage(HardwareSerial *Serial_Message)
 /**
  * A minimal auto reset function
  */
-void __attribute__((weak)) Auto_Reset(void)
+bool __attribute__((weak)) Auto_Reset(void)
 {
 #ifdef ESP8266
 	ESP.reset();
@@ -492,6 +492,7 @@ void __attribute__((weak)) Auto_Reset(void)
 #ifdef ESP32
 	ESP.restart();
 #endif
+	return true;
 }
 
 /**
@@ -569,7 +570,7 @@ bool BasicAnalyseMessage(void)
 					else
 						if (strcmp((char*) UART_Message_Buffer, "RESET_ESP") == 0)
 						{
-							Auto_Reset();
+							while (Auto_Reset());
 							return true;
 						}
 	return false;
