@@ -45,12 +45,21 @@ WebServer *pserver = &server;
 	#endif
 #endif
 const char *update_path = "/firmware";
+#ifdef ESP32
+void onBeforeUpdate(bool *abort, int *code)
+{
+#ifdef TASKLIST_DEFINED
+	print_debug(F("Suspend all task"));
+	TaskList.SuspendAllTask();
+#endif
+}
+#endif
 #endif
 
 const char *update_username = "admin";
 const char *update_password = "admin";
 
-// A counter for the connexion
+// A counter for the connexion in station mode
 #define TRY_COUNT	40	// soit 10 s
 
 // The buffer for the received message from UART
@@ -82,6 +91,10 @@ void onOTAStart() {
   // Log when OTA has started
 	print_debug("OTA update started!");
   // <Add your own code here>
+#ifdef TASKLIST_DEFINED
+	print_debug(F("Suspend all task"));
+	TaskList.SuspendAllTask();
+#endif
 }
 
 void onOTAProgress(size_t current, size_t final) {
@@ -379,15 +392,10 @@ bool ServerConnexion::Connexion(bool toUART)
 	print_debug(F("\r\nConnecting to "), false);
 	print_debug(_SSID);
 	print_debug(_PWD);
-#ifdef ESP8266
-	WiFi.setSleepMode(WIFI_NONE_SLEEP);
-#endif
-#ifdef ESP32
-	WiFi.setSleep(WIFI_PS_NONE);
-#endif
+
 	if (_IsSoftAP)
 	{
-		WiFi.mode(WIFI_AP);
+		WiFi.mode(WIFI_AP); // SoftAP mode
 #ifdef ESP8266
 		if (!_useDHCP)
 			WiFi.softAPConfig(_ip, _gateway, _subnet);
@@ -406,7 +414,7 @@ bool ServerConnexion::Connexion(bool toUART)
 	else
 	{
 		uint8_t count = 0;
-		WiFi.mode(WIFI_STA);
+		WiFi.mode(WIFI_STA); // Station mode
 #ifdef ESP8266
 		if (!_useDHCP)
 			WiFi.config(_ip, _gateway, _subnet, _dns1);
@@ -449,6 +457,11 @@ bool ServerConnexion::Connexion(bool toUART)
 #ifdef ESP32
 		// If we want message
 		WiFi.onEvent(WiFiEvent);
+#endif
+#ifdef ESP8266
+		WiFi.setSleepMode(WIFI_NONE_SLEEP);
+#else
+		WiFi.setSleep(WIFI_PS_NONE);
 #endif
 		_IPaddress = "IP=" + WiFi.localIP().toString();
 	}
@@ -639,6 +652,9 @@ bool ServerConnexion::WaitForConnexion(Conn_typedef connexion, bool toUART)
 	  ElegantOTA.onEnd(onOTAEnd);
 #else
 		httpUpdater.setup(&server, update_path, update_username, update_password);
+#ifdef ESP32
+		httpUpdater.setOnBeforeUpdateCallback(onBeforeUpdate);
+#endif
 #endif
 	}
 #endif
@@ -869,24 +885,30 @@ void ServerConnexion::SendDefaultXML(void)
  * You will receive a message like this :
  *  ets Jan  8 2013,rst cause:2, boot mode:(3,6)
  */
-void Auto_Reset(void)
+bool Auto_Reset(void)
 {
 	print_debug(F("\r\nAuto reset : "));
+#ifdef TASKLIST_DEFINED
+	print_debug(F("Suspend all task"));
+	TaskList.SuspendAllTask();
+#endif
 #ifdef USE_ASYNC_WEBSERVER
+	print_debug(F("End server"));
 	server.end();
 #else
 	server.client().stop();
 #endif
+	print_debug(F("Unmount partition"));
 	delay(100);
 	// End cleanly FileSystem partition and Data partition if exist
-	FS_Partition->end();
-	Data_Partition->end();
+	UnmountPartition();
 #ifdef ESP8266
 	ESP.reset();
 #endif
 #ifdef ESP32
 	ESP.restart();
 #endif
+	return true;
 }
 
 /**

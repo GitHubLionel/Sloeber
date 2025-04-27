@@ -393,7 +393,6 @@ const String GetMACaddress(void);
 bool getESPMacAddress(String &mac);
 
 void Server_CommonEvent(uint32_t event = default_Events);
-void Auto_Reset(void);
 void SSIDToFile(const String &filename, const String &ssidpwd);
 void SSIDToEEPROM(const String &ssid, const String &pwd);
 void DeleteSSID(void);
