@@ -184,6 +184,8 @@ class TaskList_c
 		int GetTaskSleep(const String &name, bool to_ticks = true);
 		TaskHandle_t GetTaskHandle(const String &name);
 
+		void SuspendAllTask(void);
+
 		String GetIdleStr(void) const;
 		String GetMemoryStr(void) const;
 
@@ -202,6 +204,7 @@ class TaskList_c
  * A global instance of TaskList
  */
 #if !defined(NO_GLOBAL_INSTANCES) && !defined(NO_GLOBAL_TASKLIST)
+#define TASKLIST_DEFINED
 extern TaskList_c TaskList;
 #endif
 

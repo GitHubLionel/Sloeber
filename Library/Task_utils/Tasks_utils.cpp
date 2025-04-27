@@ -76,7 +76,7 @@ bool TaskList_c::Create(bool with_idle_task)
 	bool success = true;
 	BaseType_t xReturned = pdPASS;
 
-	for (int i = 0; i < Tasks.size(); i++)
+	for (size_t i = 0; i < Tasks.size(); i++)
 	{
 		if (Tasks[i].Condition > 0)
 		{
@@ -322,7 +322,7 @@ bool TaskList_c::IsTaskSuspended(const String &name)
  */
 TaskData_t* TaskList_c::GetTaskByName(const String &name)
 {
-	for (int i = 0; i < Tasks.size(); i++)
+	for (size_t i = 0; i < Tasks.size(); i++)
 		if (strcmp(Tasks[i].Name, name.c_str()) == 0)
 			return &Tasks[i];
 	return NULL;    // Not found
@@ -360,12 +360,30 @@ TaskHandle_t TaskList_c::GetTaskHandle(const String &name)
 }
 
 /**
+ * Suspend all the tasks
+ */
+void TaskList_c::SuspendAllTask(void)
+{
+	for (size_t i = 0; i < Tasks.size(); i++)
+	{
+		TaskData_t *td = &Tasks[i];
+		if (!td->IsSuspended)
+		{
+			td->IsSuspended = true;
+			vTaskSuspend(td->Handle);
+		}
+	}
+	// 100 ms delay
+	vTaskDelay(100 / portTICK_PERIOD_MS);
+}
+
+/**
  * Print info (priority, sleep, n° core, size) of each tasks
  */
 void TaskList_c::InfoTask(void)
 {
 	String info = "--- Task Info ---\r\n";
-	for (int i = 0; i < Tasks.size(); i++)
+	for (size_t i = 0; i < Tasks.size(); i++)
 	{
 		TaskData_t *td = &Tasks[i];
 		if (td->Handle != NULL)
@@ -391,7 +409,7 @@ void TaskList_c::Task_Memory_code(void *parameter)
 	for (EVER)
 	{
 		Memory_str = "--- Memory free stack ---\r\n";
-		for (int i = 0; i < Tasks.size(); i++)
+		for (size_t i = 0; i < Tasks.size(); i++)
 		{
 			TaskData_t *td = &Tasks[i];
 			if (td->Handle != NULL)
