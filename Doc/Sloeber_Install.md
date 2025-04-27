@@ -94,13 +94,13 @@ Menu : Sloeber/preferences/Third party index url's
 Menu : Sloeber/preferences/Library Manager
   - sélectionner Communication/OneWire (Default) v2.3.8
     - Apply et attendre (surveiller en bas à droite la progression)
-  - sélectionner Sensors/DallasTemperature (Default) v3.9.0
+  - sélectionner Sensors/DallasTemperature (Default) v4.0.3
     - Apply et attendre (surveiller en bas à droite la progression)
   - sélectionner Timing/NTPClient (Default) v3.2.1 (pour récupérer l'heure Internet)
     - Apply et attendre (surveiller en bas à droite la progression)
-  - sélectionner Other/Async TCP v3.3.6 (pour le serveur asynchrone)
+  - sélectionner Other/Async TCP v3.3.8 (pour le serveur asynchrone)
     - Apply et attendre (surveiller en bas à droite la progression)
-  - sélectionner Other/ESP Async WebServer (Attention à l'orthographe) v3.7.2 (pour le serveur asynchrone)
+  - sélectionner Other/ESP Async WebServer (Attention à l'orthographe) v3.7.6 (pour le serveur asynchrone)
     - Apply et attendre (surveiller en bas à droite la progression)
   - sélectionner Other/ESPAsyncHTTPUpdateServer v2.0.0 (pour le upload avec le serveur asynchrone)
     - Apply et attendre (surveiller en bas à droite la progression)
