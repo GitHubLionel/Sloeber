@@ -35,6 +35,12 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/NTPClient}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/Preferences/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/Network/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/WebServer/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/ESP_Async_WebServer/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/Async_TCP/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/HTTPUpdateServer/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/ESPAsyncHTTPUpdateServer/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/ESP_NOW/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Fonts}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Partition_utils}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Debug_utils}&quot;"/>
@@ -51,12 +57,6 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Task_utils}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/IniFiles}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Emul_PV}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/HTTPUpdateServer/src}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/WebServer/src}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/ESP_Async_WebServer/src}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/Async_TCP/src}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/ESPAsyncHTTPUpdateServer/src}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/ESP_NOW/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/ESPNow_utils}&quot;"/>
 								</option>
 								<inputType id="io.sloeber.compiler.cpp.sketch.input.314382407" name="CPP source files" superClass="io.sloeber.compiler.cpp.sketch.input"/>
@@ -79,6 +79,12 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/NTPClient}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/Preferences/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/Network/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/WebServer/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/ESP_Async_WebServer/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/Async_TCP/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/HTTPUpdateServer/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/ESPAsyncHTTPUpdateServer/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/ESP_NOW/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Fonts}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Partition_utils}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Debug_utils}&quot;"/>
@@ -93,13 +99,9 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Keyboard}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Relay}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Task_utils}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/IniFiles}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Emul_PV}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/HTTPUpdateServer/src}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/WebServer/src}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/ESP_Async_WebServer/src}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/Async_TCP/src}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/ESPAsyncHTTPUpdateServer/src}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/ESP_NOW/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/ESPNow_utils}&quot;"/>
 								</option>
 								<inputType id="io.sloeber.compiler.c.sketch.input.406145932" name="C Source Files" superClass="io.sloeber.compiler.c.sketch.input"/>
 							</tool>
@@ -121,6 +123,12 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/NTPClient}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/Preferences/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/Network/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/WebServer/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/ESP_Async_WebServer/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/Async_TCP/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/HTTPUpdateServer/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/ESPAsyncHTTPUpdateServer/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/ESP_NOW/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Fonts}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Partition_utils}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Debug_utils}&quot;"/>
@@ -135,13 +143,9 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Keyboard}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Relay}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Task_utils}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/IniFiles}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/Emul_PV}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/HTTPUpdateServer/src}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/WebServer/src}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/ESP_Async_WebServer/src}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/Async_TCP/src}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/ESPAsyncHTTPUpdateServer/src}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/libraries/ESP_NOW/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_Tri/user_lib/ESPNow_utils}&quot;"/>
 								</option>
 								<inputType id="io.sloeber.compiler.S.sketch.input.1177578633" name="Assembly source files" superClass="io.sloeber.compiler.S.sketch.input"/>
 							</tool>

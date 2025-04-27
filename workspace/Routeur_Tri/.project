@@ -44,12 +44,12 @@
 		<link>
 			<name>libraries/Async_TCP</name>
 			<type>2</type>
-			<locationURI>ECLIPSE_HOME/arduinoPlugin/libraries/Async_TCP/3.3.6</locationURI>
+			<locationURI>ECLIPSE_HOME/arduinoPlugin/libraries/Async_TCP/3.3.8</locationURI>
 		</link>
 		<link>
 			<name>libraries/DallasTemperature</name>
 			<type>2</type>
-			<locationURI>ECLIPSE_HOME/arduinoPlugin/libraries/DallasTemperature/3.9.0</locationURI>
+			<locationURI>ECLIPSE_HOME/arduinoPlugin/libraries/DallasTemperature/4.0.3</locationURI>
 		</link>
 		<link>
 			<name>libraries/EEPROM</name>
@@ -64,7 +64,7 @@
 		<link>
 			<name>libraries/ESP_Async_WebServer</name>
 			<type>2</type>
-			<locationURI>ECLIPSE_HOME/arduinoPlugin/libraries/ESP_Async_WebServer/3.7.2</locationURI>
+			<locationURI>ECLIPSE_HOME/arduinoPlugin/libraries/ESP_Async_WebServer/3.7.6</locationURI>
 		</link>
 		<link>
 			<name>libraries/ESP_NOW</name>

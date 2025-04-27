@@ -26,6 +26,9 @@
 
 /**********************************************************
  * Partition define : Partition_utils library
+ * Notes:
+ * filesystem partition use the first partition with "data" type and littlefs/spiffs/fat "subtype". His name is "spiffs" by default
+ * data file partition use the partition with "data" type and littlefs/spiffs/fat "subtype". His name is "data"
  **********************************************************/
 // Select only one. By default it is LittleFS
 //#define USE_SPIFFS

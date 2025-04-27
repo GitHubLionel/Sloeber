@@ -611,7 +611,8 @@ void setup()
 	TaskList.AddTask(RTC_DATA_TASK); // RTC Task
 	TaskList.AddTask(UART_DATA_TASK); // UART Task
 #ifdef USE_KEEPALIVE_TASK
-	TaskList.AddTask(KEEP_ALIVE_DATA_TASK); // Keep alive Wifi Task
+	if (!myServer.ISSoftAP())
+	  TaskList.AddTask(KEEP_ALIVE_DATA_TASK); // Keep alive Wifi Task
 #endif
 #ifdef USE_DS
 	TaskList.AddTask(DS18B20_DATA_TASK(DS_Count > 0)); // DS18B20 Task
