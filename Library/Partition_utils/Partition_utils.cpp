@@ -1,4 +1,5 @@
 #include "Partition_utils.h"
+#include "Debug_utils.h"
 
 #ifdef USE_FATFS
 #include "vfs_api.h"
@@ -31,14 +32,6 @@ volatile bool Lock_File = false;
  * Choice are : Serial or Serial1
  */
 extern HardwareSerial *Serial_Info;
-
-// Function for debug message, may be redefined elsewhere
-void __attribute__((weak)) print_debug(String mess, bool ln = true)
-{
-	// Just to avoid compile warning
-	(void) mess;
-	(void) ln;
-}
 
 /**
  * The selected partition to get information
@@ -130,6 +123,19 @@ bool CreateOpenDataPartition(bool ForceFormat, bool ShowInfo)
 		print_debug(F("** Data partition open failed **"));
 		return false;
 	}
+}
+
+/**
+ * Unmount all partitions : filesystem and data if exist
+ */
+void UnmountPartition(void)
+{
+#ifdef ESP32
+	Core_Debug_Log_Restaure();
+#endif
+	if (Data_Partition != FS_Partition)
+		Data_Partition->end();
+	FS_Partition->end();
 }
 
 // ********************************************************************************
