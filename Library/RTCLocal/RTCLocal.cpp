@@ -330,18 +330,23 @@ void RTCLocal::setupDateTime(const bool autosave)
 	_AutoSave = autosave;
 	// Ouvre le fichier time en lecture
 	print_debug("Read last time : ", false);
-	File time = FS_Partition->open(Time_Filename, "r");
-	if (time)
+	if (FS_Partition->exists(Time_Filename))
 	{
-		char lasttime[30] = {0};
-		time.readBytes(lasttime, 28);
-		// Mise à l'heure
-		setDateTime(lasttime);
-		time.close();
-		print_debug(lasttime);
+		File time = FS_Partition->open(Time_Filename, "r");
+		if (time)
+		{
+			char lasttime[30] = {0};
+			time.readBytes(lasttime, 28);
+			// Mise à l'heure
+			setDateTime(lasttime);
+			time.close();
+			print_debug(lasttime);
+		}
+		else
+			print_debug("failed !");
 	}
 	else
-		print_debug("failed !");
+		print_debug("no file ! ");
 }
 
 /**
