@@ -13,18 +13,8 @@
 /**
  * Set web server port number to PORT
  */
-#ifdef ESP8266
-ESP8266WebServer server(SERVER_PORT);
-ESP8266WebServer *pserver = &server;
-#endif
-#ifdef ESP32
-#ifdef USE_ASYNC_WEBSERVER
-AsyncWebServer server(SERVER_PORT);
-#else
-WebServer server(SERVER_PORT);
-WebServer *pserver = &server;
-#endif
-#endif
+SERVER_CLASSNAME server(SERVER_PORT);
+SERVER_CLASSNAME *pserver = &server;
 
 /**
  * Updater definitions
@@ -32,30 +22,23 @@ WebServer *pserver = &server;
  */
 #ifdef USE_HTTPUPDATER
 	#ifndef USE_ELEGANT_OTA
-	#ifdef ESP8266
-	ESP8266HTTPUpdateServer httpUpdater(UPDATER_DEBUG);
-	#endif
-
-	#ifdef ESP32
 		#ifdef USE_ASYNC_WEBSERVER
-		ESPAsyncHTTPUpdateServer httpUpdater;
+      UPDATER_CLASSNAME httpUpdater;
+      void onBeforeUpdate(UpdateType updateType, int &resultCode)
+      {
+      #ifdef TASKLIST_DEFINED
+      	print_debug(F("Suspend all task"));
+      	TaskList.SuspendAllTask();
+      #endif
+      //	resultCode = 1; // To abort update
+      }
 		#else
-		HTTPUpdateServer httpUpdater(UPDATER_DEBUG);
+      UPDATER_CLASSNAME httpUpdater(UPDATER_DEBUG);
 		#endif
-	#endif
-#endif
-const char *update_path = "/firmware";
-#ifdef ESP32
-void onBeforeUpdate(bool *abort, int *code)
-{
-#ifdef TASKLIST_DEFINED
-	print_debug(F("Suspend all task"));
-	TaskList.SuspendAllTask();
-#endif
-}
-#endif
+  #endif
 #endif
 
+const char *update_path = "/firmware";
 const char *update_username = "admin";
 const char *update_password = "admin";
 
@@ -652,8 +635,8 @@ bool ServerConnexion::WaitForConnexion(Conn_typedef connexion, bool toUART)
 	  ElegantOTA.onEnd(onOTAEnd);
 #else
 		httpUpdater.setup(&server, update_path, update_username, update_password);
-#ifdef ESP32
-		httpUpdater.setOnBeforeUpdateCallback(onBeforeUpdate);
+#ifdef USE_ASYNC_WEBSERVER
+		httpUpdater.setOnUpdateBeginCallback(onBeforeUpdate);
 #endif
 #endif
 	}
@@ -902,12 +885,7 @@ bool Auto_Reset(void)
 	delay(100);
 	// End cleanly FileSystem partition and Data partition if exist
 	UnmountPartition();
-#ifdef ESP8266
-	ESP.reset();
-#endif
-#ifdef ESP32
 	ESP.restart();
-#endif
 	return true;
 }
 

@@ -11,7 +11,24 @@
  * Define USE_ASYNC_WEBSERVER for an asynchrone WebServer
  *
  * If you don't want gz file, uncomment USE_ZG_FILE
+ *
+ * Library list:
+ * ESP8266:
+ * - ESP8266WiFi
+ * - ESP8266WebServer or ESP_Async_WebServer + ESPAsyncTCP for Async WebServer
+ * - ESP8266HTTPUpdateServer or ESPAsyncHTTPUpdateServer for Async WebServer
+ *
+ * ESP32:
+ * - WiFi
+ * - WebServer or ESP_Async_WebServer + Async_TCP for Async WebServer
+ * - ESPHTTPUpdateServer or ESPAsyncHTTPUpdateServer for Async WebServer
  */
+
+// If we have an RTC_Local instance of RTCLocal
+//#define USE_RTCLocal
+
+// If we want to use gz file if available
+//#define USE_GZ_FILE
 
 // To allow HTTP updater
 //#define USE_HTTPUPDATER
@@ -22,37 +39,36 @@
 
 #include "Arduino.h"
 
+// Include WiFi library
 #ifdef ESP8266
-#include <ESP8266WiFi.h>	// Include WiFi library
-#include <ESP8266WebServer.h>	// Include WebServer library
-#undef USE_ASYNC_WEBSERVER // No async server
-#define CB_SERVER_PARAM void
-#define SERVER_PARAM
-#ifdef USE_HTTPUPDATER
-	#ifdef USE_ELEGANT_OTA
-	#include <ElegantOTA.h>
-	#else
-	#include <ESP8266HTTPUpdateServer.h>
-	#endif
+#include <ESP8266WiFi.h>
+#else // ESP32
+#include <WiFi.h>
 #endif
-#endif // ESP8266
 
-#ifdef ESP32
-#include <WiFi.h>	// Include WiFi library
+// Include (Async)WebServer library
 #ifdef USE_ASYNC_WEBSERVER
 	#include <ESPAsyncWebServer.h>
+  #define SERVER_CLASSNAME AsyncWebServer
 	#define CB_SERVER_PARAM	AsyncWebServerRequest *pserver
 	#define SERVER_PARAM	pserver
 #else
-	#include <WebServer.h>	// Include WebServer library
+	#ifdef ESP8266
+		#include <ESP8266WebServer.h>
+    #define SERVER_CLASSNAME ESP8266WebServer
+	#else // ESP32
+		#include <WebServer.h>
+    #define SERVER_CLASSNAME WebServer
+	#endif
 	#define CB_SERVER_PARAM void
 	#define SERVER_PARAM
 #endif
 
+// HTTP Updater, OTA library
 #ifdef USE_HTTPUPDATER
 	#ifdef USE_ELEGANT_OTA
-  #warning "See corrections to apply : https://github.com/ayushsharma82/ElegantOTA/issues/254"
-	#include <ElegantOTA.h>
+		#warning "See corrections to apply : https://github.com/ayushsharma82/ElegantOTA/issues/254"
+		#include <ElegantOTA.h>
 	#else
 		#ifdef USE_ASYNC_WEBSERVER
 			#ifdef USE_FATFS
@@ -60,19 +76,25 @@
 			#else
 				#ifndef USE_SPIFFS
 					#ifndef ESPASYNCHTTPUPDATESERVER_LITTLEFS
-					#error "ESPASYNCHTTPUPDATESERVER_LITTLEFS must be defined."
+					  #error "ESPASYNCHTTPUPDATESERVER_LITTLEFS must be defined."
 					#endif
 				#endif
-				#include <ESPAsyncHTTPUpdateServer.h>
+      #endif
+			#include <ESPAsyncHTTPUpdateServer.h>
+      #define UPDATER_CLASSNAME ESPAsyncHTTPUpdateServer
+		#else // not async
+			#ifdef ESP8266
+				#include <ESP8266HTTPUpdateServer.h>
+        #define UPDATER_CLASSNAME ESP8266HTTPUpdateServer
+			#else // ESP32
+				#include <HTTPUpdateServer.h>
+        #define UPDATER_CLASSNAME HTTPUpdateServer
 			#endif
-		#else
-		#include <HTTPUpdateServer.h>
-		#define UPDATER_DEBUG false
+      // Set to true to send debug to Serial
+			#define UPDATER_DEBUG false
 		#endif
 	#endif
 #endif
-
-#endif // ESP32
 
 #ifdef USE_MDNS
 #include <ESPmDNS.h>
@@ -80,36 +102,10 @@
 
 #include <Preferences.h> // For EEPROM access
 
-// If we have an RTC_Local instance of RTCLocal
-//#define USE_RTCLocal
-
-// If we want to use gz file if available
-//#define USE_GZ_FILE
-
 // The port for the server, default 80
 #ifndef SERVER_PORT
 #define SERVER_PORT	80
 #endif
-
-// The web server
-#ifdef ESP8266
-extern ESP8266WebServer server;
-extern ESP8266WebServer *pserver;
-#ifdef USE_HTTPUPDATER
-// Set to true to send debug to Serial
-#define UPDATER_DEBUG	false
-extern ESP8266HTTPUpdateServer httpUpdater;
-#endif
-#endif // ESP8266
-
-#ifdef ESP32
-#ifdef USE_ASYNC_WEBSERVER
-extern AsyncWebServer server;
-#else
-extern WebServer server;
-extern WebServer *pserver;
-#endif
-#endif // ESP32
 
 // Default SSID file name
 #ifndef SSID_FILE
@@ -125,6 +121,10 @@ extern WebServer *pserver;
 #define STREAM_BUFFER_SIZE	1024
 // Default TimeOut for the stream
 #define STREAM_TIMEOUT		2000
+
+// Extern web server access
+extern SERVER_CLASSNAME server;
+extern SERVER_CLASSNAME *pserver;
 
 /**
  * List of connexion
