@@ -486,12 +486,7 @@ bool CheckUARTMessage(HardwareSerial *Serial_Message)
  */
 bool __attribute__((weak)) Auto_Reset(void)
 {
-#ifdef ESP8266
-	ESP.reset();
-#endif
-#ifdef ESP32
 	ESP.restart();
-#endif
 	return true;
 }
 
