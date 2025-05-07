@@ -187,6 +187,7 @@ void TaskList_c::DeleteTask(const String &name)
 		vTaskDelete(td->Handle);
 		td->Handle = NULL;
 		td->IsSuspended = false;
+		td->IsGroupSuspended = false;
 	}
 }
 
@@ -209,6 +210,7 @@ bool TaskList_c::CreateTask(const String &name, bool forceDelete, void *param)
 			vTaskDelete(td->Handle);
 			td->Handle = NULL;
 			td->IsSuspended = false;
+			td->IsGroupSuspended = false;
 		}
 
 		// Create the task
@@ -276,23 +278,45 @@ void TaskList_c::ResumeTask(const String &name)
 		if (td->IsSuspended)
 		{
 			td->IsSuspended = false;
+			td->IsGroupSuspended = false;
 			vTaskResume(td->Handle);
 		}
 	}
 }
 
 /**
- * Change the sleep time of a task and reload (default false)
- * If the task is running, stop it before.
+ * Suspend all the tasks
  */
-void TaskList_c::ChangeSleepTask(const String &name, int sleep_ms, bool reload)
+void TaskList_c::SuspendAllTask(void)
 {
-	TaskData_t *td = GetTaskByName(name);
-	if (td != NULL)
+	for (size_t i = 0; i < Tasks.size(); i++)
 	{
-		td->Sleep_ms = sleep_ms;
-		if (reload)
-			CreateTask(name, true);
+		TaskData_t *td = &Tasks[i];
+		if (!td->IsSuspended)
+		{
+			td->IsSuspended = true;
+			td->IsGroupSuspended = true;
+			vTaskSuspend(td->Handle);
+		}
+	}
+	// 100 ms delay
+	vTaskDelay(100 / portTICK_PERIOD_MS);
+}
+
+/**
+ * Resume all the tasks previously suspended by SuspendAllTask()
+ */
+void TaskList_c::ResumeAllTask(void)
+{
+	for (size_t i = 0; i < Tasks.size(); i++)
+	{
+		TaskData_t *td = &Tasks[i];
+		if (td->IsGroupSuspended)
+		{
+			td->IsSuspended = false;
+			td->IsGroupSuspended = false;
+			vTaskResume(td->Handle);
+		}
 	}
 }
 
@@ -346,6 +370,21 @@ int TaskList_c::GetTaskSleep(const String &name, bool to_ticks)
 }
 
 /**
+ * Change the sleep time of a task and reload (default false)
+ * If the task is running, stop it before.
+ */
+void TaskList_c::ChangeSleepTask(const String &name, int sleep_ms, bool reload)
+{
+	TaskData_t *td = GetTaskByName(name);
+	if (td != NULL)
+	{
+		td->Sleep_ms = sleep_ms;
+		if (reload)
+			CreateTask(name, true);
+	}
+}
+
+/**
  * Get the handle of a task
  */
 TaskHandle_t TaskList_c::GetTaskHandle(const String &name)
@@ -360,24 +399,6 @@ TaskHandle_t TaskList_c::GetTaskHandle(const String &name)
 }
 
 /**
- * Suspend all the tasks
- */
-void TaskList_c::SuspendAllTask(void)
-{
-	for (size_t i = 0; i < Tasks.size(); i++)
-	{
-		TaskData_t *td = &Tasks[i];
-		if (!td->IsSuspended)
-		{
-			td->IsSuspended = true;
-			vTaskSuspend(td->Handle);
-		}
-	}
-	// 100 ms delay
-	vTaskDelay(100 / portTICK_PERIOD_MS);
-}
-
-/**
  * Print info (priority, sleep, n° core, size) of each tasks
  */
 void TaskList_c::InfoTask(void)
@@ -387,10 +408,8 @@ void TaskList_c::InfoTask(void)
 	{
 		TaskData_t *td = &Tasks[i];
 		if (td->Handle != NULL)
-			info += String(td->Name) + ":" + " Priority = " + String(td->Priority) +
-				", Sleep_ms = "	+ String(td->Sleep_ms) +
-				", Core = " + String(td->Core) +
-				", Size = "	+ String(td->StackSize) + "\r\n";
+			info += String(td->Name) + ":" + " Priority = " + String(td->Priority) + ", Sleep_ms = " + String(td->Sleep_ms)
+					+ ", Core = " + String(td->Core) + ", Size = " + String(td->StackSize) + "\r\n";
 	}
 
 	print_debug(info, false);

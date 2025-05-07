@@ -135,7 +135,7 @@ typedef enum
 
 /**
  * Task structure
- * All parameters are required except Param, Memory, UserParam, Handle and IsSuspended.
+ * All parameters are required except Param and UserParam.
  * Condition is a parameter only used in the main Create() function. If 'condNotCreate' then the task
  * will not be created and could be created separatly with CreateTask().
  * Handle should be always initialized to NULL because it will be filled when task is created.
@@ -153,10 +153,11 @@ typedef struct
 		Task_Core Core;												  	// Core where is running the task
 		TaskFunction_t TaskCode;							  	// The code of the task
 		void *Param = NULL;										  	// The parameter passed to the code function
-		int Memory = 0;                           // Task stack staying memory (used by the "Memory" task)
 		void *UserParam = NULL;						  		  // A parameter that can be used in the code function
-		TaskHandle_t Handle = NULL;							  // The handle of the task
-		bool IsSuspended = false;                 // Is the task suspended ?
+		int Memory = 0;                           // Task stack staying memory (used by the "Memory" task). Read only
+		TaskHandle_t Handle = NULL;							  // The handle of the task. Read only
+		bool IsSuspended = false;                 // Is the task suspended ?. Read only
+		bool IsGroupSuspended = false;            // Is the task suspended in group ?. Read only
 } TaskData_t;
 
 /**
@@ -176,15 +177,16 @@ class TaskList_c
 		bool CreateTask(const String &name, bool forceDelete = false, void *param = NULL);
 		void SuspendTask(const String &name);
 		void ResumeTask(const String &name);
-		void ChangeSleepTask(const String &name, int sleep_ms, bool reload = false);
+		void SuspendAllTask(void);
+		void ResumeAllTask(void);
+
 		bool IsTaskRunning(const String &name);
 		bool IsTaskSuspended(const String &name);
 
 		TaskData_t* GetTaskByName(const String &name);
 		int GetTaskSleep(const String &name, bool to_ticks = true);
+		void ChangeSleepTask(const String &name, int sleep_ms, bool reload = false);
 		TaskHandle_t GetTaskHandle(const String &name);
-
-		void SuspendAllTask(void);
 
 		String GetIdleStr(void) const;
 		String GetMemoryStr(void) const;
