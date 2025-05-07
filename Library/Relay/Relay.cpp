@@ -1,4 +1,5 @@
 #include "Relay.h"
+#include "Debug_utils.h"		  // Some utils functions for debug
 
 #ifdef RELAY_USE_TASK
 #include "Tasks_utils.h"
@@ -7,13 +8,7 @@
 #endif
 #endif
 
-// Function for debug message, may be redefined elsewhere
-void __attribute__((weak)) print_debug(const char *mess, bool ln = true)
-{
-	// Just to avoid compile warning
-	(void) mess;
-	(void) ln;
-}
+#define RELAY_DEBUG
 
 // ********************************************************************************
 // Relay_Class constructor
@@ -31,19 +26,24 @@ Relay_Class::Relay_Class()
  * Initialization of the class relay
  * gpios : values of gpio
  */
-Relay_Class::Relay_Class(const std::initializer_list<uint8_t> gpios) :
+Relay_Class::Relay_Class(const RelayGPIOList &gpios) :
 		Relay_Class()
 {
-	for (auto gpio : gpios)
-	{
-		add(gpio);
-	}
+	Initialize(gpios);
 }
 
 Relay_Class::~Relay_Class()
 {
 	_relay.clear();
 	_time.clear();
+}
+
+void Relay_Class::Initialize(const RelayGPIOList &gpios)
+{
+	for (auto gpio : gpios)
+	{
+		add(gpio);
+	}
 }
 
 // ********************************************************************************
@@ -60,6 +60,7 @@ void Relay_Class::add(uint8_t gpio)
 	relay.idRelay = _relay.size();
 	relay.gpio = gpio;
 	relay.hasAlarm = false;
+	relay.hasAlarm2 = false;
 	relay.state = false;
 	pinMode(gpio, OUTPUT);
 	digitalWrite(gpio, LOW);
@@ -68,27 +69,29 @@ void Relay_Class::add(uint8_t gpio)
 
 /**
  * Update the current time in minute
- * This function shoud be called every minute
+ * This function shoud be called at least every minute
+ * If _time == -1 (default), currentTime is just incremented by 1.
+ * _time must be provided to change day
  */
 void Relay_Class::updateTime(int _time)
 {
+	if (currentTime == _time)
+		return;
+
 	int lastcurrentTime = currentTime;
+	(_time != -1) ? currentTime = _time : currentTime++;
 
-	if (_time != -1)
+	// Time not initialized
+	if (!isTimeInitialized)
 	{
-		if (currentTime == _time)
-			return;
-		currentTime = _time;
-	}
-	else
-		currentTime++;
-
-	// Time not initialized or new time is before currentTime (change day)
-	if ((!isTimeInitialized) || (lastcurrentTime > _time))
-	{
-		UpdateNextAlarm();
+		UpdateNextAlarm(true);
 		isTimeInitialized = true;
 	}
+	else
+		// new time is before currentTime (change day)
+		if (lastcurrentTime > currentTime)
+			idTime = 0;
+
 	CheckAlarmTime();
 }
 
@@ -99,6 +102,15 @@ void Relay_Class::setState(uint8_t idRelay, bool state)
 {
 	if (idRelay >= _relay.size())
 		return;
+
+#ifdef RELAY_DEBUG
+	String tmp = "";
+	tmp = "Relay " + (String)idRelay + ". Initial state: ";
+	tmp += (_relay[idRelay].state) ?  "ON" : "OFF";
+	tmp += " - Final state: ";
+	tmp += (state) ? "ON" : "OFF";
+	print_debug(tmp);
+#endif
 
 	if (state)
 	{
@@ -133,7 +145,7 @@ void Relay_Class::toggleState(uint8_t idRelay)
 /**
  * Get the state of the relay. Return true if ON.
  */
-bool Relay_Class::getState(uint8_t idRelay)
+bool Relay_Class::getState(uint8_t idRelay) const
 {
 	if (idRelay >= _relay.size())
 		return false;
@@ -148,12 +160,26 @@ String Relay_Class::getAllState(void)
 	{
 		if (!state.isEmpty())
 			state += ",";
-		(getState(i)) ? state += "ON" : state += "OFF";
+		state += (getState(i)) ? "ON" : "OFF";
 	}
 	return state;
 }
 
-bool Relay_Class::hasAlarm(uint8_t idRelay)
+bool Relay_Class::hasAlarm(void) const
+{
+	bool result = false;
+	for (int i = 0; i < _relay.size(); i++)
+	{
+		if (_relay[i].hasAlarm)
+		{
+			result = true;
+			break;
+		}
+	}
+  return result;
+}
+
+bool Relay_Class::hasAlarm(uint8_t idRelay) const
 {
 	if (idRelay >= _relay.size())
 		return false;
@@ -161,82 +187,143 @@ bool Relay_Class::hasAlarm(uint8_t idRelay)
 	return _relay[idRelay].hasAlarm;
 }
 
-void Relay_Class::addAlarm(uint8_t idRelay, AlarmNumber num, int begin, int end)
+bool Relay_Class::addAlarm(uint8_t idRelay, AlarmNumber num, int start, int end, bool updateTimeList)
 {
 	if (idRelay >= _relay.size())
-		return;
+		return false;
+	Relay_typedef *relais = &_relay[idRelay];
 
-	if ((begin >= end) && (begin != -1) && (end != -1))
-	{
-		print_debug("Alarm error: begin >= end");
-		return;
-	}
+	if (num == AlarmNumber::Alarm1)
+		return addAlarm(idRelay, start, end, relais->alarm2.start, relais->alarm2.end, updateTimeList);
+	else
+		if (num == AlarmNumber::Alarm2)
+			return addAlarm(idRelay, relais->alarm1.start, relais->alarm1.end, start, end, updateTimeList);
+	return false;
+}
 
-	if (num == Alarm1)
+bool Relay_Class::addAlarm(uint8_t idRelay, int start1, int end1, int start2, int end2, bool updateTimeList)
+{
+	if (idRelay >= _relay.size())
+		return false;
+
+	bool result = true;
+	Relay_typedef *relay = &_relay[idRelay];
+
+	relay->hasAlarm = false;
+	relay->hasAlarm2 = false;
+	relay->alarm1.reset();
+	relay->alarm2.reset();
+
+	// Alarm1
+	if ((start1 >= end1) && (start1 != -1) && (end1 != -1))
 	{
-		_relay[idRelay].alarm1.start = begin;
-		_relay[idRelay].alarm1.end = end;
-		// We can have only begin or end alarm
-		_relay[idRelay].hasAlarm = ((begin != -1) || (end != -1));
+		print_debug("Alarm1 error: start >= end");
+		result = false;
 	}
 	else
 	{
-		// Second alarm only if first alarm exist
-		if (_relay[idRelay].hasAlarm)
+		relay->alarm1.set(start1, end1);
+		relay->hasAlarm =  relay->alarm1.isDefined();
+	}
+
+	// Alarm2 if Alarm1 exist
+	if (relay->hasAlarm)
+	{
+		if ((start2 >= end2) && (start2 != -1) && (end2 != -1))
 		{
-			if ((begin != -1) && (begin <= _relay[idRelay].alarm1.end))
-			{
-				print_debug("Alarm2 error: begin <= end of Alarm1");
-				_relay[idRelay].alarm2.start = -1;
-				_relay[idRelay].alarm2.end = -1;
-			}
-			else
-			{
-				_relay[idRelay].alarm2.start = begin;
-				_relay[idRelay].alarm2.end = end;
-			}
+			print_debug("Alarm2 error: start >= end");
+			result = false;
 		}
 		else
 		{
-			_relay[idRelay].alarm2.start = -1;
-			_relay[idRelay].alarm2.end = -1;
+			if ((start2 != -1) && (start2 <= relay->alarm1.end))
+			{
+				print_debug("Alarm2 error: start <= end of Alarm1");
+				result = false;
+			}
+			else
+			{
+				relay->alarm2.set(start2, end2);
+				relay->hasAlarm2 = relay->alarm2.isDefined();
+			}
 		}
 	}
 	UpdateTimeList();
+	return result;
 }
 
-bool Relay_Class::getAlarm(uint8_t idRelay, AlarmNumber num, int *begin, int *end)
+bool Relay_Class::getAlarm(uint8_t idRelay, AlarmNumber num, int *start, int *end)
 {
-	*begin = *end = -1;
-	if (num == Alarm1)
+	if (idRelay >= _relay.size())
+		return false;
+
+	*start = *end = -1;
+	if (num == AlarmNumber::Alarm1)
 	{
-		*begin = _relay[idRelay].alarm1.start;
-		*end = _relay[idRelay].alarm1.end;
+		_relay[idRelay].alarm1.get(start, end);
 	}
 	else
-	{
-		*begin = _relay[idRelay].alarm2.start;
-		*end = _relay[idRelay].alarm2.end;
-	}
-	return (*begin != -1);
+		if (num == AlarmNumber::Alarm2)
+		{
+			_relay[idRelay].alarm2.get(start, end);
+		}
+	return (*start != -1) || (*end != -1);
 }
 
-void Relay_Class::getAlarm(uint8_t idRelay, AlarmNumber num, String &begin, String &end)
+void Relay_Class::getAlarm(uint8_t idRelay, AlarmNumber num, String &start, String &end)
 {
-	int _begin, _end;
-	char temp[50];
-	if (getAlarm(idRelay, num, &_begin, &_end))
+	int _start, _end;
+	start = "";
+	end = "";
+	if (getAlarm(idRelay, num, &_start, &_end))
 	{
-		sprintf(temp, "%d.%02d", _begin / 60, _begin % 60);
-		begin = String(temp);
-		sprintf(temp, "%d.%02d", _end / 60, _end % 60);
-		end = String(temp);
+		start = toString(_start);
+		end = toString(_end);
 	}
-	else
+}
+
+void Relay_Class::printAlarm(void) const
+{
+	String tmp = "";
+
+	tmp = "Current time = " + toString(currentTime, true);
+	print_debug(tmp);
+	tmp = "Current id time = " + (String)idTime;
+	print_debug(tmp);
+
+	int i = 0;
+	uint8_t alarmNumber;
+	bool start;
+	int val;
+	for (TimeAlarm_typedef time : _time)
 	{
-		begin = "";
-		end = "";
+		tmp = "ID: " + (String) i + " : At time = " + toString(time.time, true) + " Relay: " + (String)time.idRelay;
+		Relay_typedef relay = _relay[time.idRelay];
+		if (relay.FoundAlarm(time.time, &alarmNumber, &start, &val))
+		{
+			tmp += " - Alarm" + (String)alarmNumber + " ";
+			tmp += (start) ? "start: " : "end: ";
+			tmp += toString(val, true);
+		}
+		else
+			tmp += "Alarm error.";
+		print_debug(tmp);
+		i++;
 	}
+}
+
+String Relay_Class::toString(int time, bool withtime) const
+{
+	char temp[20];
+	String result = "";
+	if (time != -1)
+	{
+		sprintf(temp, "%d.%02d", time / 60, time % 60);
+		result = String(temp);
+		if (withtime)
+			result += " (" + (String)time + ")";
+	}
+	return result;
 }
 
 // ********************************************************************************
@@ -252,6 +339,7 @@ void Relay_Class::UpdateTimeList(void)
 {
 	_time.clear();
 	idTime = -1;
+
 	for (Relay_typedef relay : _relay)
 	{
 		if (relay.hasAlarm)
@@ -263,21 +351,37 @@ void Relay_Class::UpdateTimeList(void)
 				time.time = relay.alarm1.start;
 				_time.push_back(time);
 			}
+			else
+				{
+				  // Special case, start is not defined, so start at 0
+					time.time = 0;
+					_time.push_back(time);
+				}
 			if (relay.alarm1.end != -1)
 			{
 				time.time = relay.alarm1.end;
 				_time.push_back(time);
 			}
+
 			// check if second alarm
-			if (relay.alarm2.start != -1)
+			if (relay.hasAlarm2)
 			{
-				time.time = relay.alarm2.start;
-				_time.push_back(time);
-			}
-			if (relay.alarm2.end != -1)
-			{
-				time.time = relay.alarm2.end;
-				_time.push_back(time);
+				if (relay.alarm2.start != -1)
+				{
+					time.time = relay.alarm2.start;
+					_time.push_back(time);
+				}
+				else
+					{
+						// Special case, start is not defined, so start at 0
+						time.time = 0;
+						_time.push_back(time);
+					}
+				if (relay.alarm2.end != -1)
+				{
+					time.time = relay.alarm2.end;
+					_time.push_back(time);
+				}
 			}
 		}
 	}
@@ -286,22 +390,22 @@ void Relay_Class::UpdateTimeList(void)
 	{
 		// Sort alarm time
 		std::sort(_time.begin(), _time.end(), sort_time);
-		UpdateNextAlarm();
+		UpdateNextAlarm(true);
 	}
 }
 
-void Relay_Class::UpdateNextAlarm(void)
+void Relay_Class::UpdateNextAlarm(bool updateLastAlarm)
 {
 	// Find the next alarm time to execute
-	if (_time.size() > 0)
+	idTime = 0;
+	while ((idTime < _time.size()) && (_time[idTime].time < currentTime))
 	{
-		idTime = 0;
-		while (_time[idTime].time < currentTime)
+		if (updateLastAlarm)
 		{
-			idTime++;
-			if (idTime == (int)_time.size())
-				break;
+			Relay_typedef *relay = &_relay[_time[idTime].idRelay];
+			setState(relay->idRelay, relay->IsAlarmActivated(currentTime));
 		}
+		idTime++;
 	}
 }
 
@@ -311,19 +415,11 @@ void Relay_Class::CheckAlarmTime(void)
 		return;
 
 	// We can have the same alarm for several relays
-	while (currentTime == _time[idTime].time)
+	while ((idTime < _time.size()) && (_time[idTime].time == currentTime))
 	{
-		Relay_typedef relay = _relay[_time[idTime].idRelay];
-		if ((relay.alarm1.start == currentTime) || (relay.alarm2.start == currentTime))
-			setState(relay.idRelay, true);
-		else
-		{
-			if ((relay.alarm1.end == currentTime) || (relay.alarm2.end == currentTime))
-				setState(relay.idRelay, false);
-		}
+		Relay_typedef *relay = &_relay[_time[idTime].idRelay];
+		setState(relay->idRelay, relay->IsAlarmActivated(currentTime));
 		idTime++;
-		if (idTime == (int)_time.size())
-			break;
 	}
 }
 
