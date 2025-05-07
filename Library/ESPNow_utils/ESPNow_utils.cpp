@@ -44,6 +44,7 @@ class ESP_NOW_Peer_Class: public ESP_NOW_Peer
 		{
 //			log_i("Received a message from master " MACSTR " (%s)\n", MAC2STR(addr()), broadcast ? "broadcast" : "unicast");
 //			log_i("  Message: %s\n", (char* )data);
+			_LastReceiveTime = millis();
 			if (Receive_slave_cb)
 				Receive_slave_cb(data, len);
 		}
@@ -52,6 +53,14 @@ class ESP_NOW_Peer_Class: public ESP_NOW_Peer
 		{
 			// Nothing to do here
 		}
+
+		bool CheckConnexion(uint32_t delta_Time_ms = 1000)
+		{
+			return ((millis() - _LastReceiveTime) < delta_Time_ms);
+		}
+
+	private:
+		uint32_t _LastReceiveTime = 0;
 };
 
 /* Global Variables */
@@ -116,6 +125,16 @@ bool ESP_NOW_Slave_Peer::send_message(const uint8_t *data, size_t len)
 		log_i("No master to send message");
 		return false;
 	}
+}
+
+bool ESP_NOW_Slave_Peer::CheckConnexion(uint32_t delta_Time_ms)
+{
+	if (masters.size() != 0)
+	{
+		// Check if we have received a message from first master
+		return masters.front().CheckConnexion(delta_Time_ms);
+	}
+	return false;
 }
 
 // ********************************************************************************

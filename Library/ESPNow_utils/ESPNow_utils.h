@@ -94,5 +94,8 @@ class ESP_NOW_Slave_Peer
 
 		// Send message to the first master
 		bool send_message(const uint8_t *data, size_t len);
+
+		// Check if we have received a message in last delta time in ms (default 1000 ms)
+		bool CheckConnexion(uint32_t delta_Time_ms = 1000);
 };
 
