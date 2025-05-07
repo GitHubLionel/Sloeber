@@ -49,7 +49,7 @@ typedef void (*KeyBoard_Click_cb)(Btn_Action Btn, uint32_t count);
 #ifdef KEYBOARD_USE_TASK
 // To create a basic task to check keyboard every 10 ms
 // You need to overload UserKeyboardAction function
-#define KEYBOARD_DATA_TASK(start)	{(Task_Condition)(start), "KEYBOARD_Task", 4096, 10, 10, Core1, KEYBOARD_Task_code}
+#define KEYBOARD_DATA_TASK(start)	{start, "KEYBOARD_Task", 4096, 10, 20, Core1, KEYBOARD_Task_code}
 void KEYBOARD_Task_code(void *parameter);
 //KeyBoard_Click_cb UserKeyboardAction;
 //void UserKeyboardAction(Btn_Action Btn_Clicked, uint32_t count);
