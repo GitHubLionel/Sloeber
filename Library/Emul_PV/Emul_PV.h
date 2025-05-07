@@ -133,6 +133,10 @@ class EmulPV_Class
 		TDateTime CurrentDay = 0;
 		char Sun_Rise_Sun_Set[20] = {0};
 
+		// Compute_Power_TH computation
+		int32_t last_daytime_s= 0;
+		double last_power = 0.0;
+
 		void Day_Init();
 		void SetRendement(void);
 		double ComputeCellTemperature(double aTAmbiante, double aIrradiance);

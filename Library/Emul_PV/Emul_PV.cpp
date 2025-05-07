@@ -339,17 +339,25 @@ double EmulPV_Class::Compute_Power_TH(uint32_t daytime_s)
 {
 	TDateTime dt;
 	int32_t time_s = daytime_s;
+	double power = last_power;
 
-	// Décalage heure solaire d'été
-	time_s -= 3600 * GLOBAL_SUMMER_HOUR;
-
-	if (time_s > 0)
+	if (daytime_s != last_daytime_s)
 	{
-		dt = IncSecond(CurrentDay, time_s);
-		return Power(dt);
+		// Décalage heure solaire d'été
+		time_s -= 3600 * GLOBAL_SUMMER_HOUR;
+
+		if (time_s > 0)
+		{
+			dt = IncSecond(CurrentDay, time_s);
+			power = Power(dt);
+		}
+		else
+			power = 0.0;
+		last_daytime_s = daytime_s;
+		last_power = power;
 	}
-	else
-		return 0.0;
+
+	return power;
 }
 
 // ********************************************************************************
