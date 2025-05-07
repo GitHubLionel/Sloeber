@@ -27,10 +27,20 @@ SERVER_CLASSNAME *pserver = &server;
       void onBeforeUpdate(UpdateType updateType, int &resultCode)
       {
       #ifdef TASKLIST_DEFINED
-      	print_debug(F("Suspend all task"));
+      	print_debug(F("Suspend all tasks"));
       	TaskList.SuspendAllTask();
       #endif
       //	resultCode = 1; // To abort update
+      }
+      void onAfterUpdate(UpdateType updateType, int &resultCode)
+      {
+      #ifdef TASKLIST_DEFINED
+      	if (resultCode != 0)
+      	{
+      	  TaskList.ResumeAllTask();
+      	  print_debug(F("Resume all tasks because error"));
+      	}
+      #endif
       }
 		#else
       UPDATER_CLASSNAME httpUpdater(UPDATER_DEBUG);
@@ -636,7 +646,8 @@ bool ServerConnexion::WaitForConnexion(Conn_typedef connexion, bool toUART)
 #else
 		httpUpdater.setup(&server, update_path, update_username, update_password);
 #ifdef USE_ASYNC_WEBSERVER
-		httpUpdater.setOnUpdateBeginCallback(onBeforeUpdate);
+		httpUpdater.onUpdateBegin = onBeforeUpdate;
+		httpUpdater.onUpdateEnd = onAfterUpdate;
 #endif
 #endif
 	}
