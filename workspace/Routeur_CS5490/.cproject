@@ -47,7 +47,6 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5490/libraries/Preferences/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5490/libraries/NTPClient}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5490/libraries/SoftwareSerial/src}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5490/libraries/Relay/src}&quot;"/>
 								</option>
 								<inputType id="io.sloeber.compiler.cpp.sketch.input.314382407" name="CPP source files" superClass="io.sloeber.compiler.cpp.sketch.input"/>
 							</tool>
@@ -81,7 +80,6 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5490/libraries/Preferences/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5490/libraries/NTPClient}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5490/libraries/SoftwareSerial/src}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5490/libraries/Relay/src}&quot;"/>
 								</option>
 								<inputType id="io.sloeber.compiler.c.sketch.input.406145932" name="C Source Files" superClass="io.sloeber.compiler.c.sketch.input"/>
 							</tool>
@@ -115,7 +113,6 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5490/libraries/Preferences/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5490/libraries/NTPClient}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5490/libraries/SoftwareSerial/src}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5490/libraries/Relay/src}&quot;"/>
 								</option>
 								<inputType id="io.sloeber.compiler.S.sketch.input.1177578633" name="Assembly source files" superClass="io.sloeber.compiler.S.sketch.input"/>
 							</tool>

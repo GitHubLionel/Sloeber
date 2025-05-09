@@ -28,6 +28,10 @@
 
 #include "Tasks_utils.h"       // Task list functions
 
+//USER CODE BEGIN Includes
+
+//USER CODE END Includes
+
 /**
  * Ce programme executé par l'ESPxx fait le lien entre l'interface web et le hardware
  * WEB <--- Wifi ---> ESPxx <--- UART ---> Hardware (BluePill, Nucleo, ...)
@@ -112,6 +116,10 @@ void OnAfterConnexion(void);
 #define I2C_ADDRESS	0x3C // ou 0x78
 #endif
 String UART_Message = "";
+
+//USER CODE BEGIN Privates
+
+//USER CODE END Privates
 
 // ********************************************************************************
 // Functions prototype
@@ -205,6 +213,10 @@ void setup()
 		print_debug(F("Display Ok"));
 	IHM_TimeOut_Display(OLED_TIMEOUT);
 
+	//USER CODE BEGIN Initialization
+
+	//USER CODE END Initialization
+
 	// **** FIN- Attente connexion réseau
 
 	// A cause de l'erreur : Brownout detector was triggered
@@ -226,7 +238,6 @@ void setup()
 	}
 
 	print_debug("*** Setup time : " + String(millis() - start_time) + " ms ***\r\n");
-
 	delay(1000);
 
 	// Task definition
@@ -246,7 +257,8 @@ void loop()
 	server.handleClient();
 #else
 	// Temporisation à adapter
-	delay(10);
+//	delay(10);
+	vTaskDelete(NULL);
 #endif
 }
 

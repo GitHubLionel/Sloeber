@@ -309,6 +309,7 @@ void ESPNOW_Task_code(void *parameter)
 	}
 }
 
+// Send new power every 100 ms
 #define ESPNOW_DATA_TASK {condCreate, "ESPNOW_Task", 4096, 3, 100, CoreAny, ESPNOW_Task_code}
 #endif
 
@@ -497,7 +498,7 @@ void setup()
 #ifdef USE_ZC_SSR
 	SSR_Initialize(ZERO_CROSS_GPIO, SSR_COMMAND_GPIO, SSR_LED_GPIO);
 
-	SSR_Set_Dump_Power(init_routeur.ReadFloat("SSR", "P_CE", 1000));  // Par défaut 1000, voir page web
+	SSR_Set_Dump_Power(init_routeur.ReadFloat("SSR", "P_CE", 1000)); // Par défaut 1000, voir page web
 	SSR_Set_Target(init_routeur.ReadFloat("SSR", "Target", 0)); // Par défaut 0, voir page web
 	SSR_Set_Percent(init_routeur.ReadFloat("SSR", "Pourcent", 10)); // Par défaut à 10%, voir page web
 
@@ -505,7 +506,7 @@ void setup()
 
 	//	SSR_Compute_Dump_power();
 
-	lastSSRAction = (SSR_Action_typedef) init_routeur.ReadInteger("SSR", "Action", 1); // Par défaut Percent, voir page web
+	lastSSRAction = (SSR_Action_typedef) init_routeur.ReadInteger("SSR", "Action", 2); // Par défaut Percent, voir page web
 	SSR_Set_Action(lastSSRAction);
 
 	// NOTE : le SSR est éteint, on le démarre dans la page web
@@ -542,11 +543,11 @@ void setup()
 	digitalWrite(GPIO_RELAY_FACADE, LOW);
 	for (int i = 0; i < Relay.size(); i++)
 	{
-		Relay.addAlarm(i, Alarm1, init_routeur.ReadIntegerIndex(i, "Relais", "Alarm1_start", -1),
-				init_routeur.ReadIntegerIndex(i, "Relais", "Alarm1_end", -1));
-		Relay.addAlarm(i, Alarm2, init_routeur.ReadIntegerIndex(i, "Relais", "Alarm2_start", -1),
-				init_routeur.ReadIntegerIndex(i, "Relais", "Alarm2_end", -1));
-		Relay.setState(i, init_routeur.ReadBoolIndex(i, "Relais", "State", false));
+		Relay.addAlarm(i, init_routeur.ReadIntegerIndex(i, "Relais", "Alarm1_start_R", -1),
+				init_routeur.ReadIntegerIndex(i, "Relais", "Alarm1_end_R", -1),
+				init_routeur.ReadIntegerIndex(i, "Relais", "Alarm2_start_R", -1),
+				init_routeur.ReadIntegerIndex(i, "Relais", "Alarm2_end_R", -1), (i == Relay.size() - 1));
+//		Relay.setState(i, init_routeur.ReadBoolIndex(i, "Relais", "State", false));
 	}
 	UpdateLedRelayFacade();
 	RTC_Local.setMinuteChangeCallback(onRelayMinuteChange_cb);
@@ -626,11 +627,11 @@ void setup()
 #ifdef USE_ADC
 	if (ADC_Action == adc_Sigma)
 #endif
-	  TaskList.AddTask(KEYBOARD_DATA_TASK(true));
+	  TaskList.AddTask(KEYBOARD_DATA_TASK(condCreate));
 #endif
 	TaskList.AddTask(LOG_DATA_TASK);  // Save log Task
 #ifdef USE_RELAY
-	TaskList.AddTask(RELAY_DATA_TASK(true));
+	TaskList.AddTask(RELAY_DATA_TASK((Relay.hasAlarm()) ? condCreate : condSuspended));
 #endif
 	TaskList.AddTask(SSR_BOOST_TASK);  // Boost SSR Task
 	TaskList.AddTask(SSR_DUMP_TASK);  // Dump SSR Task
@@ -663,7 +664,8 @@ void loop()
 	server.handleClient();
 #else
 	// Temporisation à adapter
-	vTaskDelay(1);
+//	vTaskDelay(10);
+	vTaskDelete(NULL);
 #endif
 }
 
@@ -761,10 +763,7 @@ void handleInitialization(CB_SERVER_PARAM)
 	message += (String) Get_PhaseCE() + '#';
 	message += (String) SSR_Get_Target() + '#';
 	message += (String) SSR_Get_Percent() + '#';
-	if (SSR_Get_State() == SSR_OFF)
-		message += "OFF#";
-	else
-		message += "ON#";
+	message += (SSR_Get_State() == SSR_OFF) ? "OFF#" : "ON#";
 
 	// Talema factor
 	message += (String) TalemaPhase_int + '#';
@@ -775,7 +774,7 @@ void handleInitialization(CB_SERVER_PARAM)
 #ifdef USE_RELAY
 	for (int i = 0; i < Relay.size(); i++)
 	{
-		(Relay.getState(i)) ? alarm += "ON," : alarm += "OFF,";
+		alarm += (Relay.getState(i)) ? "ON," : "OFF,";
 		Relay.getAlarm(i, Alarm1, start, end);
 		alarm += start + "," + end + ",";
 		Relay.getAlarm(i, Alarm2, start, end);
@@ -929,23 +928,26 @@ void handleOperation(CB_SERVER_PARAM)
 		int id = pserver->arg("Toggle_Relay").toInt();
 		bool state = (pserver->arg("State").toInt() == 1);
 		Relay.setState(id, state);
-		init_routeur.WriteIntegerIndex(id, "Relais", "State", state);
+//		init_routeur.WriteIntegerIndex(id, "Relais", "State", state);
 		UpdateLedRelayFacade();
 	}
 	if (pserver->hasArg("AlarmID"))
 	{
 		int id = pserver->arg("AlarmID").toInt();
-		int start = pserver->arg("Alarm1D").toInt();
-		int end = pserver->arg("Alarm1F").toInt();
-		Relay.addAlarm(id, Alarm1, start, end);
-		init_routeur.WriteIntegerIndex(id, "Relais", "Alarm1_start", start);
-		init_routeur.WriteIntegerIndex(id, "Relais", "Alarm1_end", end);
-
-		start = pserver->arg("Alarm2D").toInt();
-		end = pserver->arg("Alarm2F").toInt();
-		Relay.addAlarm(id, Alarm2, start, end);
-		init_routeur.WriteIntegerIndex(id, "Relais", "Alarm2_start", start);
-		init_routeur.WriteIntegerIndex(id, "Relais", "Alarm2_end", end);
+		int start1 = pserver->arg("Alarm1D").toInt();
+		int end1 = pserver->arg("Alarm1F").toInt();
+		int start2 = pserver->arg("Alarm2D").toInt();
+		int end2 = pserver->arg("Alarm2F").toInt();
+		TaskList.SuspendTask("RELAY_Task");
+		if (Relay.addAlarm(id, start1, end1, start2, end2))
+		{
+			init_routeur.WriteIntegerIndex(id, "Relais", "Alarm1_start_R", start1);
+			init_routeur.WriteIntegerIndex(id, "Relais", "Alarm1_end_R", end1);
+			init_routeur.WriteIntegerIndex(id, "Relais", "Alarm2_start_R", start2);
+			init_routeur.WriteIntegerIndex(id, "Relais", "Alarm2_end_R", end2);
+		}
+		if (Relay.hasAlarm())
+		  TaskList.ResumeTask("RELAY_Task");
 	}
 #endif
 

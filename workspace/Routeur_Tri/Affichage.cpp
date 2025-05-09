@@ -465,6 +465,11 @@ void Show_Page1(void)
 	IHM_Print(line++, 1, "P Talema : ", false);
 	Fast_Printf(&buffer[0], Current_Data.Talema_Power, 2, "", " W", Buffer_End, &len);
 	IHM_Print(line++, COLUMN, buffer, false);
+
+	// Afficher Idle
+#if USE_IDLE_TASK == true
+	IHM_Print(line++, TaskList.GetIdleStr().c_str(), false);
+#endif
 }
 
 void Show_Page2(void)

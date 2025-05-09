@@ -44,7 +44,7 @@
 		<link>
 			<name>libraries/DallasTemperature</name>
 			<type>2</type>
-			<locationURI>ECLIPSE_HOME/arduinoPlugin/libraries/DallasTemperature/3.9.0</locationURI>
+			<locationURI>ECLIPSE_HOME/arduinoPlugin/libraries/DallasTemperature/4.0.3</locationURI>
 		</link>
 		<link>
 			<name>libraries/EEPROM</name>

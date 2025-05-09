@@ -451,7 +451,7 @@ void setup()
 
 //	SSR_Compute_Dump_power();
 
-	lastSSRAction = (SSR_Action_typedef) init_routeur.ReadInteger("SSR", "Action", 1); // Par défaut Percent, voir page web
+	lastSSRAction = (SSR_Action_typedef) init_routeur.ReadInteger("SSR", "Action", 2); // Par défaut Percent, voir page web
 	SSR_Set_Action(lastSSRAction);
 
 	// NOTE : le SSR est éteint, on le démarre dans la page web
@@ -482,13 +482,13 @@ void setup()
 #ifdef USE_RELAY
 	for (int i = 0; i < Relay.size(); i++)
 	{
-		Relay.addAlarm(i, Alarm1, init_routeur.ReadIntegerIndex(i, "Relais", "Alarm1_start", -1),
-				init_routeur.ReadIntegerIndex(i, "Relais", "Alarm1_end", -1));
-		Relay.addAlarm(i, Alarm2, init_routeur.ReadIntegerIndex(i, "Relais", "Alarm2_start", -1),
-				init_routeur.ReadIntegerIndex(i, "Relais", "Alarm2_end", -1));
-		Relay.setState(i, init_routeur.ReadBoolIndex(i, "Relais", "State", false));
+		Relay.addAlarm(i, init_routeur.ReadIntegerIndex(i, "Relais", "Alarm1_start_R", -1),
+				init_routeur.ReadIntegerIndex(i, "Relais", "Alarm1_end_R", -1),
+				init_routeur.ReadIntegerIndex(i, "Relais", "Alarm2_start_R", -1),
+				init_routeur.ReadIntegerIndex(i, "Relais", "Alarm2_end_R", -1), (i == Relay.size() - 1));
+//		Relay.setState(i, init_routeur.ReadBoolIndex(i, "Relais", "State", false));
 	}
-	RTC_Local.setMinuteChangeCallback(onRelayMinuteChange_cb);
+//	RTC_Local.setMinuteChangeCallback(onRelayMinuteChange_cb);
 	// Delais pour le démarrage des charges sur les relais
 	delay(2000);
 #endif
@@ -536,18 +536,18 @@ void setup()
 
 	// Initialisation des taches
 //	--- Memory free stack ---
-//	Memory_Task: 1404 / 4096
-//	RTC_Task: 1500 / 4096
+//	Memory_Task: 1376 / 4096
+//	RTC_Task: 1616 / 4096
 //	UART_Task: 3400 / 4096
 //	KEEP_ALIVE_Task: 7496 / 8192
-//	DS18B20_Task: 616 / 1536
-//	TELEINFO_Task: 180 / 1024
-//	CIRRUS_Task: 4816 / 6144
-//	DISPLAY_Task: 2992 / 4096
-//	KEYBOARD_Task: 2856 / 4096
-//	LOG_DATA_Task: 1228 / 4096
-//	RELAY_Task: 452 / 1024
-//	SSR_BOOST_Task: 3400 / 4096
+//	DS18B20_Task: 660 / 1536
+//	TELEINFO_Task: 176 / 1024
+//	CIRRUS_Task: 4828 / 6144
+//	DISPLAY_Task: 2644 / 4096
+//	KEYBOARD_Task: 3276 / 4096
+//	LOG_DATA_Task: 1348 / 4096
+//	RELAY_Task: 1440 / 4096
+//	SSR_BOOST_Task: 3140 / 4096
 	TaskList.AddTask(RTC_DATA_TASK); // RTC Task
 	TaskList.AddTask(UART_DATA_TASK); // UART Task
 #ifdef USE_KEEPALIVE_TASK
@@ -566,11 +566,11 @@ void setup()
 #ifdef USE_ADC
 	if (ADC_Action == adc_Sigma)
 #endif
-	  TaskList.AddTask(KEYBOARD_DATA_TASK(true));
+	  TaskList.AddTask(KEYBOARD_DATA_TASK(condCreate));
 #endif
 	TaskList.AddTask(LOG_DATA_TASK);  // Save log Task
 #ifdef USE_RELAY
-	TaskList.AddTask(RELAY_DATA_TASK(true));
+	TaskList.AddTask(RELAY_DATA_TASK((Relay.hasAlarm()) ? condCreate : condSuspended));
 #endif
 	TaskList.AddTask(SSR_BOOST_TASK);  // Boost SSR Task
 	TaskList.AddTask(SSR_DUMP_TASK);  // Dump SSR Task
@@ -604,6 +604,7 @@ void loop()
 #else
 	// Temporisation à adapter
 //	vTaskDelay(10);
+	vTaskDelete(NULL);
 #endif
 }
 
@@ -700,10 +701,7 @@ void handleInitialization(CB_SERVER_PARAM)
 	message += (String) SSR_Get_Dump_Power() + '#';
 	message += (String) SSR_Get_Target() + '#';
 	message += (String) SSR_Get_Percent() + '#';
-	if (SSR_Get_State() == SSR_OFF)
-		message += "OFF#";
-	else
-		message += "ON#";
+	message += (SSR_Get_State() == SSR_OFF) ? "OFF#" : "ON#";
 
 	// Relay part
 	String alarm = "";
@@ -711,7 +709,7 @@ void handleInitialization(CB_SERVER_PARAM)
 #ifdef USE_RELAY
 	for (int i = 0; i < Relay.size(); i++)
 	{
-		(Relay.getState(i)) ? alarm += "ON," : alarm += "OFF,";
+		alarm += (Relay.getState(i)) ? "ON," : "OFF,";
 		Relay.getAlarm(i, Alarm1, start, end);
 		alarm += start + "," + end + ",";
 		Relay.getAlarm(i, Alarm2, start, end);
@@ -864,22 +862,25 @@ void handleOperation(CB_SERVER_PARAM)
 		int id = pserver->arg("Toggle_Relay").toInt();
 		bool state = (pserver->arg("State").toInt() == 1);
 		Relay.setState(id, state);
-		init_routeur.WriteIntegerIndex(id, "Relais", "State", state);
+//		init_routeur.WriteIntegerIndex(id, "Relais", "State", state);
 	}
 	if (pserver->hasArg("AlarmID"))
 	{
 		int id = pserver->arg("AlarmID").toInt();
-		int start = pserver->arg("Alarm1D").toInt();
-		int end = pserver->arg("Alarm1F").toInt();
-		Relay.addAlarm(id, Alarm1, start, end);
-		init_routeur.WriteIntegerIndex(id, "Relais", "Alarm1_start", start);
-		init_routeur.WriteIntegerIndex(id, "Relais", "Alarm1_end", end);
-
-		start = pserver->arg("Alarm2D").toInt();
-		end = pserver->arg("Alarm2F").toInt();
-		Relay.addAlarm(id, Alarm2, start, end);
-		init_routeur.WriteIntegerIndex(id, "Relais", "Alarm2_start", start);
-		init_routeur.WriteIntegerIndex(id, "Relais", "Alarm2_end", end);
+		int start1 = pserver->arg("Alarm1D").toInt();
+		int end1 = pserver->arg("Alarm1F").toInt();
+		int start2 = pserver->arg("Alarm2D").toInt();
+		int end2 = pserver->arg("Alarm2F").toInt();
+		TaskList.SuspendTask("RELAY_Task");
+		if (Relay.addAlarm(id, start1, end1, start2, end2))
+		{
+			init_routeur.WriteIntegerIndex(id, "Relais", "Alarm1_start_R", start1);
+			init_routeur.WriteIntegerIndex(id, "Relais", "Alarm1_end_R", end1);
+			init_routeur.WriteIntegerIndex(id, "Relais", "Alarm2_start_R", start2);
+			init_routeur.WriteIntegerIndex(id, "Relais", "Alarm2_end_R", end2);
+		}
+		if (Relay.hasAlarm())
+		  TaskList.ResumeTask("RELAY_Task");
 	}
 #endif
 
