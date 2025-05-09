@@ -1,0 +1,43 @@
+Hard ESP platform version : v3.2.0
+
+# core #
+    hard: core
+    hard: variant
+# libraries #
+    hard: EEPROM
+    hard: ESP_NOW
+    hard: FS
+    hard: HTTPUpdateServer
+    hard: LittleFS
+    hard: Network
+    hard: Preferences
+    hard: SPIFFS
+    hard: Update
+    hard: WebServer
+    hard: WiFi
+    hard: Wire
+    Async_TCP v3.4.0
+    DallasTemperature v4.0.3
+    ESPAsyncHTTPUpdateServer v3.0.0
+    ESP_Async_WebServer v3.7.7
+    NTPClient v3.2.1
+    OneWire v2.3.8
+# user_lib #
+    ADC_utils
+    CIRRUS
+    DS18B20
+    Debug_utils
+    ESPNow_utils
+    Emul_PV
+    Fonts
+    IniFiles
+    Keyboard
+    Partition_utils
+    RTCLocal
+    Relay
+    SH1107
+    SSR
+    Server_utils
+    Task_utils
+    TeleInfo
+

@@ -1,0 +1,29 @@
+Hard ESP platform version : v3.2.0
+
+# core #
+    hard: core
+    hard: variant
+# libraries #
+    hard: EEPROM
+    hard: FFat
+    hard: FS
+    hard: HTTPUpdateServer
+    hard: LittleFS
+    hard: Network
+    hard: Preferences
+    hard: SPIFFS
+    hard: Update
+    hard: WebServer
+    hard: WiFi
+    hard: Wire
+    NTPClient v3.2.1
+# user_lib #
+    Debug_utils
+    Fonts
+    Partition_utils
+    RTCLocal
+    SH1107
+    SSD1306
+    SSD1327
+    Server_utils
+
