@@ -200,14 +200,19 @@ class RTCLocal
 
 		void getDate(uint8_t *day, uint8_t *month, uint8_t *year) const;
 
+		// return the number of minutes since 00h00 : [0 .. 1440[
 		int getMinuteOfTheDay(void) const
 		{
 			return MinuteOfTheDay;
 		}
+
+		// return the number of seconds since 00h00 : [0 .. 86400[
 		int getSecondOfTheDay(void) const
 		{
 			return MinuteOfTheDay * 60 + seconds;
 		}
+
+		// return the UNIX date time
 		uint32_t getUNIXDateTime(void) const
 		{
 			return UNIX_time;
