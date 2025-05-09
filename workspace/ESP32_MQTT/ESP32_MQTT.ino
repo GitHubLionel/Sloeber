@@ -30,6 +30,10 @@
 
 #include "MQTT_utils.h"
 
+//USER CODE BEGIN Includes
+
+//USER CODE END Includes
+
 /**
  * Ce programme executé par l'ESPxx fait le lien entre l'interface web et le hardware
  * WEB <--- Wifi ---> ESPxx <--- UART ---> Hardware (BluePill, Nucleo, ...)
@@ -92,14 +96,14 @@
 void OnAfterConnexion(void);
 
 #if SSID_CONNEXION == CONN_INLINE
-#if (ISSOFTAP)
+	#if (ISSOFTAP)
 	// Pas de mot de passe
 	ServerConnexion myServer(ISSOFTAP, "SoftAP", "", OnAfterConnexion);
 //	ServerConnexion myServer(ISSOFTAP, "SoftAP", "", IPAddress(192, 168, 4, 2), IPAddress(192, 168, 4, 1));
 	#else
-// Définir en dur le SSID et le pwd du réseau
-ServerConnexion myServer(ISSOFTAP, "TP-Link_8584", "88222462", OnAfterConnexion);
-#endif
+	// Définir en dur le SSID et le pwd du réseau
+	ServerConnexion myServer(ISSOFTAP, "TP-Link_8584", "88222462", OnAfterConnexion);
+	#endif
 #else
 	// Connexion UART, File or EEPROM
   ServerConnexion myServer(ISSOFTAP, OnAfterConnexion);
@@ -135,7 +139,7 @@ void Task_ShowIdle(void *parameter)
 	for (EVER)
 	{
 		MQTTTest.Publish("Idle_Task", TaskList.GetIdleStr().c_str());
-		END_TASK_CODE();
+		END_TASK_CODE(false);
 	}
 }
 
@@ -144,6 +148,10 @@ void Wifi_Connexion(void)
 {
 	myServer.Connexion(false);
 }
+
+//USER CODE BEGIN Privates
+
+//USER CODE END Privates
 
 /**
  * Handle the request from web for MQTT server
@@ -220,6 +228,10 @@ void setup()
 	// A cause de l'erreur : Brownout detector was triggered
 //	WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
 
+	//USER CODE BEGIN Initialization
+
+	//USER CODE END Initialization
+
 	IHM_Print0("Connexion .....");
 	print_debug(F("==> Wait for network <=="));
 	if (!myServer.WaitForConnexion((Conn_typedef) SSID_CONNEXION))
@@ -239,12 +251,12 @@ void setup()
 	print_debug("*** Setup time : " + String(millis() - start_time) + " ms ***\r\n");
 
 	// IDLE Task
-	TaskList.AddTask( {MQTT_Connected, "ShowIdle", 5000, 5, 5000, CoreAny, Task_ShowIdle});
+	TaskList.AddTask( {condNotCreate, "ShowIdle", 5000, 5, 5000, CoreAny, Task_ShowIdle});
 	// MQTT Keep alive task
 #ifdef USE_TASK_FOR_LOOP
-	TaskList.AddTask(MQTT_STANDARD_KEEPALIVE_TASK_DATA(false));
+	TaskList.AddTask(MQTT_STANDARD_KEEPALIVE_TASK_DATA(condNotCreate));
 #endif
-	TaskList.AddTask(MQTT_STANDARD_PARSEMESSAGE_TASK_DATA(false));
+	TaskList.AddTask(MQTT_STANDARD_PARSEMESSAGE_TASK_DATA(condNotCreate));
 	TaskList.Create(RUN_TASK_IDLE);
 }
 
@@ -265,7 +277,7 @@ void loop()
 	// Opération à faire si on est à l'heure : par exemple afficher l'heure
 	if (uptodate)
 	{
-		IHM_Print0(RTC_Local.the_time);
+		IHM_Print0(RTC_Local.the_time());
 
 		// Afficher Idle
 		IHM_Print(3, TaskList.GetIdleStr().c_str(), true);
@@ -302,9 +314,7 @@ void loop()
 void OnAfterConnexion(void)
 {
 	// Server default events
-	Server_CommonEvent(
-			Ev_LoadPage | Ev_GetFile | Ev_DeleteFile | Ev_UploadFile | Ev_ListFile | Ev_ResetESP
-					| Ev_SetTime | Ev_GetTime | Ev_SetDHCPIP | Ev_ResetDHCPIP);
+	Server_CommonEvent(default_Events | Ev_ListFile | Ev_ResetESP | Ev_SetTime | Ev_GetTime);
 
 	// Server specific events (voir le javascript)
 	server.on("/getUARTData", HTTP_GET, [](CB_SERVER_PARAM)
@@ -314,7 +324,7 @@ void OnAfterConnexion(void)
 
 	server.on("/getLastData", HTTP_GET, [](CB_SERVER_PARAM)
 	{
-		pserver->send(200, "text/plain", (String(RTC_Local.the_time) + '#' + UART_Message));
+		pserver->send(200, "text/plain", (String(RTC_Local.the_time()) + '#' + UART_Message));
 	});
 
 	server.on("/operation", HTTP_PUT, handleOperation);
@@ -332,10 +342,9 @@ bool UserAnalyseMessage(void)
 {
 	// Default
 	// Retour à UART
-	printf_message_to_UART("Unknown message : " + String((const char*) UART_Message_Buffer));
+	printf_message_to_UART("Unknown message : " + String((const char *)UART_Message_Buffer));
 	// Message pour la page web
-	UART_Message = String((const char*) UART_Message_Buffer);
-
+	UART_Message = String((const char *)UART_Message_Buffer);
 	return false;
 }
 
@@ -344,7 +353,7 @@ void handleOperation(CB_SERVER_PARAM)
 	// Default
 	RETURN_BAD_ARGUMENT();
 
-	print_debug("Operation: " + pserver->arg((int) 0) + "=" + pserver->arg((int) 0));
+	print_debug("Operation: " + pserver->arg((int) 0) + "=" +  pserver->arg((int) 0));
 
 #if defined(OLED_DEFINED)
 	if (pserver->hasArg("Toggle_Oled"))

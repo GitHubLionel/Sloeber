@@ -26,6 +26,9 @@
 
 /**********************************************************
  * Partition define : Partition_utils library
+ * Notes:
+ * filesystem partition use the first partition with "data" type and littlefs/spiffs/fat "subtype". His name is "spiffs" by default
+ * data file partition use the partition with "data" type and littlefs/spiffs/fat "subtype". His name is "data"
  **********************************************************/
 // Select only one. By default it is LittleFS
 //#define USE_SPIFFS
@@ -45,6 +48,14 @@
 // Necessary for HTTPUPDATER with LITTLEFS in async server
 // MUST BE PUT IN DEFINE OF THE PROJECT
 //#define ESPASYNCHTTPUPDATESERVER_LITTLEFS
+//#define ESPASYNCHTTPUPDATESERVER_PRETTY // To have a better nice IHM
+
+// If USE_HTTPUPDATER is defined. Need ElegantOTA library
+//#define USE_ELEGANT_OTA
+// Don't forget to call ElegantOTAloop() in main loop
+// Necessary for ElegantOTA in async server
+// MUST BE PUT IN DEFINE OF THE PROJECT
+//#define ELEGANTOTA_USE_ASYNC_WEBSERVER=1
 
 /**********************************************************
  * MQTT define : MQTT_utils library
@@ -54,17 +65,10 @@
 #define PAYLOAD_MAXSIZE	250
 
 /**********************************************************
- * Task define : Task_utils library
- * By default, global instance TaskList is created
- * See end of file for task define used in several libraries
- **********************************************************/
-#define RUN_TASK_MEMORY	false // true or false
-
-/**********************************************************
  * RTC define : RTCLocal library
  * By default, global instance RTC_Local is created
  **********************************************************/
-#define USE_NTP_SERVER	2 // 1 or 2 for summer time
+#define USE_NTP_SERVER	1 // 1 or 2 for summer time
 //#define RTC_USE_CORRECTION
 
 /**********************************************************
@@ -84,10 +88,30 @@
 
 #define OLED_SSD1327 // SSD1327
 //#define OLED_SH1107 // SH1107
-//#define OLED_TOP_DOWN
+#define OLED_TOP_DOWN
 //#define OLED_LEFT_RIGHT
 //#define OLED_DOWN_TOP
-#define OLED_RIGHT_LEFT
+//#define OLED_RIGHT_LEFT
+
+// Choose a type you are using
+//#define TFT_ST77xx // ST7735 or ST7789
+//#define ST77xx_160X128
+//#define ST77xx_160X128_WS
+//#define ST77xx_128X128
+//#define ST77xx_160X80
+//#define ST77xx_135X240
+//#define ST77xx_240X240
+
+// Choose the Rotation
+//#define ST77xx_ROTATION_UP
+//#define ST77xx_ROTATION_RR
+//#define ST77xx_ROTATION_RL
+//#define ST77xx_ROTATION_DOWN
+
+//#define ST77xx_RESET_GPIO	GPIO_NUM_4
+//#define ST77xx_CS_GPIO	GPIO_NUM_18 // 0 if not used
+//#define ST77xx_DC_GPIO	GPIO_NUM_16
+//#define ST77xx_BLK_GPIO	GPIO_NUM_17 // 0 if not used
 
 /**********************************************************
  * Dallas DS18B20 define
@@ -101,11 +125,14 @@
 //#define TI_RX_GPIO	GPIO_NUM_14
 
 /**********************************************************
- * Keyboard define
+ * Tore and Keyboard define
  **********************************************************/
 //#define KEYBOARD_ADC_GPIO	GPIO_NUM_36
 //#define DEBOUNCING_MS	200
 //#define DEBOUNCING_US	200000
+//#define KEYBOARD_WITH_ADC // Use ADC library
+//#define ADC_USE_ARDUINO   // To use Arduino function
+//#define ADC_USE_TASK      // To use task in place of timer in oneshot mode or callback in continuous mode
 
 /**********************************************************
  * Cirrus define
@@ -116,7 +143,10 @@
 //#define CIRRUS_CS1_GPIO	GPIO_NUM_18
 //#define CIRRUS_CS2_GPIO	GPIO_NUM_19
 
-//#define CIRRUS_USE_UART
+//#define CIRRUS_USE_UART // If not defined then SPI is used
+#ifdef CIRRUS_USE_UART
+#define CIRRUS_UART_BAUD	512000
+#endif
 //#define CIRRUS_FLASH
 //#define LOG_CIRRUS_CONNECT
 //#define CIRRUS_CALIBRATION
@@ -124,26 +154,37 @@
 //#define DEBUG_CIRRUS_BAUD
 
 //#define CIRRUS_RMS_FULL  // To have U, I and P RMS. Otherwise only U and P RMS
+//#define CIRRUS_SIMPLE_IS_CS5490	true  // Only used in Simple_Get_Data. true for CS5490, false for CS548x
 
 /**********************************************************
  * SSR define
  **********************************************************/
 //#define USE_SSR
 //#define ZERO_CROSS_GPIO	GPIO_NUM_34
+//#define ZERO_CROSS_TOP_Xms	20	// Allow to have a top 200 ms created by the zero cross (10 * X ms)
 //#define SSR_COMMAND_GPIO	GPIO_NUM_12
 //#define SSR_LED_GPIO	GPIO_NUM_13
 
 //#define SIMPLE_ZC_TEST
 
 /**********************************************************
+ * Task define : Task_utils library
+ * By default, global instance TaskList is created
  * Task define used in several libraries
- * Need Task_utils library
  **********************************************************/
+//#define RUN_TASK_MEMORY	false // true or false. To check the memory used by tasks
+
 //#define UART_USE_TASK        // A basic task to analyse UART message
 //#define RTC_USE_TASK         // To run RTCLocal in a task
+//#define KEEP_ALIVE_USE_TASK  // A basic task to keep alive the Wifi connexion
 //#define DS18B20_USE_TASK     // A basic task to check DS18B20 temperature every 2 s
 //#define TELEINFO_USE_TASK    // A basic task to check TeleInfo every 1 s
+//#define KEYBOARD_USE_TASK    // A basic task to check keyboard every 10 ms
 //#define CIRRUS_TASK_DELAY	100    // The delay for the Cirrus task. Must be adapted according the time required of the GetData()
 //#define CIRRUS_USE_TASK      // A basic task to check Cirrus data every CIRRUS_TASK_DELAY ms
-//#define KEYBOARD_USE_TASK    // A basic task to check keyboard every 10 ms
+//#define RELAY_USE_TASK       // A basic task to update Relay every minute
 
+/**********************************************************
+ * User define
+ * Add your define here
+ **********************************************************/
