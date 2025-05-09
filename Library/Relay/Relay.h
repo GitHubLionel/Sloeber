@@ -177,7 +177,6 @@ class Relay_Class
 
 		void Initialize(const RelayGPIOList &gpios);
 		void add(uint8_t gpio);
-		void updateTime(int _time = -1);
 
 		size_t size(void)
 		{
@@ -197,6 +196,7 @@ class Relay_Class
 			return (relaisOnCount > 0);
 		}
 
+		void updateTime(int _time = -1);
 		bool hasAlarm(void) const;
 		bool hasAlarm(uint8_t idRelay) const;
 		bool addAlarm(uint8_t idRelay, AlarmNumber num, int start, int end, bool updateTimeList = true);
@@ -216,6 +216,7 @@ class Relay_Class
 		bool isTimeInitialized;  // Is currentTime initialized ?
 		int relaisOnCount;       // Number of relay in state ON
 	private:
+		bool CheckMinuteRange(int minute);
 		void UpdateTimeList(void);
 		void UpdateNextAlarm(bool updateLastAlarm);
 		void CheckAlarmTime(void);
