@@ -139,8 +139,8 @@ class MQTTClient
 		void IRAM_ATTR mqttCallback(char *topic, unsigned char *payload, unsigned int length);
 
 	private:
-		WiFiClient wifiClient; // @suppress("Type cannot be resolved")
-		PubSubClient *MQTT_client;
+		WiFiClient wifiClient; // @suppress("Type cannot be resolved") // @suppress("Abstract class cannot be instantiated")
+		PubSubClient *MQTT_client; // @suppress("Type cannot be resolved")
 		SemaphoreHandle_t sema_MQTT_KeepAlive;
 		QueueHandle_t QMessage;
 		String client_id = "";
