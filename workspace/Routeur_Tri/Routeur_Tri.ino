@@ -238,11 +238,13 @@ void UpdateLedRelayFacade(void)
 	(Relay.IsOneRelayON()) ? digitalWrite(GPIO_RELAY_FACADE, HIGH) : digitalWrite(GPIO_RELAY_FACADE, LOW);
 }
 
-// callback to update relay every minutes
+// callback to update relay every minutes if we don't use task
+#ifndef RELAY_USE_TASK
 void onRelayMinuteChange_cb(uint16_t minuteOfTheDay)
 {
 	Relay.updateTime(minuteOfTheDay);
 }
+#endif
 #endif
 
 #ifdef USE_KEYBOARD
@@ -549,8 +551,7 @@ void setup()
 				init_routeur.ReadIntegerIndex(i, "Relais", "Alarm2_end_R", -1), (i == Relay.size() - 1));
 //		Relay.setState(i, init_routeur.ReadBoolIndex(i, "Relais", "State", false));
 	}
-	UpdateLedRelayFacade();
-	RTC_Local.setMinuteChangeCallback(onRelayMinuteChange_cb);
+	Relay.printAlarm();
 #endif
 
 	// **** 9- Initialisation installation PV
@@ -631,7 +632,16 @@ void setup()
 #endif
 	TaskList.AddTask(LOG_DATA_TASK);  // Save log Task
 #ifdef USE_RELAY
+#ifdef RELAY_USE_TASK
 	TaskList.AddTask(RELAY_DATA_TASK((Relay.hasAlarm()) ? condCreate : condSuspended));
+#else
+	if (Relay.hasAlarm())
+	{
+		Relay.updateTime(RTC_Local.getMinuteOfTheDay());
+		RTC_Local.setMinuteChangeCallback(onRelayMinuteChange_cb);
+	}
+#endif
+	UpdateLedRelayFacade();
 #endif
 	TaskList.AddTask(SSR_BOOST_TASK);  // Boost SSR Task
 	TaskList.AddTask(SSR_DUMP_TASK);  // Dump SSR Task
@@ -938,7 +948,12 @@ void handleOperation(CB_SERVER_PARAM)
 		int end1 = pserver->arg("Alarm1F").toInt();
 		int start2 = pserver->arg("Alarm2D").toInt();
 		int end2 = pserver->arg("Alarm2F").toInt();
+#ifdef RELAY_USE_TASK
 		TaskList.SuspendTask("RELAY_Task");
+#else
+		// Suppress callback during update
+		RTC_Local.setMinuteChangeCallback(NULL);
+#endif
 		if (Relay.addAlarm(id, start1, end1, start2, end2))
 		{
 			init_routeur.WriteIntegerIndex(id, "Relais", "Alarm1_start_R", start1);
@@ -946,8 +961,17 @@ void handleOperation(CB_SERVER_PARAM)
 			init_routeur.WriteIntegerIndex(id, "Relais", "Alarm2_start_R", start2);
 			init_routeur.WriteIntegerIndex(id, "Relais", "Alarm2_end_R", end2);
 		}
+#ifdef RELAY_USE_TASK
 		if (Relay.hasAlarm())
 		  TaskList.ResumeTask("RELAY_Task");
+#else
+		if (Relay.hasAlarm())
+		{
+			Relay.updateTime(RTC_Local.getMinuteOfTheDay());
+			RTC_Local.setMinuteChangeCallback(onRelayMinuteChange_cb);
+		}
+#endif
+		UpdateLedRelayFacade();
 	}
 #endif
 

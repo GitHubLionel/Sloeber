@@ -16,7 +16,7 @@ Hard ESP platform version : v3.2.0
     hard: WebServer
     hard: WiFi
     hard: Wire
-    Async_TCP v3.4.0
+    Async_TCP v3.4.1
     DallasTemperature v4.0.3
     ESPAsyncHTTPUpdateServer v3.0.0
     ESP_Async_WebServer v3.7.7
