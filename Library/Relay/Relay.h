@@ -130,11 +130,11 @@ typedef struct
 		{
 			if (alarm.start != -1)
 			{
-				if (alarm.start <= time)
+				if (time >= alarm.start)
 				{
 					// If end is defined else until end of day
 					if (alarm.end != -1)
-						return (alarm.end > time);
+						return (time < alarm.end);
 					else
 						return true;
 				}
@@ -144,7 +144,7 @@ typedef struct
 			else
 			{
 				// end must be defined
-				return (alarm.end > time);
+				return (time < alarm.end);
 			}
 		}
 } Relay_typedef;
@@ -201,6 +201,7 @@ class Relay_Class
 		bool hasAlarm(uint8_t idRelay) const;
 		bool addAlarm(uint8_t idRelay, AlarmNumber num, int start, int end, bool updateTimeList = true);
 		bool addAlarm(uint8_t idRelay, int start1, int end1, int start2, int end2, bool updateTimeList = true);
+		void deleteAlarm(uint8_t idRelay, AlarmNumber num, bool updateTimeList = true);
 		bool getAlarm(uint8_t idRelay, AlarmNumber num, int *start, int *end);
 		void getAlarm(uint8_t idRelay, AlarmNumber num, String &start, String &end);
 

@@ -10,6 +10,13 @@
 
 #define RELAY_DEBUG
 
+// Number of minutes in a day
+#define MINUTESINDAY	1440
+
+// Check if id is correct
+#define	CHECK_RELAY_SIZE(id)	if (!((id) < _relay.size())) return;
+#define	CHECK_RELAY_SIZE_TRUE(id)	if (!((id) < _relay.size())) return false;
+
 // ********************************************************************************
 // Relay_Class constructor
 // ********************************************************************************
@@ -72,12 +79,11 @@ void Relay_Class::add(uint8_t gpio)
  */
 void Relay_Class::setState(uint8_t idRelay, bool state)
 {
-	if (idRelay >= _relay.size())
-		return;
+	CHECK_RELAY_SIZE(idRelay);
 
 #ifdef RELAY_DEBUG
-	String tmp = "";
-	tmp = "Relay " + (String) idRelay + ". Initial state: ";
+	String tmp = toString(currentTime, true);
+	tmp += ". Relay " + (String) idRelay + ". Initial state: ";
 	tmp += (_relay[idRelay].state) ? "ON" : "OFF";
 	tmp += " - Final state: ";
 	tmp += (state) ? "ON" : "OFF";
@@ -109,8 +115,7 @@ void Relay_Class::setState(uint8_t idRelay, bool state)
  */
 void Relay_Class::toggleState(uint8_t idRelay)
 {
-	if (idRelay >= _relay.size())
-		return;
+	CHECK_RELAY_SIZE(idRelay);
 	setState(idRelay, !getState(idRelay));
 }
 
@@ -119,9 +124,7 @@ void Relay_Class::toggleState(uint8_t idRelay)
  */
 bool Relay_Class::getState(uint8_t idRelay) const
 {
-	if (idRelay >= _relay.size())
-		return false;
-
+	CHECK_RELAY_SIZE_TRUE(idRelay);
 	return _relay[idRelay].state;
 }
 
@@ -147,7 +150,7 @@ String Relay_Class::getAllState(void)
  */
 inline bool Relay_Class::CheckMinuteRange(int minute)
 {
-	return ((minute >= -1) && (minute < 1440));
+	return ((minute >= -1) && (minute < MINUTESINDAY));
 }
 
 /**
@@ -198,16 +201,13 @@ bool Relay_Class::hasAlarm(void) const
 
 bool Relay_Class::hasAlarm(uint8_t idRelay) const
 {
-	if (idRelay >= _relay.size())
-		return false;
-
+	CHECK_RELAY_SIZE_TRUE(idRelay);
 	return _relay[idRelay].hasAlarm;
 }
 
 bool Relay_Class::addAlarm(uint8_t idRelay, AlarmNumber num, int start, int end, bool updateTimeList)
 {
-	if (idRelay >= _relay.size())
-		return false;
+	CHECK_RELAY_SIZE_TRUE(idRelay);
 	Relay_typedef *relais = &_relay[idRelay];
 
 	if (num == AlarmNumber::Alarm1)
@@ -220,8 +220,7 @@ bool Relay_Class::addAlarm(uint8_t idRelay, AlarmNumber num, int start, int end,
 
 bool Relay_Class::addAlarm(uint8_t idRelay, int start1, int end1, int start2, int end2, bool updateTimeList)
 {
-	if (idRelay >= _relay.size())
-		return false;
+	CHECK_RELAY_SIZE_TRUE(idRelay);
 
 	bool result = true;
 	Relay_typedef *relay = &_relay[idRelay];
@@ -231,7 +230,6 @@ bool Relay_Class::addAlarm(uint8_t idRelay, int start1, int end1, int start2, in
 	relay->hasAlarm2 = false;
 	relay->alarm1.reset();
 	relay->alarm2.reset();
-	UpdateTimeList();
 
 	// Alarm1
 	if (!CheckMinuteRange(start1) || !CheckMinuteRange(end1))
@@ -289,15 +287,27 @@ bool Relay_Class::addAlarm(uint8_t idRelay, int start1, int end1, int start2, in
 	}
 
 	// Update alarm time list
-	if (result)
-		UpdateTimeList();
+	if (updateTimeList)
+	  UpdateTimeList();
+
 	return result;
+}
+
+void Relay_Class::deleteAlarm(uint8_t idRelay, AlarmNumber num, bool updateTimeList)
+{
+	CHECK_RELAY_SIZE(idRelay);
+	Relay_typedef *relais = &_relay[idRelay];
+
+	if (num == AlarmNumber::Alarm1)
+		addAlarm(idRelay, -1, -1, -1, -1, updateTimeList); // delete also Alarm2
+	else
+		if (num == AlarmNumber::Alarm2)
+			addAlarm(idRelay, relais->alarm1.start, relais->alarm1.end, -1, -1, updateTimeList);
 }
 
 bool Relay_Class::getAlarm(uint8_t idRelay, AlarmNumber num, int *start, int *end)
 {
-	if (idRelay >= _relay.size())
-		return false;
+	CHECK_RELAY_SIZE_TRUE(idRelay);
 
 	*start = *end = -1;
 	if (num == AlarmNumber::Alarm1)
@@ -352,6 +362,8 @@ void Relay_Class::printAlarm(void) const
 		print_debug(tmp);
 		i++;
 	}
+	if (i == 0)
+		print_debug("No alarm.");
 }
 
 String Relay_Class::toString(int time, bool withtime) const
@@ -381,6 +393,7 @@ void Relay_Class::UpdateTimeList(void)
 {
 	_time.clear();
 	idTime = -1;
+	isTimeInitialized = false;
 
 	for (Relay_typedef relay : _relay)
 	{
@@ -432,7 +445,6 @@ void Relay_Class::UpdateTimeList(void)
 	{
 		// Sort alarm time
 		std::sort(_time.begin(), _time.end(), sort_time);
-		UpdateNextAlarm(true);
 	}
 }
 
