@@ -134,13 +134,12 @@ bool RTCLocal::update()
 			}
 #endif
 		}
-		else
-		{
-			MinuteOfTheDay = this->hours * 60 + this->minutes;
-			if (this->minutes == 59)
-				this->_cb_minute = true;
-			minutechange = true;
-		}
+
+		// We have a new minute
+		MinuteOfTheDay = this->hours * 60 + this->minutes;
+		if (this->minutes == 59)
+			this->_cb_minute = true;
+		minutechange = true;
 	}
 
 	// Met à jour la string heure
