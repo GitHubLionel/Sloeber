@@ -1,6 +1,7 @@
 "use strict";
 
 var xmlHttp = createXmlHttpObject();
+var RequestHeader = "application/x-www-form-urlencoded";
 var loadingdiv = null;        // le div d'attente pour l'upload
 var get_time = true;
 var request_busy = false;
@@ -8,13 +9,14 @@ var pending_request = null;
 
 // web events
 function createXmlHttpObject() {
+  var xhr;
   if (window.XMLHttpRequest) {
-    xmlHttp = new XMLHttpRequest();
+    xhr = new XMLHttpRequest();
   } else {
-    xmlHttp = new ActiveXObject('Microsoft.XMLHTTP');
+    xhr = new ActiveXObject('Microsoft.XMLHTTP');
   }
-  xmlHttp.onerror = onError;
-  return xmlHttp;
+  xhr.onerror = onError;
+  return xhr;
 }
 
 function onError(event) {
@@ -23,7 +25,7 @@ function onError(event) {
   if (event.target.status != 0)
   {
     request_busy = false;
-    xmlHttp.onreadystatechange = null;
+    this.onreadystatechange = null;
     process();
   }
 }
@@ -31,6 +33,11 @@ function onError(event) {
 // Test if the server can accept a new request
 function serverIsReady(server) {
   return ((!request_busy) && (server.readyState == 0 || server.readyState == 4));
+}
+
+// Check if request is DONE
+function request_done(server) {
+  return (server.readyState == 4);
 }
 
 // Test if we have received the response
@@ -41,7 +48,7 @@ function requestIsOK(server) {
   return (server.readyState == 4 && server.status == 200);
 }
 
-function ESP_Request(send_request, params = null) {
+function ESP_Request(send_request, params) {
   // Le server n'est pas prêt, on met la requête en attente
   if (!serverIsReady(xmlHttp)) {
     pending_request = {"request": send_request, "params": params};
@@ -52,18 +59,18 @@ function ESP_Request(send_request, params = null) {
   if (send_request === "getFile")
   {
     xmlHttp.open("POST", "/getFile", true);
-    xmlHttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+    xmlHttp.setRequestHeader("Content-type", RequestHeader);
     xmlHttp.onreadystatechange = function() {
       if (requestIsOK(this)) {
 
         var blob = new Blob([this.responseText],
-                  { type: "text/plain; charset=utf-8" });
+                    { type: "text/plain; charset=utf-8" });
 
         // Save the file with FileSaver.js
         saveAs(blob, params[1]);
       }
       wait_Upload(false);
-      request_busy = false;
+      request_busy = !request_done(this);
     }
     xmlHttp.send("FILE=" + params[0]);
     wait_Upload(true);
@@ -73,12 +80,12 @@ function ESP_Request(send_request, params = null) {
   if (send_request === "delFile")
   {
     xmlHttp.open("POST", "/delFile", true);
-    xmlHttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+    xmlHttp.setRequestHeader("Content-type", RequestHeader);
     xmlHttp.onreadystatechange = function() {
       if (this.status == 204) {
         document.getElementById("delFile").value = "";
       }
-//          else alert("Not found");
+  //          else alert("Not found");
       request_busy = false;
     }
     xmlHttp.send("FILE=" + params[0]);
@@ -94,7 +101,7 @@ function ESP_Request(send_request, params = null) {
         if (xmlResponse === null) return;
         document.getElementById("data_json").innerHTML = xmlResponse;
       }
-      request_busy = false;
+      request_busy = !request_done(this);
     }
     xmlHttp.send(null);
     return;
@@ -112,24 +119,23 @@ function ESP_Request(send_request, params = null) {
   if (send_request === "setTime")
   {
     xmlHttp.open("PUT","/setTime",true);
-    xmlHttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+    xmlHttp.setRequestHeader("Content-type", RequestHeader);
     xmlHttp.onreadystatechange = null;
     xmlHttp.send(params[0] + "&UART=1");  //  + "&UART=1" to send to UART
     request_busy = false;
     return;
   }
-  else
-    {
+
   // Opération par défaut : send_request is the param like PARAM=VALUE
-  //    alert(send_request);
-      xmlHttp.open("PUT","/operation",true);
-      xmlHttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-      xmlHttp.onreadystatechange = null;
-      xmlHttp.send(send_request);
-      request_busy = false;
-    }
+//    alert(send_request);
+  xmlHttp.open("PUT","/operation",true);
+  xmlHttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+  xmlHttp.onreadystatechange = null;
+  xmlHttp.send(send_request);
+  request_busy = false;
 }
 
+// The process function is repeated every second
 function process() {
   if (!serverIsReady(xmlHttp))
   {
@@ -175,11 +181,11 @@ function process() {
 }
 
 function handleServer_getTime() {
-  if (requestIsOK(xmlHttp))
-  {
-    var xmlResponse = xmlHttp.responseText;
-    request_busy = false;
+  request_busy = !request_done(this);
 
+  if (requestIsOK(this))
+  {
+    let xmlResponse = this.responseText;    
     if (xmlResponse === null) return;
 
     document.getElementById("time").innerHTML = xmlResponse;
@@ -187,11 +193,11 @@ function handleServer_getTime() {
 }
 
 function handleServer_getUARTData() {
-  if (requestIsOK(xmlHttp))
-  {
-    var xmlResponse = xmlHttp.responseText;
-    request_busy = false;
+  request_busy = !request_done(this);
 
+  if (requestIsOK(this))
+  {
+    let xmlResponse = this.responseText;
     if (xmlResponse === null) return;
 
     document.getElementById("data_uart").innerHTML = xmlResponse;
@@ -199,11 +205,11 @@ function handleServer_getUARTData() {
 }
 
 function handleServerResponse() {
-  if (requestIsOK(xmlHttp))
-  {
-    var xmlResponse = xmlHttp.responseText;
-    request_busy = false;
+  request_busy = !request_done(this);
 
+  if (requestIsOK(this))
+  {
+    let xmlResponse = this.responseText;
     if (xmlResponse === null) return;
 
 //    console.log(xmlResponse);
@@ -231,6 +237,14 @@ function wait_Upload(visible) {
 // ***************************
 // Time function
 // ***************************
+
+// Return unix date. Use date parameter if provided else use current date.
+function getUnixDate(date) {
+  if (date === undefined)
+    date = new Date();
+  return Math.round(date.getTime()/1000) - date.getTimezoneOffset() * 60; // UTC time soit GMT+00:00
+}
+
 function createDateTime() {
   var date = new Date();
 
@@ -240,7 +254,7 @@ function createDateTime() {
   var hours = date.getHours();
   var minutes = date.getMinutes();
   var seconds = date.getSeconds();
-  var unix = Math.round(date.getTime()/1000) - date.getTimezoneOffset() * 60; // UTC time soit GMT+00:00
+  var unix = getUnixDate(date);
 
   if (day < 10) day = "0" + day;
   if (month < 10) month = "0" + month;
