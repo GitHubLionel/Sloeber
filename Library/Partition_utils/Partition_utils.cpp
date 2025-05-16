@@ -11,6 +11,13 @@ extern "C" {
 }
 #endif
 
+#ifdef USE_TARGZ_LIB
+#ifndef USE_SPIFFS
+#define DEST_FS_USES_LITTLEFS
+#endif
+#include <ESP32-targz.h>
+#endif
+
 /**
  * Define shortcut to pre-defined filesystem partition
  */
@@ -236,7 +243,7 @@ void ESPinformations(void)
 
 /**
  * Return free space in byte
- * if Data_Partition (default false), return free space of data partition else free space of file system partition
+ * @param Data: true use Data_Partition else use FS_Partition. Default false = use FS_Partition
  */
 size_t Partition_FreeSpace(bool Data)
 {
@@ -259,21 +266,23 @@ size_t Partition_FreeSpace(bool Data)
 
 /**
  * Return the size in byte of the specified file
+ * @param Data: true use Data_Partition else use FS_Partition. Default false = use FS_Partition
  */
-size_t Partition_FileSize(String &file, bool Data)
+size_t Partition_FileSize(const String &file, bool Data)
 {
 	File f;
-	CheckBeginSlash(file);
+	String str_file = file;
+	CheckBeginSlash(str_file);
 #ifdef ESP8266
 	if (Data)
-	  f = Data_Partition->open(file.c_str(), "r");
+	  f = Data_Partition->open(str_file.c_str(), "r");
 	else
-		f = FS_Partition->open(file.c_str(), "r");
+		f = FS_Partition->open(str_file.c_str(), "r");
 #else
 	if (Data)
-	  f = Data_Partition->open(file.c_str());
+	  f = Data_Partition->open(str_file.c_str());
 	else
-		f = FS_Partition->open(file.c_str());
+		f = FS_Partition->open(str_file.c_str());
 #endif
 
 	if ((!f) || (f.isDirectory()))
@@ -467,7 +476,7 @@ inline bool checkFile(const char *file, const listFile_typedef &skipfile)
  * Get the list of the name of the files of a directory
  * @param: data_partition : true for data partition else filesystem partition
  * @param: dir : the name of the directory
- * @param: skipfile : the list of files to exclude
+ * @param: skipfile : the list of files to exclude. Use .ext to exclude file with .ext extension (not safe !)
  * @param: list : the list of the file of the directory
  * @return: true if the list is filled
  */
@@ -566,6 +575,66 @@ String ListFileToString(listFile_typedef &list)
 	}
 	return result;
 }
+
+// ********************************************************************************
+// GZ file
+// ********************************************************************************
+
+#ifdef USE_TARGZ_LIB
+
+/**
+ * Compress the specified file
+ * @param Data: true use Data_Partition else use FS_Partition. Default false = use FS_Partition
+ * The name of the compressed file is the name of the file + ".gz"
+ */
+void GZFile(const String &file, bool data)
+{
+	File src, dst;
+	String str_file = file;
+	PART_TYPE *part = FS_Partition;
+
+	if (data)
+		part = Data_Partition;
+
+	print_debug("### GZ File ###");
+	CheckBeginSlash(str_file);
+
+	// open the uncompressed text file for streaming
+	src = part->open(str_file.c_str(), "r");
+	if (!src)
+	{
+		print_debug("[GZFile] Unable to read input file, halting");
+		return;
+	}
+
+	// open the fz file for writing
+	str_file = str_file + ".gz";
+	dst = part->open(str_file, "w");
+	if (!dst)
+	{
+		print_debug("[GZFile] Unable to create output file, halting");
+		src.close();
+		return;
+	}
+
+//	LZPacker::setProgressCallBack(LZPacker::defaultProgressCallback);
+	size_t dstLen = LZPacker::compress(&src, src.size(), &dst);
+	size_t srcLen = src.size();
+
+	float done = float(dstLen) / float(srcLen);
+	float left = -(1.0f - done);
+
+	char message[120] = {0};
+	sprintf(message, "[GZFile] Deflated %d bytes to %d bytes (%s%.1f%s)\r\n", srcLen, dstLen, left > 0 ? "+" : "",
+			left * 100.0, "%");
+	print_debug(message);
+
+	src.close();
+	dst.close();
+
+//  verify(gzfile, file);
+}
+#endif
 
 // ********************************************************************************
 // End of file

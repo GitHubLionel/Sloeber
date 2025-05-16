@@ -69,10 +69,14 @@ void ESPinformations(void);
 void Partition_Info(void);
 void Partition_ListDir(void);
 size_t Partition_FreeSpace(bool Data = false);
-size_t Partition_FileSize(String &file, bool Data = false);
+size_t Partition_FileSize(const String &file, bool Data = false);
 String formatBytes(float bytes, int id_multi);
 
 bool FillListFile(bool data_partition, const String &dir, const listFile_typedef &skipfile, listFile_typedef &list);
 void PrintListFile(listFile_typedef &list);
 String ListFileToString(listFile_typedef &list);
+
+#ifdef USE_TARGZ_LIB
+void GZFile(const String &file, bool data = false);
+#endif
 

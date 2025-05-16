@@ -1101,17 +1101,15 @@ void Server_CommonEvent(uint32_t event)
 	if ((event & Ev_GetESPMACAddress) == Ev_GetESPMACAddress)
 		server.on("/getESPMACAddress", HTTP_GET, handleGetESPMACAddress);
 }
+
 /**
  * Check if path=SSID filename
  * If true then send 403 message
  */
 bool CheckSSIDFileName(const String &path)
 {
-	if (path == "/" + SSID_FileName)
-	{
-		return true;
-	}
-	return false;
+	bool equal = (path == "/" + SSID_FileName) ? true : false;
+	return equal;
 }
 
 /**
@@ -1280,12 +1278,12 @@ void handleDeleteFile(CB_SERVER_PARAM)
 	// The name of the file to delete is the first argument
 	String path = pserver->arg((int) 0);
 
+	// Add slash if necessary
+	CheckBeginSlash(path);
+
 	// Can not delete root !
 	if (path == "/")
 		return pserver->send(500, "text/plain", "BAD PATH");
-
-	// Add slash if necessary
-	CheckBeginSlash(path);
 
 	// Refuse la suppression du SSID
 	if (CheckSSIDFileName(path))
@@ -1301,7 +1299,7 @@ void handleDeleteFile(CB_SERVER_PARAM)
 	FS_Partition->remove(path);
 
 	print_debug("handleDeleteFile: " + path);
-	pserver->send(204, "text/plain", "");
+	pserver->send(204);
 }
 
 /**
@@ -1309,9 +1307,20 @@ void handleDeleteFile(CB_SERVER_PARAM)
  * JavaScript side :
  * 	xmlHttp.open("POST","/getFile",true);
  * 	xmlHttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
- * 	xmlHttp.send("FILE=" + filename); //  + "&DATA_PART=1" to get file from data partition
+ * 	xmlHttp.send("FILE=" + filename);
+ * 	or
+ * 	xmlHttp.open("GET","/getFile?FILE=" + filename,true);
+ * 	xmlHttp.send(null);
+ * 	Options is:
+ * 	//  + "&DATA_PART=1" to get file from data partition
+ * 	//  + "&USE_GZ=1" to get gz file
+ * 	IMPORTANT:
+ * 	  with USE_GZ, you must add: xmlHttp.responseType = 'arraybuffer';
+ * 	  and use xmlHttp.response in place of xmlHttp.responseText
  * Server side :
  * 	server.on("/getFile", HTTP_POST, handleGetFile);
+ * 	or
+ * 	server.on("/getFile", HTTP_GET, handleGetFile);
  */
 void handleGetFile(CB_SERVER_PARAM)
 {
@@ -1320,6 +1329,7 @@ void handleGetFile(CB_SERVER_PARAM)
 
 	// The name of the file to get is the first argument
 	String path = pserver->arg((int) 0);
+	CheckBeginSlash(path);
 	print_debug("handleGetFile: " + path);
 
 	// Refuse la transmission du SSID
@@ -1328,21 +1338,30 @@ void handleGetFile(CB_SERVER_PARAM)
 
 	PART_TYPE *partition = FS_Partition;
 	// In case of requested file is on the data partition
-	if ((pserver->args() == 2) && (pserver->hasArg("DATA_PART")))
+	if (pserver->hasArg("DATA_PART"))
 		partition = Data_Partition;
 
-	if (partition->exists(path))
+	String _path = path;
+	bool pathWithGz = false;
+	// If there's a compressed version available, use it
+	if (pserver->hasArg("USE_GZ") && (partition->exists(_path + ".gz")))
+	{
+		_path += ".gz";
+		pathWithGz = true;
+	}
+
+	if (pathWithGz || partition->exists(_path))
 	{
 		Lock_File = true;
 #ifdef USE_ASYNC_WEBSERVER
-		send_html(SERVER_PARAM, path, "text/plain", false, *partition);
+		send_html(SERVER_PARAM, _path, "text/plain", false, *partition);
 #else
-		send_html(path, "text/plain", *partition);
+		send_html(_path, "text/plain", *partition);
 #endif
 		Lock_File = false;
 	}
 	else
-		return pserver->send(404, "text/plain", "404: Not found for " + path);
+		return pserver->send(404, "text/plain", "404: Not found for " + _path);
 }
 
 /**
@@ -1419,7 +1438,7 @@ void handleUploadFile(AsyncWebServerRequest *request, String thefile, size_t ind
 				request->redirect("/index.html");
 			}
 			else
-				request->send(303);
+				request->send(204);
 		}
 	}
 }
@@ -1533,8 +1552,8 @@ void handleListFile(CB_SERVER_PARAM)
 		return pserver->send(500, "text/plain", "BAD ARGS");
 
 	String path = pserver->arg("DIR");
-	print_debug("handleListFile: " + path);
 	CheckBeginSlash(path);
+	print_debug("handleListFile: " + path);
 
 #ifdef USE_LITTLEFS
 	if (!FS_Partition->exists(path))
