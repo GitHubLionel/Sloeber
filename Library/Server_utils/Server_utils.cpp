@@ -1258,6 +1258,8 @@ bool handleReadFile(CB_SERVER_PARAM)
  * 	xmlHttp.open("POST","/delFile",true);
  * 	xmlHttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
  * 	xmlHttp.send("FILE=" + filename);
+ * 	Options is:
+ * 	//  + "&DATA_PART=1" to delete file from data partition
  * Server side :
  * 	server.on("/delFile", HTTP_POST, handleDeleteFile);
  * With form :
@@ -1289,14 +1291,19 @@ void handleDeleteFile(CB_SERVER_PARAM)
 	if (CheckSSIDFileName(path))
 		return pserver->send(403, "text/plain", "403: Access not allowed.");
 
+	PART_TYPE *partition = FS_Partition;
+	// In case of requested file is on the data partition
+	if (pserver->hasArg("DATA_PART"))
+		partition = Data_Partition;
+
 	// File does not exist !
-	if (!FS_Partition->exists(path))
+	if (!partition->exists(path))
 		return pserver->send(404, "text/plain", "404: Not found for " + path);
 
 	// Delete file, wait if Lock_File
 	while (Lock_File)
 		delay(10);
-	FS_Partition->remove(path);
+	partition->remove(path);
 
 	print_debug("handleDeleteFile: " + path);
 	pserver->send(204);
