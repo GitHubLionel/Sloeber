@@ -406,6 +406,8 @@ void setup()
 	print_debug((int)Partition_FreeSpace(true));
 	FillListFile();
 //	PrintListFile();
+//	GZFile("data15.csv");
+//	GZListFile();
 
 	// Initialisation fichier ini
 	init_routeur.Begin(true);

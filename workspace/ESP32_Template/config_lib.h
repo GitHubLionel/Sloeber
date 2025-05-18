@@ -2,7 +2,7 @@
 
 /**
  * This is a global config file that can be included in each library
- * if define USE_CONFIG_LIB_FILE is used.
+ * if the define USE_CONFIG_LIB_FILE is used in Sloeber "Compile Options".
  * This is an alternative for the define
  * See doc for more informations
  */
@@ -29,13 +29,25 @@
  * Notes:
  * filesystem partition use the first partition with "data" type and littlefs/spiffs/fat "subtype". His name is "spiffs" by default
  * data file partition use the partition with "data" type and littlefs/spiffs/fat "subtype". His name is "data"
+ * USE_TARGZ_LIB: for GZ operation. Need ESP32-targz library
  **********************************************************/
 // Select only one. By default it is LittleFS
 //#define USE_SPIFFS
 //#define USE_FATFS
+//#define USE_TARGZ_LIB
 
 /**********************************************************
  * Server define : Server_utils library
+ * Library list:
+ * ESP8266:
+ * - ESP8266WiFi
+ * - ESP8266WebServer or ESP_Async_WebServer + ESPAsyncTCP for Async WebServer
+ * - ESP8266HTTPUpdateServer or ESPAsyncHTTPUpdateServer for Async WebServer
+ *
+ * ESP32:
+ * - WiFi
+ * - WebServer or ESP_Async_WebServer + Async_TCP for Async WebServer
+ * - ESPHTTPUpdateServer or ESPAsyncHTTPUpdateServer for Async WebServer
  **********************************************************/
 #define USE_GZ_FILE // Default
 #define SERVER_PORT	80
@@ -182,6 +194,7 @@
 //#define KEYBOARD_USE_TASK    // A basic task to check keyboard every 10 ms
 //#define CIRRUS_TASK_DELAY	100    // The delay for the Cirrus task. Must be adapted according the time required of the GetData()
 //#define CIRRUS_USE_TASK      // A basic task to check Cirrus data every CIRRUS_TASK_DELAY ms
+//#define SSR_USE_TASK         // Task for boost and dump
 //#define RELAY_USE_TASK       // A basic task to update Relay every minute
 
 /**********************************************************

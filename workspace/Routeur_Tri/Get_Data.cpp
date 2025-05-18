@@ -110,7 +110,7 @@ listFile_typedef listFile;
 void UpdateLedSurplus(float power);
 void GetExtraData(void);
 void append_data(void);
-void append_energy(void);
+void append_energy(uint8_t year, bool restart);
 void AddFileToListFile(listFile_typedef &list, const String &file);
 
 // Function for debug message, may be redefined elsewhere
@@ -566,7 +566,7 @@ void reboot_energy(void)
 	Lock_File = false;
 }
 
-void append_energy(void)
+void append_energy(uint8_t year, bool restart)
 {
 	// On vérifie qu'on n'est pas en train de l'uploader
 	if (Lock_File)
@@ -576,6 +576,7 @@ void append_energy(void)
 	char *pbuffer = &buffer[0];
 	uint16_t len;
 
+	Energy_Filename = "/energy_20" + (String) year + ".csv";
 	// Ouvre le fichier en append, le crée s'il n'existe pas
 	Lock_File = true;
 	bool Exist = Data_Partition->exists(Energy_Filename);
@@ -601,24 +602,28 @@ void append_energy(void)
 		temp.close();
 	}
 	Lock_File = false;
+
+	// Restart energy
+	if (restart)
+	{
+		Current_Data.energy_day_conso = 0.0;
+		Current_Data.energy_day_surplus = 0.0;
+//  	*Current_Data.energy_day_prod = 0.0;
+		Current_Data.Talema_Energy = 0.0;
+		CS5480.RestartEnergy();
+		CS5484.RestartEnergy();
+#ifdef USE_TI
+		if (TI_OK)
+			Current_Data.TI_Counter = TI.getIndexWh();
+#endif
+	}
 }
 
 void onDaychange(uint8_t year, uint8_t month, uint8_t day)
 {
 	print_debug(F("Callback day change"));
-	// On ajoute les énergies au fichier
-	Energy_Filename = "/energy_20" + (String) year + ".csv";
-	append_energy();
-	Current_Data.energy_day_conso = 0.0;
-	Current_Data.energy_day_surplus = 0.0;
-//	*Current_Data.energy_day_prod = 0.0;
-	Current_Data.Talema_Energy = 0.0;
-	CS5480.RestartEnergy();
-	CS5484.RestartEnergy();
-#ifdef USE_TI
-	if (TI_OK)
-		Current_Data.TI_Counter = TI.getIndexWh();
-#endif
+	// On ajoute les énergies au fichier et les ré-initialise
+	append_energy(year, true);
 
 	// On archive le fichier data du jour en lui donnant le nom du jour
 	if (Data_Partition->exists(CSV_Filename))
@@ -661,6 +666,16 @@ void FillListFile(void)
 void PrintListFile(void)
 {
 	PrintListFile(listFile);
+}
+
+void GZListFile(void)
+{
+	int time = millis();
+	for (auto const &l : listFile)
+	{
+		GZFile(l, true);
+	}
+  print_debug("Compress time: " + (String)(millis() - time));
 }
 
 // ********************************************************************************

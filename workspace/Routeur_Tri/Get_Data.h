@@ -114,4 +114,5 @@ void onDaychange(uint8_t year, uint8_t month, uint8_t day);
 
 void FillListFile(void);
 void PrintListFile(void);
+void GZListFile(void);
 
