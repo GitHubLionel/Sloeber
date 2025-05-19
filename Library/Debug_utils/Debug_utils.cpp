@@ -515,59 +515,93 @@ bool __attribute__((weak)) getESPMacAddress(String &mac)
 bool BasicAnalyseMessage(void)
 {
 	char datetime[30] = {0};
-	char *date = NULL;
+	char *date = NULL, *dir = NULL;
 
 	if (strcmp((char*) UART_Message_Buffer, "GET_IP") == 0)
 	{
 		printf_message_to_UART(GetIPaddress());
 		return true;
 	}
-	else
-		if (strcmp((char*) UART_Message_Buffer, "GET_MAC") == 0)
-		{
-			String mac;
-			if (getESPMacAddress(mac))
-			  printf_message_to_UART(mac.c_str());
-			return true;
-		}
-		else
-			if (strcmp((char*) UART_Message_Buffer, "GET_TIME") == 0)
-			{
+
+	if (strcmp((char*) UART_Message_Buffer, "GET_MAC") == 0)
+	{
+		String mac;
+		if (getESPMacAddress(mac))
+			printf_message_to_UART(mac.c_str());
+		return true;
+	}
+
+	if (strcmp((char*) UART_Message_Buffer, "GET_TIME") == 0)
+	{
 #ifdef USE_RTCLocal
-				printf_message_to_UART("TIME=" + String(RTC_Local.getFormatedDateTime(datetime)));
+		printf_message_to_UART("TIME=" + String(RTC_Local.getFormatedDateTime(datetime)));
 #endif
-				return true;
-			}
-			else
-				if (strcmp((char*) UART_Message_Buffer, "GET_DATE=") == 0)
-				{
+		return true;
+	}
+
+	if (strcmp((char*) UART_Message_Buffer, "GET_DATE=") == 0)
+	{
 #ifdef USE_RTCLocal
-					printf_message_to_UART(String(RTC_Local.getDateTime(datetime, false, '#')) + "#END_DATE\r\n", false);
+		printf_message_to_UART(String(RTC_Local.getDateTime(datetime, false, '#')) + "#END_DATE\r\n", false);
 #endif
-					return true;
-				}
-				else
-					if ((date = strstr((char*) UART_Message_Buffer, "DATE=")) != NULL)
-					{
+		return true;
+	}
+
+	if ((date = strstr((char*) UART_Message_Buffer, "DATE=")) != NULL)
+	{
 #ifdef USE_RTCLocal
-						// Format DD/MM/YY#hh:mm:ss
-						date += 5;
-						strncpy(datetime, date, 17);
-						datetime[18] = 0;
-						RTC_Local.setDateTime(datetime, false, false);
-						// Sauvegarde de l'heure
-						RTC_Local.saveDateTime();
-						// Renvoie la nouvelle heure
-						printf_message_to_UART(String(RTC_Local.getDateTime(datetime, false, '#')) + "#END_DATE\r\n", false);
+		// Format DD/MM/YY#hh:mm:ss
+		date += strlen("DATE=");
+		strncpy(datetime, date, 17);
+		datetime[18] = 0;
+		RTC_Local.setDateTime(datetime, false, false);
+		// Sauvegarde de l'heure
+		RTC_Local.saveDateTime();
+		// Renvoie la nouvelle heure
+		printf_message_to_UART(String(RTC_Local.getDateTime(datetime, false, '#')) + "#END_DATE\r\n", false);
 #endif
-						return true;
-					}
-					else
-						if (strcmp((char*) UART_Message_Buffer, "RESET_ESP") == 0)
-						{
-							while (Auto_Reset());
-							return true;
-						}
+		return true;
+	}
+
+	if (strcmp((char*) UART_Message_Buffer, "RESET_ESP") == 0)
+	{
+		while (Auto_Reset())
+			;
+		return true;
+	}
+
+	// Format DIR=(0/1)#path. 0 for filesystem partition, 1 for data partition
+	if ((dir = strstr((char*) UART_Message_Buffer, "DIR=")) != NULL)
+	{
+		dir += strlen("DIR=");
+		bool part_data = (dir[0] == '1') ? true : false;
+		dir += 2;
+		ListDirToUART(dir, part_data);
+		printf_message_to_UART("#END_DIR\r\n", false);
+		return true;
+	}
+
+	// Format GET_FILE=(0/1)#filename. 0 for filesystem partition, 1 for data partition
+	if ((dir = strstr((char*) UART_Message_Buffer, "GET_FILE=")) != NULL)
+	{
+		dir += strlen("GET_FILE=");
+		bool part_data = (dir[0] == '1') ? true : false;
+		dir += 2;
+		SendFileToUART(dir, part_data);
+		printf_message_to_UART("#END_FILE\r\n", false);
+		return true;
+	}
+
+	// Format DEL_FILE=(0/1)#filename. 0 for filesystem partition, 1 for data partition
+	if ((dir = strstr((char*) UART_Message_Buffer, "DEL_FILE=")) != NULL)
+	{
+		dir += strlen("DEL_FILE=");
+		bool part_data = (dir[0] == '1') ? true : false;
+		dir += 2;
+		DeleteFile(dir, part_data);
+		return true;
+	}
+
 	return false;
 }
 
@@ -598,6 +632,19 @@ void printf_message_to_UART(const String &mess, bool balise, HardwareSerial *Ser
 		Serial_Message->printf("%c%s%c", BEGIN_DATA, mess.c_str(), END_DATA);
 	else
 		Serial_Message->printf("%s", mess.c_str());
+	Serial_Message->flush();
+}
+
+void printf_message_to_UART(char *buffer, size_t size, bool balise, HardwareSerial *Serial_Message)
+{
+	if (balise)
+	{
+		Serial_Message->printf("%c", BEGIN_DATA);
+		Serial_Message->write(buffer, size);
+		Serial_Message->printf("%c", END_DATA);
+	}
+	else
+		Serial_Message->write(buffer, size);
 	Serial_Message->flush();
 }
 

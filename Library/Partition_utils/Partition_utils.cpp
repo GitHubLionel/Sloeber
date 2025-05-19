@@ -425,7 +425,116 @@ void scanDir(fs::FS &fs, const char *dirname)
 
 	root.close();
 }
+
+void ListDirToUART(const String &dirname, bool data_partition)
+{
+	String path = dirname;
+	CheckBeginSlash(path);
+
+	File root;
+	if (data_partition)
+		root = Data_Partition->open(path);
+	else
+		root = FS_Partition->open(path);
+
+	if (!root)
+	{
+		printf_message_to_UART("#Partition not mounted\r\n", false);
+		return;
+	}
+	if (!root.isDirectory())
+	{
+		root.close();
+		printf_message_to_UART("#Not a directory\r\n", false);
+		return;
+	}
+
+  uint8_t buffer[300] = {0};
+
+	while (true)
+	{
+		File file = root.openNextFile();
+		if (!file)
+			break;
+
+		if (file.isDirectory())
+		{
+			ListDirToUART(file.path(), data_partition);
+		}
+		else
+		{
+		  if (strlen(path.c_str()) == 1) // root
+		    sprintf((char *)buffer,"#/%s (%ld octets)\r\n", file.name(), (uint32_t)file.size());
+		  else
+		    sprintf((char *)buffer,"#%s/%s (%ld octets)\r\n", path.c_str(), file.name(), (uint32_t)file.size());
+		  printf_message_to_UART((const char *)buffer, false);
+
+		}
+		file.close();
+	}
+
+	root.close();
+}
 #endif
+
+void SendFileToUART(const String &filename, bool data_partition)
+{
+	// On vérifie qu'on n'est pas en train de l'uploader
+	if (Lock_File)
+		return;
+
+	PART_TYPE *partition = FS_Partition;
+	if (data_partition)
+		partition = Data_Partition;
+
+	String path = filename;
+	CheckBeginSlash(path);
+
+	// Ouvre le fichier en read
+	Lock_File = true;
+	if (partition->exists(path))
+	{
+		File temp = partition->open(path, "r");
+		if (temp)
+		{
+			char buffer[1024];
+			// Read until end
+			while (temp.available())
+			{
+				size_t len = temp.readBytes(buffer, 1024);
+				printf_message_to_UART(buffer, len, false);
+				yield();
+			}
+			temp.close();
+		}
+	}
+
+	Lock_File = false;
+}
+
+
+bool DeleteFile(const String &filename, bool data_partition)
+{
+	PART_TYPE *partition = FS_Partition;
+	if (data_partition)
+		partition = Data_Partition;
+
+	String path = filename;
+	CheckBeginSlash(path);
+
+	// Can not delete root !
+	if (path.equals("/"))
+		return false;
+
+	// Delete file, wait if Lock_File
+	while (Lock_File)
+		delay(10);
+	if (partition->exists(path))
+	{
+		return partition->remove(path);
+	}
+	return false;
+}
 
 void Partition_ListDir(void)
 {

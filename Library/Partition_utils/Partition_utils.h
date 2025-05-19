@@ -72,6 +72,10 @@ size_t Partition_FreeSpace(bool Data = false);
 size_t Partition_FileSize(const String &file, bool Data = false);
 String formatBytes(float bytes, int id_multi);
 
+void ListDirToUART(const String &dirname, bool data_partition = false);
+void SendFileToUART(const String &filename, bool data_partition = false);
+bool DeleteFile(const String &filename, bool data_partition = false);
+
 bool FillListFile(bool data_partition, const String &dir, const listFile_typedef &skipfile, listFile_typedef &list);
 void PrintListFile(listFile_typedef &list);
 String ListFileToString(listFile_typedef &list);

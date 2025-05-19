@@ -1284,26 +1284,15 @@ void handleDeleteFile(CB_SERVER_PARAM)
 	CheckBeginSlash(path);
 
 	// Can not delete root !
-	if (path == "/")
+	if (path.equals("/"))
 		return pserver->send(500, "text/plain", "BAD PATH");
 
 	// Refuse la suppression du SSID
 	if (CheckSSIDFileName(path))
 		return pserver->send(403, "text/plain", "403: Access not allowed.");
 
-	PART_TYPE *partition = FS_Partition;
-	// In case of requested file is on the data partition
-	if (pserver->hasArg("DATA_PART"))
-		partition = Data_Partition;
-
-	// File does not exist !
-	if (!partition->exists(path))
+	if (!DeleteFile(path, pserver->hasArg("DATA_PART")))
 		return pserver->send(404, "text/plain", "404: Not found for " + path);
-
-	// Delete file, wait if Lock_File
-	while (Lock_File)
-		delay(10);
-	partition->remove(path);
 
 	print_debug("handleDeleteFile: " + path);
 	pserver->send(204);
