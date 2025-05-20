@@ -86,7 +86,7 @@ bool CheckUARTMessage(HardwareSerial *Serial_Message = &Serial);
 bool BasicAnalyseMessage(void);
 void printf_message_to_UART(const char *mess, bool balise = true, HardwareSerial *Serial_Message = &Serial);
 void printf_message_to_UART(const String &mess, bool balise = true, HardwareSerial *Serial_Message = &Serial);
-void printf_message_to_UART(char *buffer, size_t size, bool balise, HardwareSerial *Serial_Message = &Serial);
+void printf_message_to_UART(uint8_t *buffer, size_t size, bool balise, HardwareSerial *Serial_Message = &Serial);
 
 // Other utilitary function
 char* Search_Balise(uint8_t *data, const char *B_Begin, const char *B_end, char *value,

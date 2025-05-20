@@ -635,7 +635,7 @@ void printf_message_to_UART(const String &mess, bool balise, HardwareSerial *Ser
 	Serial_Message->flush();
 }
 
-void printf_message_to_UART(char *buffer, size_t size, bool balise, HardwareSerial *Serial_Message)
+void printf_message_to_UART(uint8_t *buffer, size_t size, bool balise, HardwareSerial *Serial_Message)
 {
 	if (balise)
 	{

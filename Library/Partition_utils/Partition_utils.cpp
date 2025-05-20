@@ -497,14 +497,16 @@ void SendFileToUART(const String &filename, bool data_partition)
 		File temp = partition->open(path, "r");
 		if (temp)
 		{
-			char buffer[1024];
+			uint8_t *buffer = new uint8_t[1024];
 			// Read until end
+			temp.seek(0); // Be sure to be at beginning of file
 			while (temp.available())
 			{
-				size_t len = temp.readBytes(buffer, 1024);
+				size_t len = temp.read(buffer, 1024);
 				printf_message_to_UART(buffer, len, false);
 				yield();
 			}
+			delete[] buffer;
 			temp.close();
 		}
 	}
