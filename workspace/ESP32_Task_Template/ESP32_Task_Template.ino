@@ -256,7 +256,7 @@ void loop()
 #ifndef USE_ASYNC_WEBSERVER
 	server.handleClient();
 #else
-	// Temporisation à adapter
+	// Temporisation à adapter (important pour CheckUARTMessage())
 //	delay(10);
 	vTaskDelete(NULL);
 #endif

@@ -97,10 +97,10 @@
 
 #define OLED_SSD1327 // SSD1327
 //#define OLED_SH1107 // SH1107
-#define OLED_TOP_DOWN
+//#define OLED_TOP_DOWN
 //#define OLED_LEFT_RIGHT
 //#define OLED_DOWN_TOP
-//#define OLED_RIGHT_LEFT
+#define OLED_RIGHT_LEFT
 
 // Choose a type you are using
 //#define TFT_ST77xx // ST7735 or ST7789

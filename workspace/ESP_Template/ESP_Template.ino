@@ -204,6 +204,7 @@ void setup()
 
 	print_debug("*** Setup time : " + String(millis() - start_time) + " ms ***\r\n");
 	delay(1000);
+	IHM_Clear(true);
 }
 
 // The loop function is called in an endless loop
@@ -231,10 +232,9 @@ void loop()
 	// Listen for HTTP requests from clients
 #ifndef USE_ASYNC_WEBSERVER
 	server.handleClient();
-#else
-	// Temporisation à adapter
-	delay(10);
 #endif
+	// Temporisation à adapter (important pour CheckUARTMessage())
+	delay(10);
 }
 
 // ********************************************************************************
