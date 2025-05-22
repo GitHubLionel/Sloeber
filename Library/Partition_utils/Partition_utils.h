@@ -42,8 +42,8 @@
 #endif
 #include <list>
 
-// A list of filename typedef
-typedef std::list<String> listFile_typedef;
+// Typedef for a list of String
+typedef std::list<String> StringList_td;
 
 // The pre-defined filesystem partition
 extern PART_TYPE *FS_Partition;
@@ -64,23 +64,34 @@ bool CreateOpenDataPartition(bool ForceFormat, bool ShowInfo = false);
 void UnmountPartition(void);
 
 void CheckBeginSlash(String &path);
+void CheckEndSlash(String &path);
 
 void ESPinformations(void);
 void Partition_Info(void);
 void Partition_ListDir(void);
-size_t Partition_FreeSpace(bool Data = false);
-size_t Partition_FileSize(const String &file, bool Data = false);
+size_t Partition_FreeSpace(bool data_partition = false);
+size_t Partition_FileSize(const String &file, bool data_partition = false);
 String formatBytes(float bytes, int id_multi);
 
 void ListDirToUART(const String &dirname, bool data_partition = false);
 void SendFileToUART(const String &filename, bool data_partition = false);
 bool DeleteFile(const String &filename, bool data_partition = false);
 
-bool FillListFile(bool data_partition, const String &dir, const listFile_typedef &skipfile, listFile_typedef &list);
-void PrintListFile(listFile_typedef &list);
-String ListFileToString(listFile_typedef &list);
+/**
+ * Get the list of the name of the files in a directory
+ * @param: data_partition : true for data partition else filesystem partition
+ * @param: dir : the name of the directory
+ * @return: list : the list of the file in the directory
+ * @param: filter : the list of the extension for the file allowed
+ * @param: skipfile : the list of files to exclude
+ * @return: true if the list is filled
+ */
+bool FillListFile(bool data_partition, const String &dir, StringList_td &list,
+		const StringList_td &filter = {}, const StringList_td &skipfile = {});
+void PrintListFile(StringList_td &list);
+String ListFileToString(StringList_td &list);
 
 #ifdef USE_TARGZ_LIB
-void GZFile(const String &file, bool data = false);
+void GZFile(const String &file, bool data_partition);
 #endif
 

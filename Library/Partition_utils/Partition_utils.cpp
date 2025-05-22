@@ -156,6 +156,16 @@ void CheckBeginSlash(String &path)
 }
 
 // ********************************************************************************
+// Check if path end with a / and add it if not present
+// ********************************************************************************
+void CheckEndSlash(String &path)
+{
+	// Add slash if necessary
+	if (!path.endsWith("/"))
+		path = path + "/" ;
+}
+
+// ********************************************************************************
 // Functions prototype
 // ********************************************************************************
 String formatBytes(float bytes, int id_multi);
@@ -243,13 +253,13 @@ void ESPinformations(void)
 
 /**
  * Return free space in byte
- * @param Data: true use Data_Partition else use FS_Partition. Default false = use FS_Partition
+ * @param data_partition: true use Data_Partition else use FS_Partition. Default false = use FS_Partition
  */
-size_t Partition_FreeSpace(bool Data)
+size_t Partition_FreeSpace(bool data_partition)
 {
 	FSInfo fsInfo;
 	// Select data partition
-	if (Data)
+	if (data_partition)
 		SelectPartitionForInfo(Data_Partition);
 #ifdef ESP8266
 	Info_Partition->info(fsInfo);
@@ -258,7 +268,7 @@ size_t Partition_FreeSpace(bool Data)
 	FillFSInfo(fsInfo);
 #endif
 	// Return filesystem partition
-	if (Data)
+	if (data_partition)
 		SelectPartitionForInfo(FS_Partition);
 
 	return fsInfo.totalBytes - fsInfo.usedBytes;
@@ -266,20 +276,20 @@ size_t Partition_FreeSpace(bool Data)
 
 /**
  * Return the size in byte of the specified file
- * @param Data: true use Data_Partition else use FS_Partition. Default false = use FS_Partition
+ * @param data_partition: true use Data_Partition else use FS_Partition. Default false = use FS_Partition
  */
-size_t Partition_FileSize(const String &file, bool Data)
+size_t Partition_FileSize(const String &file, bool data_partition)
 {
 	File f;
 	String str_file = file;
 	CheckBeginSlash(str_file);
 #ifdef ESP8266
-	if (Data)
+	if (data_partition)
 	  f = Data_Partition->open(str_file.c_str(), "r");
 	else
 		f = FS_Partition->open(str_file.c_str(), "r");
 #else
-	if (Data)
+	if (data_partition)
 	  f = Data_Partition->open(str_file.c_str());
 	else
 		f = FS_Partition->open(str_file.c_str());
@@ -379,6 +389,43 @@ void Partition_RecurseDir(Dir dir)
 		}
 	}
 }
+
+void ListDirToUART(const String &dirname, bool data_partition)
+{
+	String path = dirname;
+	CheckBeginSlash(path);
+	CheckEndSlash(path);
+
+	Dir dir;
+	if (data_partition)
+		dir = Data_Partition->openDir(path);
+	else
+		dir = FS_Partition->openDir(path);
+
+	uint8_t buffer[300] = {0};
+
+	while (dir.next())
+	{
+		String fileName = dir.fileName();
+		size_t fileSize = dir.fileSize();
+		if (dir.isFile())
+		{
+			if (path.length() == 1) // root
+				sprintf((char*) buffer, "#/%s (%u octets)\r\n", fileName.c_str(), (uint32_t) fileSize);
+			else
+				sprintf((char*) buffer, "#%s%s (%d octets)\r\n", path.c_str(), fileName.c_str(), (uint32_t) fileSize);
+			printf_message_to_UART((const char*) buffer, false);
+		}
+		else
+		{
+			if (dir.isDirectory())
+			{
+				ListDirToUART(fileName, data_partition);
+			}
+		}
+	}
+}
+
 #endif
 #ifdef ESP32
 // From https://wokwi.com/projects/383917656227391489
@@ -430,6 +477,7 @@ void ListDirToUART(const String &dirname, bool data_partition)
 {
 	String path = dirname;
 	CheckBeginSlash(path);
+	CheckEndSlash(path);
 
 	File root;
 	if (data_partition)
@@ -466,9 +514,8 @@ void ListDirToUART(const String &dirname, bool data_partition)
 		  if (strlen(path.c_str()) == 1) // root
 		    sprintf((char *)buffer,"#/%s (%ld octets)\r\n", file.name(), (uint32_t)file.size());
 		  else
-		    sprintf((char *)buffer,"#%s/%s (%ld octets)\r\n", path.c_str(), file.name(), (uint32_t)file.size());
+		    sprintf((char *)buffer,"#%s%s (%ld octets)\r\n", path.c_str(), file.name(), (uint32_t)file.size());
 		  printf_message_to_UART((const char *)buffer, false);
-
 		}
 		file.close();
 	}
@@ -569,30 +616,43 @@ String formatBytes(float bytes, int id_multi)
 // List of filename of a directory
 // ********************************************************************************
 
-inline bool checkFile(const char *file, const listFile_typedef &skipfile)
+/**
+ * Check if the filename is valid
+ * @Param file: the filename
+ * @Param filter: list of the extension allowed with the point (ex: .csv). Leave empty if no extension
+ * @Param skipfile: list of filename to exclude
+ */
+inline bool checkFile(const String &file, const StringList_td &filter, const StringList_td &skipfile)
 {
 	bool ret = true;
+	// Check file to exclude
 	for (auto const &skip : skipfile)
 	{
-		if ((strstr(file, skip.c_str()) != NULL))
+		if ((strstr(file.c_str(), skip.c_str()) != NULL))
 		{
 			ret = false;
 			break;
 		}
 	}
+	// Check extension to allow
+	if (ret && (filter.size() > 0))
+	{
+		ret = false;
+		for (auto const &ext : filter)
+		{
+			if (file.endsWith(ext))
+			{
+				ret = true;
+				break;
+			}
+		}
+	}
 	return ret;
 }
 
-/**
- * Get the list of the name of the files of a directory
- * @param: data_partition : true for data partition else filesystem partition
- * @param: dir : the name of the directory
- * @param: skipfile : the list of files to exclude. Use .ext to exclude file with .ext extension (not safe !)
- * @param: list : the list of the file of the directory
- * @return: true if the list is filled
- */
 #ifdef ESP8266
-bool FillListFile(bool data_partition, const String &dir, const listFile_typedef &skipfile, listFile_typedef &list)
+bool FillListFile(bool data_partition, const String &dir, StringList_td &list,
+		const StringList_td &filter, const StringList_td &skipfile)
 {
 	Dir root;
 	if (data_partition)
@@ -610,10 +670,10 @@ bool FillListFile(bool data_partition, const String &dir, const listFile_typedef
 	{
 		if (!root.isDirectory())
 		{
-			const char *filename = root.fileName().c_str();
-			if (checkFile(filename, skipfile))
+			const String filename = root.fileName();
+			if (checkFile(filename, filter, skipfile))
 			{
-				list.push_back((String) filename);
+				list.push_back(filename);
 			}
 		}
 	}
@@ -622,7 +682,8 @@ bool FillListFile(bool data_partition, const String &dir, const listFile_typedef
 #endif
 
 #ifdef ESP32
-bool FillListFile(bool data_partition, const String &dir, const listFile_typedef &skipfile, listFile_typedef &list)
+bool FillListFile(bool data_partition, const String &dir, StringList_td &list,
+		const StringList_td &filter, const StringList_td &skipfile)
 {
 	File root;
 	if (data_partition)
@@ -642,6 +703,7 @@ bool FillListFile(bool data_partition, const String &dir, const listFile_typedef
 		return false;
 	}
 
+	list.clear();
 	while (true)
 	{
 		File file = root.openNextFile();
@@ -651,7 +713,7 @@ bool FillListFile(bool data_partition, const String &dir, const listFile_typedef
 		if (!file.isDirectory())
 		{
 			const char *filename = file.name();
-			if (checkFile(filename, skipfile))
+			if (checkFile(filename, filter, skipfile))
 			{
 				list.push_back("/" + (String) filename);
 			}
@@ -666,7 +728,7 @@ bool FillListFile(bool data_partition, const String &dir, const listFile_typedef
 /**
  * Print the list of file
  */
-void PrintListFile(listFile_typedef &list)
+void PrintListFile(StringList_td &list)
 {
 	for (auto const &l : list)
 	{
@@ -677,7 +739,7 @@ void PrintListFile(listFile_typedef &list)
 /**
  * Return the list of file in a string
  */
-String ListFileToString(listFile_typedef &list)
+String ListFileToString(StringList_td &list)
 {
 	String result = "";
 	for (auto const &l : list)
@@ -695,16 +757,16 @@ String ListFileToString(listFile_typedef &list)
 
 /**
  * Compress the specified file
- * @param Data: true use Data_Partition else use FS_Partition. Default false = use FS_Partition
+ * @param data_partition: true use Data_Partition else use FS_Partition
  * The name of the compressed file is the name of the file + ".gz"
  */
-void GZFile(const String &file, bool data)
+void GZFile(const String &file, bool data_partition)
 {
 	File src, dst;
 	String str_file = file;
 	PART_TYPE *part = FS_Partition;
 
-	if (data)
+	if (data_partition)
 		part = Data_Partition;
 
 	print_debug("### GZ File ###");
