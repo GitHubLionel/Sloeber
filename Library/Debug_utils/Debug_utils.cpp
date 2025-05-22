@@ -442,6 +442,15 @@ esp_err_t esp_core_dump_image_erase_2()
  * Function that read incoming formated message from UART.
  * The message is stored in UART_Message_Buffer and 0 is add to the end
  * By default, use Serial for UART
+ * ATTENTION: if use in loop(), maybe need to add delay(10) if necessary
+ * Typical code in loop() is:
+	if (CheckUARTMessage())
+	{
+		if (! BasicAnalyseMessage())
+			UserAnalyseMessage();
+	}
+ * or if we use task:
+  TaskList.AddTask(UART_DATA_TASK);
  */
 bool CheckUARTMessage(HardwareSerial *Serial_Message)
 {
@@ -510,6 +519,9 @@ bool __attribute__((weak)) getESPMacAddress(String &mac)
  * - GET_MAC: Send MAC address
  * - GET_TIME: Send Time
  * - RESET_ESP: Reset ESP
+ * - DIR: to get thist of file in the directory
+ * - GET_FILE: to download the file
+ * - DEL_FILE: to delete the file
  * then send back the responce to UART
  */
 bool BasicAnalyseMessage(void)
@@ -575,8 +587,13 @@ bool BasicAnalyseMessage(void)
 	{
 		dir += strlen("DIR=");
 		bool part_data = (dir[0] == '1') ? true : false;
-		dir += 2;
-		ListDirToUART(dir, part_data);
+		if (dir[1] == '#')
+		{
+			dir += 2;
+			ListDirToUART(String(dir), part_data);
+		}
+		else
+			print_debug("Error message");
 		printf_message_to_UART("#END_DIR\r\n", false);
 		return true;
 	}
@@ -586,8 +603,13 @@ bool BasicAnalyseMessage(void)
 	{
 		dir += strlen("GET_FILE=");
 		bool part_data = (dir[0] == '1') ? true : false;
-		dir += 2;
-		SendFileToUART(dir, part_data);
+		if (dir[1] == '#')
+		{
+			dir += 2;
+			SendFileToUART(String(dir), part_data);
+		}
+		else
+			print_debug("Error message");
 		printf_message_to_UART("#END_FILE\r\n", false);
 		return true;
 	}
@@ -597,8 +619,13 @@ bool BasicAnalyseMessage(void)
 	{
 		dir += strlen("DEL_FILE=");
 		bool part_data = (dir[0] == '1') ? true : false;
-		dir += 2;
-		DeleteFile(dir, part_data);
+		if (dir[1] == '#')
+		{
+			dir += 2;
+			DeleteFile(String(dir), part_data);
+		}
+		else
+			print_debug("Error message");
 		return true;
 	}
 
