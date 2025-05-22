@@ -131,7 +131,7 @@ bool Relay_Class::getState(uint8_t idRelay) const
 String Relay_Class::getAllState(void)
 {
 	String state = "";
-	for (unsigned int i = 0; i < _relay.size(); i++)
+	for (size_t i = 0; i < _relay.size(); i++)
 	{
 		if (!state.isEmpty())
 			state += ",";
@@ -188,7 +188,7 @@ void Relay_Class::updateTime(int _time)
 bool Relay_Class::hasAlarm(void) const
 {
 	bool result = false;
-	for (int i = 0; i < _relay.size(); i++)
+	for (size_t i = 0; i < _relay.size(); i++)
 	{
 		if (_relay[i].hasAlarm)
 		{
@@ -452,7 +452,7 @@ void Relay_Class::UpdateNextAlarm(bool updateLastAlarm)
 {
 	// Find the next alarm time to execute
 	idTime = 0;
-	while ((idTime < _time.size()) && (_time[idTime].time < currentTime))
+	while ((idTime < (int)_time.size()) && (_time[idTime].time < currentTime))
 	{
 		if (updateLastAlarm)
 		{
@@ -469,7 +469,7 @@ void Relay_Class::CheckAlarmTime(void)
 		return;
 
 	// We can have the same alarm for several relays
-	while ((idTime < _time.size()) && (_time[idTime].time == currentTime))
+	while ((idTime < (int)_time.size()) && (_time[idTime].time == currentTime))
 	{
 		Relay_typedef *relay = &_relay[_time[idTime].idRelay];
 		setState(relay->idRelay, relay->IsAlarmActivated(currentTime));
