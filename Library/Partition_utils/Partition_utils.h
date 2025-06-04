@@ -92,6 +92,6 @@ void PrintListFile(StringList_td &list);
 String ListFileToString(StringList_td &list);
 
 #ifdef USE_TARGZ_LIB
-void GZFile(const String &file, bool data_partition);
+void GZFile(const String &filename, bool data_partition, bool delete_file = false);
 #endif
 

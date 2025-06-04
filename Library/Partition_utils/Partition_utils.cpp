@@ -757,32 +757,36 @@ String ListFileToString(StringList_td &list)
 
 /**
  * Compress the specified file
- * @param data_partition: true use Data_Partition else use FS_Partition
+ * @Param filename: the file to be compressed
+ * @Param data_partition: true use Data_Partition else use FS_Partition
+ * @Param delete_file: delete the original file after gzip. Default false
  * The name of the compressed file is the name of the file + ".gz"
  */
-void GZFile(const String &file, bool data_partition)
+void GZFile(const String &filename, bool data_partition, bool delete_file)
 {
 	File src, dst;
-	String str_file = file;
+	String file = filename;
 	PART_TYPE *part = FS_Partition;
 
 	if (data_partition)
 		part = Data_Partition;
 
 	print_debug("### GZ File ###");
-	CheckBeginSlash(str_file);
+	CheckBeginSlash(file);
 
 	// open the uncompressed text file for streaming
-	src = part->open(str_file.c_str(), "r");
+	src = part->open(file.c_str(), "r");
 	if (!src)
 	{
 		print_debug("[GZFile] Unable to read input file, halting");
 		return;
 	}
 
-	// open the fz file for writing
-	str_file = str_file + ".gz";
-	dst = part->open(str_file, "w");
+	// open the gz file for writing, delete it before if exists
+	String file_gz = file + ".gz";
+	if (part->exists(file_gz))
+		part->remove(file_gz);
+	dst = part->open(file_gz, "w");
 	if (!dst)
 	{
 		print_debug("[GZFile] Unable to create output file, halting");
@@ -798,14 +802,15 @@ void GZFile(const String &file, bool data_partition)
 	float left = -(1.0f - done);
 
 	char message[120] = {0};
-	sprintf(message, "[GZFile] Deflated %d bytes to %d bytes (%s%.1f%s)\r\n", srcLen, dstLen, left > 0 ? "+" : "",
+	sprintf(message, "[GZFile] Deflated %d bytes to %d bytes (%s%.1f%s)", srcLen, dstLen, left > 0 ? "+" : "",
 			left * 100.0, "%");
 	print_debug(message);
 
 	src.close();
 	dst.close();
 
-//  verify(gzfile, file);
+	if (delete_file)
+		part->remove(file);
 }
 #endif
 
