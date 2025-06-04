@@ -337,12 +337,6 @@ void Relay_Class::getAlarm(uint8_t idRelay, AlarmNumber num, String &start, Stri
 void Relay_Class::printAlarm(void) const
 {
 	String tmp = "";
-
-	tmp = "Current time = " + toString(currentTime, true);
-	print_debug(tmp);
-	tmp = "Current id time = " + (String) idTime;
-	print_debug(tmp);
-
 	int i = 0;
 	uint8_t alarmNumber;
 	bool start;
@@ -364,6 +358,13 @@ void Relay_Class::printAlarm(void) const
 	}
 	if (i == 0)
 		print_debug("No alarm.");
+	else
+	{
+		tmp = "Current time = " + toString(currentTime, true);
+		print_debug(tmp);
+		tmp = "Current id time = " + (String) idTime;
+		print_debug(tmp);
+	}
 }
 
 String Relay_Class::toString(int time, bool withtime) const
