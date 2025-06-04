@@ -10,6 +10,9 @@
 #include "Tasks_utils.h"
 #endif
 
+// Print SSID in debug log file
+//#define DEBUG_SSID
+
 /**
  * Set web server port number to PORT
  */
@@ -383,8 +386,12 @@ bool ServerConnexion::Connexion(bool toUART)
 
 	// Connect to Wi-Fi network with _SSID and password
 	print_debug(F("\r\nConnecting to "), false);
+#ifdef DEBUG_SSID
 	print_debug(_SSID);
 	print_debug(_PWD);
+#else
+	print_debug(F("****"));
+#endif
 
 	if (_IsSoftAP)
 	{
@@ -1219,11 +1226,16 @@ bool handleReadFile(CB_SERVER_PARAM)
 		return false;
 	}
 
-	// Les pages web
+	// Get all web page
 	if (_path.endsWith("/"))
 		_path += "index.html";         		// If a folder is requested, send the index file
 	if (_path.equals("/home"))
 		_path = "/index.html";
+#ifdef USE_DEFAULT_HTML_PAGE
+	// for debug, load only the default page
+	if (_path.equals("/index.html"))
+	_path = "/default.html";
+#endif
 	String contentType;
 	if (pserver->hasArg("download"))
 		contentType = "application/octet-stream";
