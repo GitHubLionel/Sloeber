@@ -127,6 +127,7 @@ bool ESP_NOW_Slave_Peer::send_message(const uint8_t *data, size_t len)
 	}
 }
 
+// Check if we have received a message in last delta time in ms (default 1000 ms)
 bool ESP_NOW_Slave_Peer::CheckConnexion(uint32_t delta_Time_ms)
 {
 	if (masters.size() != 0)
