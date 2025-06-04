@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <Wire.h>
+#include "Debug_utils.h"
 
 #ifdef ESP32
 // I2C0 : GPIO22(SCL) et GPIO21(SDA)
@@ -25,13 +27,72 @@ uint32_t Oled_timeout = 600; // 10 minutes
 int Oled_timeout_count = 600; // 10 minutes
 bool TurnOff = false;
 
-/* Private function prototypes -----------------------------------------------*/
-
-// Function for debug message, may be redefined elsewhere
-void __attribute__((weak)) PrintTerminal(const char *mess)
+/**
+ * Simple I2C scanner
+ */
+void I2C_Scanner(void)
 {
-	// Just to avoid compile warning
-	(void) mess;
+	print_debug("*** I2C Scanner ***");
+	print_debug("I2C SDA GPIO: ", false);
+	print_debug(PIN_WIRE_SDA);
+	print_debug("I2C SCL GPIO: ", false);
+	print_debug(PIN_WIRE_SCL);
+	print_debug("I2C frequency: ", false);
+	print_debug(I2C_FREQUENCY);
+
+#ifdef ESP8266
+	Wire.begin(PIN_WIRE_SDA, PIN_WIRE_SCL);
+	Wire.setClock(I2C_FREQUENCY);
+	if (Wire.status() != 0)
+	{
+		print_debug("Wire failed");
+		return;
+	}
+#endif
+#ifdef ESP32
+	if (!Wire.begin(PIN_WIRE_SDA, PIN_WIRE_SCL, I2C_FREQUENCY))
+	{
+		print_debug("Wire failed");
+		return;
+	}
+#endif
+
+	byte error, address;
+	int nDevices;
+	char buf[6];
+
+	print_debug("Scanning I2C address ...");
+	nDevices = 0;
+	for (address = 1; address < 127; address++)
+	{
+		Wire.beginTransmission(address);
+		error = Wire.endTransmission();
+
+		if (error == 0)
+		{
+			print_debug("I2C device found at address hex: ", false);
+			nDevices++;
+		}
+		else
+			if (error == 4)
+				print_debug("Unknow error at address hex: ", false);
+			else
+				continue;
+
+		sprintf(buf, "0x%.2X", address);
+		print_debug(buf);
+	}
+
+	if (nDevices == 0)
+		print_debug("No I2C devices found");
+	else
+	{
+		print_debug("Number of I2C device found: ", false);
+		print_debug(nDevices);
+	}
+	print_debug("I2C scanning done.");
+
+	Wire.end();
 }
 
 /**
@@ -80,11 +141,11 @@ bool IHM_IsDisplayOff(void)
 }
 
 #ifdef OLED_SSD1327
-extern void PrintTerminal(const char *text);
+extern void print_debug(const char *text);
 void SSD1327_Print(const String &str)
 {
 //  printf(str.c_str());
-  PrintTerminal(str.c_str());
+  print_debug(str.c_str());
 }
 #endif
 
@@ -112,7 +173,7 @@ void IHM_Print0(const char *text)
 #endif
 #ifdef DEFAULT_OUTPUT
   // Par défaut envoie dans la console
-  PrintTerminal(text);
+  print_debug(text);
 #endif
 }
 
@@ -125,7 +186,7 @@ void IHM_Print(uint8_t line, const char *text, bool update_screen)
 {
 #ifdef DEFAULT_OUTPUT
   // Par défaut envoie dans la console
-  PrintTerminal(text);
+  print_debug(text);
   (void) line;
   (void) update_screen;
 #endif
@@ -161,7 +222,7 @@ void IHM_Print(uint8_t line, uint8_t col, const char *text, bool update_screen)
 {
 #ifdef DEFAULT_OUTPUT
   // Par défaut envoie dans la console
-  PrintTerminal(text);
+  print_debug(text);
   (void) line;
   (void) update_screen;
 #endif
@@ -349,7 +410,7 @@ void IHM_IPAddress(const char *ip, uint16_t waitAndClear_ms)
 	}
 #endif
 #ifdef DEFAULT_OUTPUT
-	PrintTerminal(ip);
+	print_debug(ip);
 	(void) waitAndClear_ms;
 #endif
 }

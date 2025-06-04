@@ -56,8 +56,8 @@
 #define OLED_DEFINED
 #endif
 
-// Print terminal to be defined elsewhere
-extern void PrintTerminal(const char *text);
+// Simple I2C scanner
+void I2C_Scanner(void);
 
 bool IHM_Initialization(uint8_t address, bool test);
 bool IHM_IsDisplayOff(void);
