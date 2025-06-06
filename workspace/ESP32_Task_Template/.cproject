@@ -36,7 +36,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP32_Task_Template/user_lib/Debug_utils}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP32_Task_Template/user_lib/RTCLocal}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP32_Task_Template/user_lib/Server_utils}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP32_Task_Template/user_lib/Task_utils}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP32_Task_Template/user_lib/Tasks_utils}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP32_Task_Template/user_lib/Fonts}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP32_Task_Template/user_lib/SSD1306}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP32_Task_Template/user_lib/SSD1327}&quot;"/>
@@ -63,7 +63,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP32_Task_Template/user_lib/Debug_utils}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP32_Task_Template/user_lib/RTCLocal}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP32_Task_Template/user_lib/Server_utils}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP32_Task_Template/user_lib/Task_utils}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP32_Task_Template/user_lib/Tasks_utils}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP32_Task_Template/user_lib/Fonts}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP32_Task_Template/user_lib/SSD1306}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP32_Task_Template/user_lib/SSD1327}&quot;"/>
@@ -90,7 +90,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP32_Task_Template/user_lib/RTCLocal}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP32_Task_Template/user_lib/Partition_utils}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP32_Task_Template/user_lib/Server_utils}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP32_Task_Template/user_lib/Task_utils}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP32_Task_Template/user_lib/Tasks_utils}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP32_Task_Template/user_lib/Fonts}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP32_Task_Template/user_lib/SSD1306}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ESP32_Task_Template/user_lib/SSD1327}&quot;"/>

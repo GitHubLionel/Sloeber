@@ -7,17 +7,16 @@ Hard ESP platform version : v3.2.0
     hard: EEPROM
     hard: ESPmDNS
     hard: FS
-    hard: HTTPUpdateServer
     hard: LittleFS
     hard: Network
     hard: Preferences
     hard: SPIFFS
     hard: Update
-    hard: WebServer
     hard: WiFi
     hard: Wire
-    Async_TCP v3.4.1
+    Async_TCP v3.4.2
     DallasTemperature v4.0.3
+    ESP32-targz v1.2.7
     ESPAsyncHTTPUpdateServer v3.0.0
     ESP_Async_WebServer v3.7.7
     NTPClient v3.2.1
@@ -38,6 +37,6 @@ Hard ESP platform version : v3.2.0
     SSD1327
     SSR
     Server_utils
-    Task_utils
+    Tasks_utils
     TeleInfo
 

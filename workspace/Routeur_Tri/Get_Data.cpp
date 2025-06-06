@@ -93,15 +93,15 @@ Phase_ID Phase_CE = Phase1;
 float *VoltageForCE = &Current_Data.Phase1.Voltage;
 
 // Gestion fichier dans la FLASH
-listFile_typedef listFile;
+StringList_td listFile;
 
 /**
  * Nombre max de fichier dans la FLASH
- * Un fichier fait environ 68 ko
+ * Un fichier fait environ 66.5 ko, soit 38.1 ko zippé
  * L'espace de la FLASH est de 11403264 octets (10.88 Mo)
- * Donc un max de 163.7
+ * Moins fichier data et énergie, soit 140/280 zippé
  */
-#define MAX_LOGFILE	140
+#define MAX_LOGFILE	280
 
 // ********************************************************************************
 // Functions prototype
@@ -111,7 +111,7 @@ void UpdateLedSurplus(float power);
 void GetExtraData(void);
 void append_data(void);
 void append_energy(uint8_t year, bool restart);
-void AddFileToListFile(listFile_typedef &list, const String &file);
+void AddFileToListFile(StringList_td &list, const String &file);
 
 // Function for debug message, may be redefined elsewhere
 void __attribute__((weak)) print_debug(String mess, bool ln = true)
@@ -630,10 +630,13 @@ void onDaychange(uint8_t year, uint8_t month, uint8_t day)
 	{
 		while (Lock_File)
 			;
-		char Day_Name[20] = {0};
-		sprintf(Day_Name, "/%02d-%02d-%02d.csv", year, month, day);
-		Data_Partition->rename(CSV_Filename, String(Day_Name));
-		AddFileToListFile(listFile, String(Day_Name));
+		char buffer[20] = {0};
+		sprintf(buffer, "/%02d-%02d-%02d.csv", year, month, day);
+		String Day_Name = String(buffer);
+		Data_Partition->rename(CSV_Filename, Day_Name);
+		GZFile(Day_Name, true, true);
+		Day_Name += ".gz";
+		AddFileToListFile(listFile, Day_Name);
 	}
 }
 
@@ -645,7 +648,7 @@ void onDaychange(uint8_t year, uint8_t month, uint8_t day)
  * Ajoute un nouveau fichier à la liste
  * Supprime le plus ancien fichier si on a dépassé le nombre MAX de fichier
  */
-void AddFileToListFile(listFile_typedef &list, const String &file)
+void AddFileToListFile(StringList_td &list, const String &file)
 {
 	list.push_back(file);
 
@@ -653,14 +656,19 @@ void AddFileToListFile(listFile_typedef &list, const String &file)
 	{
 		String old_file = list.front();
 		list.pop_front();
+		print_debug("remove: " + old_file);
 		Data_Partition->remove(old_file);
 	}
 }
 
-void FillListFile(void)
+/**
+ * List all fles in data partition with filter extension
+ * Exclude data.csv and energy files
+ */
+void FillListFile(const String &filter)
 {
-	const listFile_typedef skip = {"data", "energy"};
-	FillListFile(true, "/", skip, listFile);
+	const StringList_td skip = {"data", "energy"};
+	FillListFile(true, "/", listFile, {filter}, skip);
 }
 
 void PrintListFile(void)
@@ -668,12 +676,16 @@ void PrintListFile(void)
 	PrintListFile(listFile);
 }
 
-void GZListFile(void)
+/**
+ * Zip all the files in ListFile
+ * @param: remove. if true, delete file after zip
+ */
+void GZListFile(bool remove)
 {
 	int time = millis();
 	for (auto const &l : listFile)
 	{
-		GZFile(l, true);
+		GZFile(l, true, remove);
 	}
   print_debug("Compress time: " + (String)(millis() - time));
 }

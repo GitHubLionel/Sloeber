@@ -404,10 +404,14 @@ void setup()
 	// Gestion des fichiers data
 	print_debug(F("Free Data space : "), false);
 	print_debug((int)Partition_FreeSpace(true));
-	FillListFile();
+	FillListFile(".gz"); //
+
 //	PrintListFile();
-//	GZFile("data15.csv");
-//	GZListFile();
+//	GZListFile(true);
+//	print_debug(F("Free Data space : "), false);
+//	print_debug((int)Partition_FreeSpace(true));
+//	FillListFile(".gz");
+//	PrintListFile();
 
 	// Initialisation fichier ini
 	init_routeur.Begin(true);
@@ -615,7 +619,7 @@ void setup()
 	TaskList.AddTask(RTC_DATA_TASK); // RTC Task
 	TaskList.AddTask(UART_DATA_TASK); // UART Task
 #ifdef USE_KEEPALIVE_TASK
-	if (!myServer.ISSoftAP())
+	if (!myServer.ISSoftAP() && myServer.IsConnected())
 	  TaskList.AddTask(KEEP_ALIVE_DATA_TASK); // Keep alive Wifi Task
 #endif
 #ifdef USE_DS
@@ -648,7 +652,7 @@ void setup()
 	TaskList.AddTask(SSR_BOOST_TASK);  // Boost SSR Task
 	TaskList.AddTask(SSR_DUMP_TASK);  // Dump SSR Task
 #ifdef USE_ESPNOW
-	if (routeur_master)
+	if (routeur_master && myServer.IsConnected())
 		TaskList.AddTask(ESPNOW_DATA_TASK);
 #endif
 

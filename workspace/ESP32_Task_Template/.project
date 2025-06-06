@@ -137,9 +137,9 @@
 			<locationURI>USER_LIB/Server_utils</locationURI>
 		</link>
 		<link>
-			<name>user_lib/Task_utils</name>
+			<name>user_lib/Tasks_utils</name>
 			<type>2</type>
-			<locationURI>USER_LIB/Task_utils</locationURI>
+			<locationURI>USER_LIB/Tasks_utils</locationURI>
 		</link>
 	</linkedResources>
 </projectDescription>

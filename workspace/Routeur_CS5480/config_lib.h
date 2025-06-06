@@ -49,9 +49,11 @@
  * - WebServer or ESP_Async_WebServer + Async_TCP for Async WebServer
  * - ESPHTTPUpdateServer or ESPAsyncHTTPUpdateServer for Async WebServer
  **********************************************************/
+//#define USE_DEFAULT_HTML_PAGE  // For debug, load only default page
 #define USE_GZ_FILE // Default
 #define SERVER_PORT	80
 #define SSID_FILE	"/SSID.txt"
+//#define SSID_PRINT_DEBUG // Print SSID/pwd in debug log file
 #define DEFAULT_SOFTAP	"DefaultAP"
 #define USE_HTTPUPDATER
 //#define USE_MDNS

@@ -57,7 +57,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/SSR}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/Relay}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/ADC_utils}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/Task_utils}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/Tasks_utils}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/Emul_PV}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/libraries/ESP32-targz/src}&quot;"/>
 								</option>
@@ -100,7 +100,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/SSR}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/Relay}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/ADC_utils}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/Task_utils}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/Tasks_utils}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/Emul_PV}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/libraries/ESP32-targz/src}&quot;"/>
 								</option>
@@ -143,7 +143,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/SSR}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/Relay}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/ADC_utils}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/Task_utils}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/Tasks_utils}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/user_lib/Emul_PV}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Routeur_CS5480/libraries/ESP32-targz/src}&quot;"/>
 								</option>

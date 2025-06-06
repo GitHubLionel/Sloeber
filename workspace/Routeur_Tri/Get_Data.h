@@ -112,7 +112,7 @@ bool Get_Last_Data(float *Energy, float *Surplus, float *Prod);
 void reboot_energy(void);
 void onDaychange(uint8_t year, uint8_t month, uint8_t day);
 
-void FillListFile(void);
+void FillListFile(const String &filter = ".csv");
 void PrintListFile(void);
-void GZListFile(void);
+void GZListFile(bool remove);
 
