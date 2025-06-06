@@ -10,8 +10,11 @@
 #include "Tasks_utils.h"
 #endif
 
-// Print SSID in debug log file
-//#define DEBUG_SSID
+// Print SSID/pwd in debug log file
+//#define SSID_PRINT_DEBUG
+
+// For debug, load only default page
+//#define USE_DEFAULT_HTML_PAGE
 
 /**
  * Set web server port number to PORT
@@ -386,7 +389,7 @@ bool ServerConnexion::Connexion(bool toUART)
 
 	// Connect to Wi-Fi network with _SSID and password
 	print_debug(F("\r\nConnecting to "), false);
-#ifdef DEBUG_SSID
+#ifdef SSID_PRINT_DEBUG
 	print_debug(_SSID);
 	print_debug(_PWD);
 #else
