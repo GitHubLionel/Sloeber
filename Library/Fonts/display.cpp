@@ -8,6 +8,16 @@
 #include <Wire.h>
 #include "Debug_utils.h"
 
+#ifdef ESP8266
+// default pins are defined in pins_arduino.h
+#ifdef I2C_SDA_GPIO
+#define PIN_WIRE_SDA	I2C_SDA_GPIO
+#endif
+#ifdef I2C_SCL_GPIO
+#define PIN_WIRE_SCL  I2C_SCL_GPIO
+#endif
+#endif
+
 #ifdef ESP32
 // I2C0 : GPIO22(SCL) et GPIO21(SDA)
 // I2C1 : GPIO12(SCL) et GPIO14(SDA)
@@ -23,9 +33,10 @@
 #endif
 #endif
 
-uint32_t Oled_timeout = 600; // 10 minutes
-int Oled_timeout_count = 600; // 10 minutes
-bool TurnOff = false;
+static uint32_t Oled_timeout = 600; // 10 minutes
+static int Oled_timeout_count = 600; // 10 minutes
+static bool TurnOff = false;
+static bool OledInitialized = false;
 
 /**
  * Simple I2C scanner
@@ -92,7 +103,9 @@ void I2C_Scanner(void)
 	}
 	print_debug("I2C scanning done.");
 
+#ifdef ESP32
 	Wire.end();
+#endif
 }
 
 /**
@@ -102,22 +115,21 @@ void I2C_Scanner(void)
  */
 bool IHM_Initialization(uint8_t address, bool test)
 {
-	bool success = true;
 #ifdef OLED_SSD1306
-	success = SSD1306_Init(PIN_WIRE_SDA, PIN_WIRE_SCL, address);
-	if (success && test)
+	OledInitialized = SSD1306_Init(PIN_WIRE_SDA, PIN_WIRE_SCL, address);
+	if (OledInitialized && test)
 	  SSD1306_Test_Screen();
 #endif
 
 #ifdef OLED_SSD1327
-	success = SSD1327_Init(PIN_WIRE_SDA, PIN_WIRE_SCL, address);
-	if (success && test)
+	OledInitialized = SSD1327_Init(PIN_WIRE_SDA, PIN_WIRE_SCL, address);
+	if (OledInitialized && test)
     SSD1327_Test_Screen();
 #endif
 
 #ifdef OLED_SH1107
-	success = SH1107_Init(PIN_WIRE_SDA, PIN_WIRE_SCL, address);
-	if (success && test)
+	OledInitialized = SH1107_Init(PIN_WIRE_SDA, PIN_WIRE_SCL, address);
+	if (OledInitialized && test)
 		SH1107_Test_Screen();
 #endif
 
@@ -125,7 +137,7 @@ bool IHM_Initialization(uint8_t address, bool test)
 	(void) address;
 	(void) test;
 #endif
-	return success;
+	return OledInitialized;
 }
 
 // *****************************************************************************
@@ -141,7 +153,6 @@ bool IHM_IsDisplayOff(void)
 }
 
 #ifdef OLED_SSD1327
-extern void print_debug(const char *text);
 void SSD1327_Print(const String &str)
 {
 //  printf(str.c_str());
@@ -154,6 +165,13 @@ void SSD1327_Print(const String &str)
  */
 void IHM_Print0(const char *text)
 {
+#ifdef DEFAULT_OUTPUT
+  // Par défaut envoie dans la console
+  print_debug(text);
+#endif
+  if (!OledInitialized)
+  	return;
+
 #ifdef USE_LCD
   LCD_I2C_Str(1, 1 ,text, true);
 #endif
@@ -170,10 +188,6 @@ void IHM_Print0(const char *text)
 	SH1107_Fill(0x0, 0);
 	SH1107_WriteString(0, 0, 2, (char*) text, FONT_SMALL, 0);
 	SH1107_DumpBuffer();
-#endif
-#ifdef DEFAULT_OUTPUT
-  // Par défaut envoie dans la console
-  print_debug(text);
 #endif
 }
 
@@ -193,6 +207,9 @@ void IHM_Print(uint8_t line, const char *text, bool update_screen)
   // Si l'écran est éteint, on ne fait rien
   if (TurnOff)
   	return;
+  if (!OledInitialized)
+  	return;
+
 #ifdef USE_LCD
   LCD_I2C_Str(line+1, 1, text, true);
 #endif
@@ -229,6 +246,9 @@ void IHM_Print(uint8_t line, uint8_t col, const char *text, bool update_screen)
   // Si l'écran est éteint, on ne fait rien
   if (TurnOff)
   	return;
+  if (!OledInitialized)
+  	return;
+
 #ifdef USE_LCD
   LCD_I2C_Str(line+1, col, text, true);
 #endif
@@ -255,6 +275,9 @@ void IHM_Print(uint8_t line, uint8_t col, const char *text, bool update_screen)
  */
 void IHM_Display(void)
 {
+  if (!OledInitialized)
+  	return;
+
   // Actualise l'écran
 #ifdef OLED_SSD1306
   SSD1306_UpdateScreen();
@@ -273,6 +296,9 @@ void IHM_Display(void)
  */
 void IHM_Clear(bool refresh)
 {
+  if (!OledInitialized)
+  	return;
+
   // Efface la mémoire de l'écran mais ne rafraichit pas le oled
 #ifdef USE_LCD
   LCD_I2C_Clear_Screen();
@@ -306,6 +332,9 @@ void IHM_TimeOut_Display(uint32_t time)
  */
 bool IHM_ToggleDisplay(void)
 {
+  if (!OledInitialized)
+  	return false;
+
 #ifdef OLED_SSD1306
 	TurnOff = !SSD1306_ToggleOnOff();
 #endif
@@ -339,6 +368,9 @@ void IHM_CheckTurnOff(void)
  */
 void IHM_DisplayOn(void)
 {
+  if (!OledInitialized)
+  	return;
+
 #ifdef OLED_SSD1306
 	SSD1306_ON();
 #endif
@@ -356,6 +388,10 @@ void IHM_DisplayOn(void)
  */
 void IHM_DisplayOff(void)
 {
+	TurnOff = true;
+  if (!OledInitialized)
+  	return;
+
 #ifdef OLED_SSD1306
 	SSD1306_OFF();
 #endif
@@ -365,7 +401,6 @@ void IHM_DisplayOff(void)
 #ifdef OLED_SH1107
 	SH1107_OFF();
 #endif
-	TurnOff = true;
 }
 
 /**
@@ -374,6 +409,13 @@ void IHM_DisplayOff(void)
  */
 void IHM_IPAddress(const char *ip, uint16_t waitAndClear_ms)
 {
+#ifdef DEFAULT_OUTPUT
+	print_debug(ip);
+	(void) waitAndClear_ms;
+#endif
+  if (!OledInitialized)
+  	return;
+
 #ifdef USE_LCD
   LCD_I2C_Str(1, 1 ,ip, true);
   (void) waitAndClear_ms;
@@ -408,10 +450,6 @@ void IHM_IPAddress(const char *ip, uint16_t waitAndClear_ms)
 		delay(waitAndClear_ms);
 		SH1107_Fill(0x0, 1);
 	}
-#endif
-#ifdef DEFAULT_OUTPUT
-	print_debug(ip);
-	(void) waitAndClear_ms;
 #endif
 }
 
