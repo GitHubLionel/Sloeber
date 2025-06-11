@@ -17,13 +17,16 @@ typedef std::initializer_list<uint8_t> PCF8574_Modes;
 
 /**
  * Task definition
+ * Check every 20 ms if PCF8574 input pins has changed.
+ * If true, call PCF8574_Keyboard_Action() callback function
  */
-#define PCF8574_TASK(start)	{start, "PCF8574_Task", 4096, 10, 20, Core1, PCF8574_Task_code}
-void PCF8574_Task_code(void *parameter);
+#define PCF8574_KEY_TASK	{condCreate, "PCF8574_KEY_Task", 4096, 10, 20, CoreAny, PCF8574_KEY_Task_code}
+void PCF8574_KEY_Task_code(void *parameter);
 
 bool PCF8574_Initialization(uint8_t address, uint8_t interruptPin, PCF8574_Modes pinModes, PCF8574_int_cb fonc = NULL);
 void PCF8574_SetPinLed(PCF8574_Modes pinLeds);
 
-void CircularToggleLed(bool use_output_list);
+void PCF8574_CircularToggleLed(bool use_output_list);
+void PCF8574_UpdateLed(uint8_t ledpin, bool state);
 
 #endif /* PCF8574_UTILS_H_ */

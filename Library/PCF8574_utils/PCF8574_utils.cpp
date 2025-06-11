@@ -88,7 +88,7 @@ void PCF8574_SetPinLed(PCF8574_Modes pinLeds)
  * @Param use_output_list: if true use all the pins who are OUTPUT else use the list
  * of pins defined by PCF8574_SetPinLed() function.
  */
-void CircularToggleLed(bool use_output_list)
+void PCF8574_CircularToggleLed(bool use_output_list)
 {
 	static int toggleLed = 0;
 
@@ -106,6 +106,16 @@ void CircularToggleLed(bool use_output_list)
 			toggleLed = 0;
 		pcf8574->digitalWrite(pin_led[toggleLed], LOW);
 	}
+}
+
+/**
+ * Update led
+ * @Param ledpin: the attached pin of the led
+ * @Param state: true = led is ON, false = led is OFF
+ */
+void PCF8574_UpdateLed(uint8_t ledpin, bool state)
+{
+	(state) ? pcf8574->digitalWrite(ledpin, LOW) : pcf8574->digitalWrite(ledpin, HIGH);
 }
 
 // ********************************************************************************
@@ -131,9 +141,9 @@ void __attribute__((weak)) PCF8574_Keyboard_Action(uint8_t btn_id)
 	}
 }
 
-void PCF8574_Task_code(void *parameter)
+void PCF8574_KEY_Task_code(void *parameter)
 {
-	BEGIN_TASK_CODE("PCF8574_Task");
+	BEGIN_TASK_CODE("PCF8574_KEY_Task");
 
 	for (EVER)
 	{
