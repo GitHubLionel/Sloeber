@@ -22,7 +22,7 @@
 //#define USE_UART // Beware if SERIAL_DEBUG is also defined since all two use Serial0
 #define UART_BAUD	115200
 
-#define USE_SAVE_CRASH
+//#define USE_SAVE_CRASH
 
 /**********************************************************
  * Partition define : Partition_utils library
@@ -49,9 +49,11 @@
  * - WebServer or ESP_Async_WebServer + Async_TCP for Async WebServer
  * - ESPHTTPUpdateServer or ESPAsyncHTTPUpdateServer for Async WebServer
  **********************************************************/
+//#define USE_DEFAULT_HTML_PAGE  // For debug, load only default page
 #define USE_GZ_FILE // Default
 #define SERVER_PORT	80
 #define SSID_FILE	"/SSID.txt"
+//#define SSID_PRINT_DEBUG // Print SSID/pwd in debug log file
 #define DEFAULT_SOFTAP	"DefaultAP"
 #define USE_HTTPUPDATER
 //#define USE_MDNS
@@ -193,9 +195,13 @@
 
 // Active le relais
 #define USE_RELAY
+#define  GPIO_RELAY_FACADE	GPIO_NUM_15
 
 // Active le clavier
 #define USE_KEYBOARD
+
+// Utilise PCF8574 pour le clavier et les leds
+//#define USE_PCF8574
 
 // Active ADC
 #define USE_ADC
@@ -208,3 +214,9 @@
 
 // Show Idle task
 #define USE_IDLE_TASK	false
+
+// Test define
+#ifdef USE_PCF8574
+#undef USE_KEYBOARD // le clavier est controlé par le PCF8574
+#endif
+

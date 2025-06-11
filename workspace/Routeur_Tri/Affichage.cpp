@@ -19,6 +19,9 @@
 #ifdef USE_ADC
 #include "ADC_Utils.h"
 #endif
+#ifdef USE_PCF8574
+#include "PCF8574_utils.h"
+#endif
 
 // Pre ++ operator for any enum type but is not circular
 //https://stackoverflow.com/questions/36793526/how-to-create-a-template-operator-for-enums
@@ -74,7 +77,6 @@ extern EmulPV_Class emul_PV;
 // Relais
 #ifdef USE_RELAY
 extern Relay_Class Relay;
-extern void UpdateLedRelayFacade(void);
 #endif
 
 // Use ADC
@@ -101,6 +103,52 @@ int Action_Wifi = 0;
 
 int Count_Action_Needed = 0;
 
+/**
+ * Définition des leds PCF8574
+ */
+#define LED_RELAIS	0  // Led jaune - relais
+#define LED_SSR	1      // Led rouge - SSR
+#define LED_SURPLUS 2  // Led orange - surplus
+#define LED_CONSO 3    // Led bleu - conso
+
+void UpdateLedRelayFacade(void)
+{
+#ifdef USE_PCF8574
+	PCF8574_UpdateLed(LED_RELAIS, Relay.IsOneRelayON());
+#else
+	(Relay.IsOneRelayON()) ? digitalWrite(GPIO_RELAY_FACADE, HIGH) : digitalWrite(GPIO_RELAY_FACADE, LOW);
+#endif
+}
+
+#ifdef USE_PCF8574
+volatile SemaphoreHandle_t LedSSR_Semaphore = NULL;
+static bool lastState = false;
+
+void IRAM_ATTR UpdateLedSSR(uint16_t val)
+{
+	bool state = (val != 0);
+	if (state != lastState)
+	{
+		lastState = state;
+		if (LedSSR_Semaphore)
+			xSemaphoreGiveFromISR(LedSSR_Semaphore, NULL);
+	}
+}
+
+void SSR_LED_Task_code(void *parameter)
+{
+	BEGIN_TASK_CODE("SSR_LED_Task");
+
+	LedSSR_Semaphore = xSemaphoreCreateBinary();
+	for (EVER)
+	{
+		if (xSemaphoreTake(LedSSR_Semaphore, 0) == pdTRUE)
+			PCF8574_UpdateLed(LED_SSR, lastState);
+		END_TASK_CODE(false);
+	}
+}
+#endif
+
 /* Private function prototypes -----------------------------------------------*/
 void Show_Page_Test(void);
 void Show_Page1(void);
@@ -121,14 +169,24 @@ void Show_Page_Wifi_Action(void);
 // Gestion IHM
 // *****************************************************************************
 
-#ifdef USE_KEYBOARD
 /**
  * Gestion des actions des boutons
  * - Bouton du haut : Action type Menu, sélection d'un menu avec ses pages
  * - Bouton du milieu : Action type OK, validation choix
  * - Bouton du bas : Action type flèche, écran suivant ou sélection suivante
  */
+#ifdef USE_KEYBOARD
 void UserKeyboardAction(Btn_Action Btn_Clicked, uint32_t count)
+#define Btn_DOWN Btn_K1
+#define Btn_OK Btn_K2
+#define Btn_UP Btn_K3
+#else // Use PCF8574
+#define Btn_DOWN 1
+#define Btn_OK 2
+#define Btn_UP 3
+uint32_t count = 1;
+void PCF8574_Keyboard_Action(uint8_t Btn_Clicked)
+#endif
 {
 //	if (Btn_Clicked != Btn_NOP)
 //		Serial.println(Btn_Texte[Btn_Clicked]);
@@ -146,7 +204,7 @@ void UserKeyboardAction(Btn_Action Btn_Clicked, uint32_t count)
 
 	switch (Btn_Clicked)
 	{
-		case Btn_K1: // Bouton du bas : Action type flèche, écran suivant ou sélection suivante
+		case Btn_DOWN: // Bouton du bas : Action type flèche, écran suivant ou sélection suivante
 		{
 			if (count == 1)
 			{
@@ -178,7 +236,7 @@ void UserKeyboardAction(Btn_Action Btn_Clicked, uint32_t count)
 			break;
 		}
 
-		case Btn_K2: // Bouton du milieu : Action type OK, validation choix
+		case Btn_OK: // Bouton du milieu : Action type OK, validation choix
 		{
 			if (count == 1)
 			{
@@ -250,6 +308,7 @@ void UserKeyboardAction(Btn_Action Btn_Clicked, uint32_t count)
 				}
 			}
 
+#ifdef USE_KEYBOARD
 			// On a appuyé plus de 5 secondes sur le bouton
 			if ((Menu == menuWifi) && (count == SECOND_TO_DEBOUNCING(5)))
 			{
@@ -257,10 +316,11 @@ void UserKeyboardAction(Btn_Action Btn_Clicked, uint32_t count)
 				DeleteSSID();
 				Action_Wifi = 0;
 			}
+#endif
 			break;
 		}
 
-		case Btn_K3: // Bouton du haut : Action type Menu, sélection d'un menu avec ses pages
+		case Btn_UP: // Bouton du haut : Action type Menu, sélection d'un menu avec ses pages
 		{
 			if (count == 1)
 			{
@@ -293,7 +353,6 @@ void UserKeyboardAction(Btn_Action Btn_Clicked, uint32_t count)
 			;
 	}
 }
-#endif
 
 /**
  * Gestion de l'affichage des pages oled en fonction des boutons pressés
@@ -692,6 +751,6 @@ void Show_Page_Wifi_Action(void)
 	IHM_Print(7, 1, "OK pour confirmer", false);
 }
 
-// *****************************************************************
-// ***** Fin
-// *****************************************************************
+// ********************************************************************************
+// End of file
+// ********************************************************************************

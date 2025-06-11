@@ -36,6 +36,9 @@
 #ifdef USE_ESPNOW
 #include "ESPNow_utils.h"
 #endif
+#ifdef USE_PCF8574
+#include "PCF8574_utils.h"
+#endif
 
 /**
  * Define de debug
@@ -216,6 +219,10 @@ extern bool Calibration;
 bool Cirrus_OK = false;
 bool Mess_For_Cirrus_Connect = false;
 
+// ********************************************************************************
+// Définition SSR
+// ********************************************************************************
+
 #ifndef USE_ZC_SSR
 extern volatile SemaphoreHandle_t topZC_Semaphore;
 extern void onCirrusZC(void);
@@ -230,13 +237,7 @@ bool lastSSRState = false;
 
 #ifdef USE_RELAY
 // Pin commande du relais
-Relay_Class Relay({GPIO_NUM_26, GPIO_NUM_25, GPIO_NUM_33}); // @suppress("Invalid arguments")
-#define  GPIO_RELAY_FACADE	GPIO_NUM_15
-
-void UpdateLedRelayFacade(void)
-{
-	(Relay.IsOneRelayON()) ? digitalWrite(GPIO_RELAY_FACADE, HIGH) : digitalWrite(GPIO_RELAY_FACADE, LOW);
-}
+Relay_Class Relay( {GPIO_NUM_26, GPIO_NUM_25, GPIO_NUM_33}); // @suppress("Invalid arguments")
 
 // callback to update relay every minutes if we don't use task
 #ifndef RELAY_USE_TASK
@@ -313,6 +314,24 @@ void ESPNOW_Task_code(void *parameter)
 
 // Send new power every 100 ms
 #define ESPNOW_DATA_TASK {condCreate, "ESPNOW_Task", 4096, 3, 100, CoreAny, ESPNOW_Task_code}
+#endif
+
+// ********************************************************************************
+// Définition PCF8574
+// ********************************************************************************
+
+#ifdef USE_PCF8574
+#define PCF8574_INTERRUPTED_PIN GPIO_RELAY_FACADE // GPIO_NUM_15
+
+//	pinMode(P0, OUTPUT); // Led jaune - relais
+//	pinMode(P1, OUTPUT); // Led rouge - SSR
+//	pinMode(P2, OUTPUT); // Led orange - surplus
+//	pinMode(P3, OUTPUT); // Led bleu - conso
+//	pinMode(P4, OUTPUT); // oled ?
+//	pinMode(P5, INPUT); // BP Down
+//	pinMode(P6, INPUT); // BP OK
+//	pinMode(P7, INPUT); // BP UP
+PCF8574_Modes modes = {OUTPUT, OUTPUT, OUTPUT, OUTPUT, OUTPUT, INPUT, INPUT, INPUT};
 #endif
 
 // ********************************************************************************
@@ -395,7 +414,7 @@ void setup()
 	// Des infos sur la flash
 	ESPinformations();
 	Partition_Info();
-  Partition_ListDir();
+	Partition_ListDir();
 #endif
 
 	// Création de la partition data
@@ -403,7 +422,7 @@ void setup()
 
 	// Gestion des fichiers data
 	print_debug(F("Free Data space : "), false);
-	print_debug((int)Partition_FreeSpace(true));
+	print_debug((int) Partition_FreeSpace(true));
 	FillListFile(".gz"); //
 
 //	PrintListFile();
@@ -428,6 +447,14 @@ void setup()
 	if (IHM_Initialization(I2C_ADDRESS, false))
 		print_debug(F("Display Ok"));
 	IHM_TimeOut_Display(OLED_TIMEOUT);
+
+#ifdef USE_PCF8574
+	if (PCF8574_Initialization(0x38, PCF8574_INTERRUPTED_PIN, modes))
+		print_debug("PCF8574 OK");
+	else
+		print_debug("PCF8574 KO");
+//	PCF8574_SetPinLed({true, true, true, true});
+#endif
 
 	// **** 4- initialisation DS18B20 ****
 #ifdef USE_DS
@@ -504,13 +531,19 @@ void setup()
 
 	// **** 7- Initialisation SSR avec Zero-Cross ****
 #ifdef USE_ZC_SSR
+
+#ifndef USE_PCF8574
 	SSR_Initialize(ZERO_CROSS_GPIO, SSR_COMMAND_GPIO, SSR_LED_GPIO);
+#else
+	SSR_Initialize(ZERO_CROSS_GPIO, SSR_COMMAND_GPIO);
+	SSR_SetLedPinValue(UpdateLedSSR);
+#endif
 
 	SSR_Set_Dump_Power(init_routeur.ReadFloat("SSR", "P_CE", 1000)); // Par défaut 1000, voir page web
 	SSR_Set_Target(init_routeur.ReadFloat("SSR", "Target", 0)); // Par défaut 0, voir page web
 	SSR_Set_Percent(init_routeur.ReadFloat("SSR", "Pourcent", 10)); // Par défaut à 10%, voir page web
 
-	Set_PhaseCE((Phase_ID)init_routeur.ReadInteger("SSR", "Phase_CE", 1));
+	Set_PhaseCE((Phase_ID) init_routeur.ReadInteger("SSR", "Phase_CE", 1));
 
 	//	SSR_Compute_Dump_power();
 
@@ -526,7 +559,7 @@ void setup()
 
 	// **** 8- Initialisation Clavier, relais, ADC
 #ifdef USE_ADC
-	if ((ADC_OK = ADC_Initialize_OneShot({KEYBOARD_ADC_GPIO, GPIO_NUM_39}, ADC_Action)) == true) // @suppress("Invalid arguments")
+	if ((ADC_OK = ADC_Initialize_OneShot( {KEYBOARD_ADC_GPIO, GPIO_NUM_39}, ADC_Action)) == true) // @suppress("Invalid arguments")
 	{
 		print_debug(F("ADC OK"));
 //		ADC_Begin();
@@ -547,8 +580,10 @@ void setup()
 #endif
 
 #ifdef USE_RELAY
+#ifndef USE_PCF8574
 	pinMode(GPIO_RELAY_FACADE, OUTPUT);
 	digitalWrite(GPIO_RELAY_FACADE, LOW);
+#endif
 	for (int i = 0; i < Relay.size(); i++)
 	{
 		Relay.addAlarm(i, init_routeur.ReadIntegerIndex(i, "Relais", "Alarm1_start_R", -1),
@@ -603,18 +638,21 @@ void setup()
 
 	// Initialisation des taches
 //	--- Memory free stack ---
-//	Memory_Task: 1404 / 4096
-//	RTC_Task: 1508 / 4096
+//	Memory_Task: 1600 / 4096
+//	RTC_Task: 1920 / 2048
 //	UART_Task: 3472 / 4096
 //	KEEP_ALIVE_Task: 7496 / 8192
-//	DS18B20_Task: 608 / 1536
+//	DS18B20_Task: 692 / 1536
 //	TELEINFO_Task: 176 / 1024
-//	CIRRUS_Task: 4760 / 6144
+//	CIRRUS_Task: 4836 / 6144
 //	DISPLAY_Task: 3000 / 4096
+//  PCF8574_Task: 3516 / 4096
 //	KEYBOARD_Task: 3432 / 4096
-//	LOG_DATA_Task: 3560 / 4096
+//	LOG_DATA_Task: 3584 / 4096
 //	RELAY_Task: 688 / 1024
-//	SSR_BOOST_Task: 0 / 4096
+//	SSR_LED_Task: 3540 / 4096
+//	SSR_BOOST_Task: 3392 / 4096
+//  SSR_DUMP_Task: 3100 / 4096
 //	ESPNOW_Task: 3068 / 4096
 	TaskList.AddTask(RTC_DATA_TASK); // RTC Task
 	TaskList.AddTask(UART_DATA_TASK); // UART Task
@@ -629,17 +667,20 @@ void setup()
 	TaskList.AddTask(TELEINFO_DATA_TASK(TI_OK)); // TeleInfo Task
 #endif
 	TaskList.AddTask(CIRRUS_DATA_TASK(Cirrus_OK)); // Cirrus get data Task
-	TaskList.AddTask(DISPLAY_DATA_TASK);
+	TaskList.AddTask(DISPLAY_DATA_TASK); // Display oled Task
+#ifdef USE_PCF8574
+	TaskList.AddTask(PCF8574_KEY_TASK); // PCF8574 KEYBOARD Task
+#endif
 #ifdef USE_KEYBOARD
 #ifdef USE_ADC
 	if (ADC_Action == adc_Sigma)
 #endif
-	  TaskList.AddTask(KEYBOARD_DATA_TASK(condCreate));
+	  TaskList.AddTask(KEYBOARD_DATA_TASK(condCreate)); // ADC KEYBOARD Task
 #endif
 	TaskList.AddTask(LOG_DATA_TASK);  // Save log Task
 #ifdef USE_RELAY
 #ifdef RELAY_USE_TASK
-	TaskList.AddTask(RELAY_DATA_TASK((Relay.hasAlarm()) ? condCreate : condSuspended));
+	TaskList.AddTask(RELAY_DATA_TASK((Relay.hasAlarm()) ? condCreate : condSuspended)); // Relay alarm Task
 #else
 	if (Relay.hasAlarm())
 	{
@@ -649,11 +690,14 @@ void setup()
 #endif
 	UpdateLedRelayFacade();
 #endif
+#ifdef USE_PCF8574
+	TaskList.AddTask(SSR_LED_TASK);  // Led SSR Task if we use PCF8574
+#endif
 	TaskList.AddTask(SSR_BOOST_TASK);  // Boost SSR Task
 	TaskList.AddTask(SSR_DUMP_TASK);  // Dump SSR Task
 #ifdef USE_ESPNOW
 	if (routeur_master && myServer.IsConnected())
-		TaskList.AddTask(ESPNOW_DATA_TASK);
+		TaskList.AddTask(ESPNOW_DATA_TASK); // ESPNOW get data Task
 #endif
 
 	// Create all the tasks
@@ -678,9 +722,10 @@ void loop()
 	// Listen for HTTP requests from clients
 #ifndef USE_ASYNC_WEBSERVER
 	server.handleClient();
+	vTaskDelay(10);
 #else
 	// Temporisation à adapter
-//	vTaskDelay(10);
+//
 	vTaskDelete(NULL);
 #endif
 }
@@ -782,7 +827,11 @@ void handleInitialization(CB_SERVER_PARAM)
 	message += (SSR_Get_State() == SSR_OFF) ? "OFF#" : "ON#";
 
 	// Talema factor
+#ifdef USE_ADC
 	message += (String) TalemaPhase_int + '#';
+#else
+	message += "1#";
+#endif
 
 	// Relay part
 	String alarm = "";
@@ -894,7 +943,7 @@ void handleFillTheoric(CB_SERVER_PARAM)
 //	print_debug("DATA_NB: " + pserver->arg("DATA_NB") + ",  last_date=" + pserver->arg("DATA_DATE"));
 
 	int *data = NULL;
-	data = (int *) malloc((nb) * sizeof(int));
+	data = (int*) malloc((nb) * sizeof(int));
 
 	emul_PV.Fill_Power_Day(last_date, nb, data);
 
@@ -983,10 +1032,12 @@ void handleOperation(CB_SERVER_PARAM)
 
 	if (pserver->hasArg("TalemaPhase"))
 	{
+#ifdef USE_ADC
 		TalemaPhase_int = pserver->arg("TalemaPhase").toInt();
 		SetTalemaParams((Phase_ID) TalemaPhase_int);
 
 		init_routeur.WriteInteger("TALEMA", "Phase", TalemaPhase_int);
+#endif
 	}
 
 #ifdef USE_ZC_SSR
@@ -1023,7 +1074,7 @@ void handleOperation(CB_SERVER_PARAM)
 	{
 		int phase = pserver->arg("CEPhase").toInt();
 		init_routeur.WriteInteger("SSR", "Phase_CE", phase);
-		Set_PhaseCE((Phase_ID)phase);
+		Set_PhaseCE((Phase_ID) phase);
 	}
 
 	// Test puissance CE
