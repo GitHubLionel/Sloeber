@@ -28,6 +28,9 @@ typedef enum
 	SSR_Action_Dimme
 } SSR_Action_typedef;
 
+/**
+ * Definition of task for Boost and Dump operations
+ */
 #ifdef SSR_USE_TASK
 // Task to boost the SSR (Full load) for 1 hour
 #define SSR_BOOST_TASK	{condSuspended, "SSR_BOOST_Task", 4096, 3, 3600 * 1000, Core0, SSR_Boost_Task_code}
@@ -43,10 +46,19 @@ extern void onDumpComputed(float power);
 #define SSR_DUMP_TASK	{}
 #endif
 
-// Fonction d'action
+/**
+ * Functions definition
+ * - Action to do for the SSR, see SSR_Action_typedef
+ * - Action for the led
+ */
 typedef void (*Gestion_SSR_TypeDef)(const float, const float);
+typedef void (*SetLedPinValue_Typedef)(const uint16_t);
 
+/**
+ * SSR functions
+ */
 void SSR_Initialize(uint8_t ZC_Pin, uint8_t SSR_Pin, int8_t LED_Pin = -1);
+void SSR_SetLedPinValue(const SetLedPinValue_Typedef &fonc = NULL);
 float SSR_Compute_Dump_power(float default_Power = 0.0);
 
 void SSR_Set_Action(SSR_Action_typedef do_action, bool restart = false);

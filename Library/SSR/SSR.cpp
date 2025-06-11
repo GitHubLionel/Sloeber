@@ -32,7 +32,7 @@ static portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 #define TIMERMUX_SECURE(op) portENTER_CRITICAL_ISR(&timerMux); \
 		(op); \
 		portEXIT_CRITICAL_ISR(&timerMux);
-volatile SemaphoreHandle_t topZC_Semaphore;
+volatile SemaphoreHandle_t topZC_Semaphore = NULL;
 #if defined(ESP_IDF_VERSION) && (ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)) // ESP32 2.0.x
 // Le channel pour la led SSR en PWM
 #define LED_CHANNEL	0
@@ -124,6 +124,10 @@ bool __attribute__((weak)) CIRRUS_get_rms_data(float *uRMS, float *pRMS)
 	return true;
 }
 
+// Gestion de la led témoin
+void Default_SetLedPinValue(uint16_t val);
+SetLedPinValue_Typedef SetLedPinValue = Default_SetLedPinValue;
+
 // Fonction de gestion du SSR en mode dimme ou surplus
 volatile Gestion_SSR_TypeDef Gestion_SSR_CallBack = NULL;
 
@@ -195,14 +199,18 @@ void __attribute__((weak)) print_debug(const char *mess, bool ln = true)
 #endif
 
 /**
- * Led command
+ * Default Led command
+ * @Param val: value for the led pin.
  */
-void IRAM_ATTR SetLedPinLow(uint16_t val = 0)
+void IRAM_ATTR Default_SetLedPinValue(uint16_t val)
 {
 	if (LED_PIN != -1)
+	{
 #ifdef ESP8266
-		SET_PIN_LOW(LED_PIN);
-	(void) val;
+		if (val == 0)
+		  SET_PIN_LOW(LED_PIN);
+		else
+			SET_PIN_HIGH(LED_PIN);
 #else
 #if defined(ESP_IDF_VERSION) && (ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)) // ESP32 2.0.x
 		ledcWrite(LED_CHANNEL, val);
@@ -210,6 +218,7 @@ void IRAM_ATTR SetLedPinLow(uint16_t val = 0)
 		ledcWrite(LED_PIN, val);
 #endif
 #endif // ESP32
+	}
 }
 
 /**
@@ -255,8 +264,7 @@ void IRAM_ATTR onTimerSSR(void)
 			SET_PIN_LOW(SSR_PIN);
 
 #ifdef ESP8266
-			if (LED_PIN != -1)
-				SET_PIN_HIGH(LED_PIN);
+			SetLedPinValue(1);
 			Timer_SSR.stopTimer();
 #endif
 		}
@@ -279,12 +287,12 @@ void IRAM_ATTR onCirrusZC(void)
 
 	if (Count_CS_ZC == 100) // 1 s
 	{
-		SET_PIN_HIGH(LED_PIN);
+		SetLedPinValue(1);
 		Count_CS_ZC = 0;
 	}
 	else
 		if (Count_CS_ZC == 10) // 100 ms
-			SET_PIN_LOW(LED_PIN);
+			SetLedPinValue(0);
 }
 #else
 /**
@@ -297,7 +305,8 @@ void IRAM_ATTR onCirrusZC(void)
 {
 #ifdef ESP32
   // Give a semaphore that we can used to synchronise with ZC cirrus
-  xSemaphoreGiveFromISR(topZC_Semaphore, NULL);
+	if (topZC_Semaphore)
+		xSemaphoreGiveFromISR(topZC_Semaphore, NULL);
 #endif
 
 	TIMERMUX_ENTER();
@@ -318,7 +327,7 @@ void IRAM_ATTR onCirrusZC(void)
 		startTimerAndTrigger(SSR_COUNT);
 
 		// Plus le délai est long, plus la led sera éteinte longtemps
-		SetLedPinLow(1023 - SSR_COUNT / 9);
+		SetLedPinValue(1023 - SSR_COUNT / 9);
 	}
 }
 #endif // SIMPLE_ZC_TEST
@@ -357,7 +366,7 @@ bool ZC_Top_Xms(void)
  * SSR_Initialize : initialisation du SSR avec les callback zéro-cross et timer
  * ZC_Pin : le pin zéro-cross
  * SSR_Pin : le pin actionnant le SSR
- * LED_Pin : le pin de la led indiquant le status du SSR (default -1)
+ * LED_Pin : le pin de la led indiquant le status du SSR (default -1 = pas de led ou gestion externe)
  * Le SSR est désactivé.
  * D'abord définir le type d'action avec SSR_Action() puis appeler SSR_Enable() pour l'activer.
  */
@@ -427,6 +436,18 @@ void SSR_Initialize(uint8_t ZC_Pin, uint8_t SSR_Pin, int8_t LED_Pin)
 	// La puissance relative à sa tension nominale = courant !
 	Dump_Power = 1000.0;
 	Dump_Power_Relatif = Dump_Power / 220.0; // Normalement c'est 230.0
+}
+
+/**
+ * Set the SetLedPinValue function.
+ * If NULL, restaure the default function
+ */
+void SSR_SetLedPinValue(const SetLedPinValue_Typedef &fonc)
+{
+	if (fonc)
+		SetLedPinValue = fonc;
+	else
+		SetLedPinValue = Default_SetLedPinValue;
 }
 
 /**
@@ -633,7 +654,7 @@ void SSR_Disable(void)
 	SSR_Stop_Timer();
 	// Etre sûr qu'il est low
 	SET_PIN_LOW(SSR_PIN);
-	SetLedPinLow();
+	SetLedPinValue(0);
 }
 
 // ********************************************************************************
@@ -725,7 +746,7 @@ void SSR_Enable_Timer_Interrupt(bool enable)
 {
 	TIMERMUX_SECURE(Tim_Interrupt_Enabled = enable);
 	if (!enable)
-		SetLedPinLow();
+		SetLedPinValue(0);
 }
 
 void SSR_Start_Timer(void)
