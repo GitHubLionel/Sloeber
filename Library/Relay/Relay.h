@@ -168,6 +168,10 @@ typedef std::initializer_list<uint8_t> RelayGPIOList;
 typedef std::vector<Relay_typedef> RelayList;
 typedef std::vector<TimeAlarm_typedef> TimeList;
 
+// Callback when a relay change
+typedef void (*Relay_on_before_change_cb)(uint8_t id, bool new_state, bool *accept);
+typedef void (*Relay_on_after_change_cb)(uint8_t id, bool new_state);
+
 class Relay_Class
 {
 	public:
@@ -209,6 +213,16 @@ class Relay_Class
 
 		String toString(int time, bool withtime = false) const;
 
+		void setOnBeforeChangeCallback(const Relay_on_before_change_cb &callback)
+		{
+			_relay_on_before_change_cb = callback;
+		}
+
+		void setOnAfterChangeCallback(const Relay_on_after_change_cb &callback)
+		{
+			_relay_on_after_change_cb = callback;
+		}
+
 	protected:
 		RelayList _relay;    // The list of relay
 		TimeList _time;      // The list of time (minute of the day) with an alarm (on or off a relay)
@@ -216,7 +230,10 @@ class Relay_Class
 		int idTime;          // The current index in the list of time action
 		bool isTimeInitialized;  // Is currentTime initialized ?
 		int relaisOnCount;       // Number of relay in state ON
+
 	private:
+		Relay_on_before_change_cb _relay_on_before_change_cb = NULL;
+		Relay_on_after_change_cb _relay_on_after_change_cb = NULL;
 		bool CheckMinuteRange(int minute);
 		void UpdateTimeList(void);
 		void UpdateNextAlarm(bool updateLastAlarm);

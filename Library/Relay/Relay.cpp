@@ -90,23 +90,30 @@ void Relay_Class::setState(uint8_t idRelay, bool state)
 	print_debug(tmp);
 #endif
 
-	if (state)
+
+	if (state != _relay[idRelay].state)
 	{
-		if (!_relay[idRelay].state)
+		bool accept = true;
+		if (_relay_on_before_change_cb)
+			_relay_on_before_change_cb(idRelay, state, &accept);
+		if (!accept)
+			return;
+
+		if (state)
 		{
 			_relay[idRelay].state = true;
 			digitalWrite(_relay[idRelay].gpio, HIGH);
 			relaisOnCount++;
 		}
-	}
-	else
-	{
-		if (_relay[idRelay].state)
+		else
 		{
 			_relay[idRelay].state = false;
 			digitalWrite(_relay[idRelay].gpio, LOW);
 			relaisOnCount--;
 		}
+
+		if (_relay_on_after_change_cb)
+			_relay_on_after_change_cb(idRelay, state);
 	}
 }
 
