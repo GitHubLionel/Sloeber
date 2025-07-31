@@ -161,7 +161,7 @@ void EmulPV_Class::Day_Init()
 }
 
 /**
- * Renvoie l'heure du lever du Soleil à l'heure solaire ou local
+ * Renvoie l'heure du lever du Soleil à l'heure solaire ou local au format TDateTime
  */
 TDateTime EmulPV_Class::getSunRise(bool toLocalTime)
 {
@@ -172,7 +172,20 @@ TDateTime EmulPV_Class::getSunRise(bool toLocalTime)
 }
 
 /**
- * Renvoie l'heure du coucher du Soleil à l'heure solaire ou local
+ * Renvoie l'heure du lever du Soleil à l'heure solaire ou local en minute
+ */
+int EmulPV_Class::getSunRise_int(bool toLocalTime)
+{
+	TDateTime dt = SunRise;
+	uint16_t hour, min, sec, msec;
+	if (toLocalTime)
+		SunHourToLocalTime(&dt);
+  DecodeTime(dt, &hour, &min, &sec, &msec);
+	return hour * 60 + min;
+}
+
+/**
+ * Renvoie l'heure du coucher du Soleil à l'heure solaire ou local au format TDateTime
  */
 TDateTime EmulPV_Class::getSunSet(bool toLocalTime)
 {
@@ -180,6 +193,19 @@ TDateTime EmulPV_Class::getSunSet(bool toLocalTime)
 	if (toLocalTime)
 		SunHourToLocalTime(&dt);
 	return dt;
+}
+
+/**
+ * Renvoie l'heure du coucher du Soleil à l'heure solaire ou local en minute
+ */
+int EmulPV_Class::getSunSet_int(bool toLocalTime)
+{
+	TDateTime dt = SunSet;
+	uint16_t hour, min, sec, msec;
+	if (toLocalTime)
+		SunHourToLocalTime(&dt);
+  DecodeTime(dt, &hour, &min, &sec, &msec);
+	return hour * 60 + min;
 }
 
 /**
@@ -228,7 +254,7 @@ String EmulPV_Class::getData_str(PVData_Enum data)
 }
 
 /**
- * Renvoie la date du jour au format TDateTime
+ * Défini la date du jour. Actualise les données du jour : le lever et coucher du Soleil, énergie
  */
 void EmulPV_Class::setDateTime(void)
 {

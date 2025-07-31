@@ -84,13 +84,15 @@ class EmulPV_Class
 		void Set_DayParameters(TAngstromCoeff ang, double temp, double hr);
 
 		TDateTime getSunRise(bool toLocalTime);
+		int getSunRise_int(bool toLocalTime);
 		TDateTime getSunSet(bool toLocalTime);
+		int getSunSet_int(bool toLocalTime);
 		TDateTime getSunTransit(TDateTime day, bool toLocalTime);
 		char *SunRise_SunSet(void);
 		void setDateTime(void);
 		void setSummerTime(bool summer)
 		{
-			(summer) ? GLOBAL_SUMMER_HOUR = 2 : GLOBAL_SUMMER_HOUR = 1;
+			GLOBAL_SUMMER_HOUR = (summer) ? 2 : 1;
 		}
 
 		float getData(PVData_Enum data);
