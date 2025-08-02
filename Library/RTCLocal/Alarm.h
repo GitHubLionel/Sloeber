@@ -12,10 +12,10 @@
 // To create a basic task to update Relay every 10 secondes
 #ifdef ALARM_USE_TASK
 // Task to update relay according alarm
-#define ALARM_DATA_TASK(start)	{start, "ALARM_Task", 1024 * 4, 2, 10000, CoreAny, ALARM_Task_code}
+#define ALARM_ACTION_TASK(start)	{start, "ALARM_Task", 1024 * 4, 10, 10000, CoreAny, ALARM_Task_code}
 void ALARM_Task_code(void *parameter);
 #else
-#define ALARM_DATA_TASK(start)	{}
+#define ALARM_ACTION_TASK(start)	{}
 #endif
 
 typedef void (*AlarmFunction_t)(size_t, bool, int);
@@ -49,6 +49,20 @@ typedef struct
 		bool isDefined(void)
 		{
 			return ((start != -1) || (end != -1));
+		}
+		String print()
+		{
+			return "Start: " + toString(start) + ", end: " + toString(end);
+		}
+	private:
+		String toString(int val)
+		{
+			char temp[20];
+			if (val == -1)
+				strcpy(temp, "(-1)");
+			else
+				sprintf(temp, "%d.%02d (%d)", val / 60, val % 60, val);
+			return String(temp);
 		}
 } AlarmLimit_typedef;
 
@@ -93,6 +107,11 @@ typedef struct
 			return ((alarm.start == time) || (alarm.end == time));
 		}
 
+		String print(void)
+		{
+			return "Alarm ID: " + (String) idAlarm + ", " + alarm.print();
+		}
+
 	private:
 
 } AlarmAction_typedef;
@@ -128,6 +147,10 @@ class Alarm_Class
 		AlarmAction_typedef* getAlarmByID(size_t id);
 
 		void updateTime(int _time = -1);
+		void updateList(void)
+		{
+			UpdateTimeList();
+		}
 
 		int add(int start, int end, const AlarmFunction_t &pAlarmAction, int param, bool updateTimeList = true);
 

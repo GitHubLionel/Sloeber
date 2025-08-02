@@ -8,7 +8,7 @@
 #endif
 #endif
 
-// #define DEBUG_ALARM
+#define DEBUG_ALARM
 
 // Number of minutes in a day
 #define MINUTESINDAY	1440
@@ -21,7 +21,7 @@ Alarm_Class::Alarm_Class()
 {
 	unique_ID = 0;
 	currentTime = -1;
-	idTime = -1;
+	idTime = 0;
 	isTimeInitialized = false;
 }
 
@@ -162,14 +162,17 @@ void Alarm_Class::updateTime(int _time)
  */
 int Alarm_Class::add(int start, int end, const AlarmFunction_t &pAlarmAction, int param, bool updateTimeList)
 {
-	// Alarm1
+	if ((start == -1) && (end == -1))
+		return -1;
+
+	// Alarm range
 	if (!CheckMinuteRange(start) || !CheckMinuteRange(end))
 	{
 		print_debug("Alarm error: start or end not correct");
 		return -1;
 	}
 
-	if ((start >= end) && (start != -1) && (end != -1))
+	if ((start != -1) && (end != -1) && (start >= end))
 	{
 		print_debug("Alarm error: start >= end");
 		return -1;
@@ -178,6 +181,7 @@ int Alarm_Class::add(int start, int end, const AlarmFunction_t &pAlarmAction, in
 	AlarmAction_typedef alarm;
 	alarm.idAlarm = unique_ID;
 	alarm.alarm.set(start, end);
+	alarm.active = true;
 	alarm.action = pAlarmAction;
 	alarm.Param = param;
 	_alarm.push_back(alarm);
@@ -245,11 +249,16 @@ void Alarm_Class::updateAlarm(size_t idAlarm, int start, int end, bool updateTim
 
 void Alarm_Class::printAlarm(void)
 {
+	for (AlarmAction_typedef alarm : _alarm)
+	{
+		print_debug(alarm.print());
+	}
+
 	String tmp = "";
 	int i = 0;
 	for (TimeAlarmLimit_typedef time : _time)
 	{
-		tmp = "ID: " + (String) i + " : At time = " + toString(time.time, true) + " Alarm: " + (String) time.idAlarm;
+		tmp = "Time ID: " + (String) i + " : At time = " + toString(time.time, true) + " Alarm: " + (String) time.idAlarm;
 		AlarmAction_typedef *alarmAction = getAlarmByID(time.idAlarm);
 		if (alarmAction != NULL)
 		{
@@ -314,12 +323,6 @@ void Alarm_Class::UpdateTimeList(void)
 				time.time = alarm.alarm.start;
 				_time.push_back(time);
 			}
-			else
-			{
-				// Special case, start is not defined, so start at 0
-				time.time = 0;
-				_time.push_back(time);
-			}
 			if (alarm.alarm.end != -1)
 			{
 				time.time = alarm.alarm.end;
@@ -333,6 +336,9 @@ void Alarm_Class::UpdateTimeList(void)
 		// Sort alarm time
 		std::sort(_time.begin(), _time.end(), sort_time);
 	}
+
+//	if (isTimeInitialized)
+//		UpdateNextAlarm(false);
 }
 
 void Alarm_Class::DoAction(size_t idAlarm)
@@ -340,15 +346,38 @@ void Alarm_Class::DoAction(size_t idAlarm)
 	AlarmAction_typedef *alarmAction = getAlarmByID(idAlarm);
 	if ((alarmAction != NULL) && (alarmAction->active) && (alarmAction->action != NULL))
 	{
-		bool state = (alarmAction->alarm.start == currentTime);
-		alarmAction->action(idAlarm, state, alarmAction->Param);
+		if (alarmAction->IsAlarmTime(currentTime))
+			alarmAction->action(idAlarm, (currentTime == alarmAction->alarm.start), alarmAction->Param);
+		else
+			if (alarmAction->IsAlarmActivated(currentTime))
+				alarmAction->action(idAlarm, true, alarmAction->Param);
+
+//		AlarmLimit_typedef alarm = alarmAction->alarm;
+//		if (currentTime == alarm.start)
+//		  alarmAction->action(idAlarm, true, alarmAction->Param);
+//		else
+//			if (currentTime == alarm.end)
+//			  alarmAction->action(idAlarm, false, alarmAction->Param);
+//			else
+//			{
+//				if ((currentTime > alarm.start) && (currentTime < alarm.end))
+//					alarmAction->action(idAlarm, true, alarmAction->Param);
+//			}
 	}
 }
 
 void Alarm_Class::UpdateNextAlarm(bool updateLastAlarm)
 {
-	// Find the next alarm time to execute
 	idTime = 0;
+	if (_time.size() == 0)
+		return;
+
+#ifdef DEBUG_ALARM
+	String tmp = "Time: " + toString(currentTime, true);
+	print_debug(tmp);
+#endif
+
+	// Find the next alarm time to execute
 	while ((idTime < _time.size()) && (_time[idTime].time < currentTime))
 	{
 		if (updateLastAlarm)
@@ -357,18 +386,30 @@ void Alarm_Class::UpdateNextAlarm(bool updateLastAlarm)
 		}
 		idTime++;
 	}
+#ifdef DEBUG_ALARM
+	tmp = "Current id time = " + (String) idTime;
+	print_debug(tmp);
+#endif
 }
 
 void Alarm_Class::CheckAlarmTime(void)
 {
-	if (idTime == _time.size())
+	if ((_time.size() == 0) || (idTime == _time.size()))
 		return;
 
 	// We can have the same alarm for several actions
 	while ((idTime < _time.size()) && (_time[idTime].time == currentTime))
 	{
+#ifdef DEBUG_ALARM
+		String tmp = "Time: " + toString(currentTime, true);
+		print_debug(tmp);
+#endif
 		DoAction(_time[idTime].idAlarm);
 		idTime++;
+#ifdef DEBUG_ALARM
+		tmp = "Current id time = " + (String) idTime;
+		print_debug(tmp);
+#endif
 	}
 }
 
