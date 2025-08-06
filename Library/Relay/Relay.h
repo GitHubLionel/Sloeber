@@ -9,164 +9,30 @@
 #include <initializer_list>
 #include <vector>
 
-// To create a basic task to update Relay every 10 secondes
-#ifdef RELAY_USE_TASK
-#define RELAY_DATA_TASK(start)	{start, "RELAY_Task", 1024 * 4, 2, 10000, CoreAny, RELAY_Task_code}
-void RELAY_Task_code(void *parameter);
+// To create a basic task to update Relay with a callback
+#ifdef RELAY_USE_CB_TASK
+// Task to update relay according condition in a callback
+#define RELAY_CB_DATA_TASK(start, delay)	{start, "RELAY_CB_Task", 1024 * 4, 5, delay, CoreAny, RELAY_CB_Task_code}
+void RELAY_CB_Task_code(void *parameter);
 #else
-#define RELAY_DATA_TASK(start)	{}
+#define RELAY_CB_DATA_TASK(start, delay) {}
 #endif
-
-/**
- * Alarm structure for a relay
- * start: beginning of the ON status of the relay
- * end: ending of the ON status of the relay
- */
-typedef struct
-{
-		int start = -1;
-		int end = -1;
-	public:
-		void reset(void)
-		{
-			start = -1;
-			end = -1;
-		}
-		void set(int _start, int _end)
-		{
-			start = _start;
-			end = _end;
-		}
-		void get(int *_start, int *_end)
-		{
-			*_start = start;
-			*_end = end;
-		}
-		// We can have only start or end alarm
-		bool isDefined(void)
-		{
-			return ((start != -1) || (end != -1));
-		}
-} Alarm_typedef;
 
 /**
  * Relay structure
  */
 typedef struct
 {
-		uint8_t idRelay;
-		uint8_t gpio;
-		bool hasAlarm;
-		bool hasAlarm2;
-		Alarm_typedef alarm1;
-		Alarm_typedef alarm2;
-		bool state;
-	public:
-		bool IsAlarm1Activated(int time)
-		{
-			return _IsAlarmActivated(alarm1, time);
-		}
-
-		bool IsAlarm2Activated(int time)
-		{
-			return _IsAlarmActivated(alarm2, time);
-		}
-
-		bool IsAlarmActivated(int time)
-		{
-			bool activated = false;
-			if (hasAlarm)
-			{
-				if (IsAlarm1Activated(time))
-					activated = true;
-				else
-				{
-					if (IsAlarm2Activated(time))
-						activated = true;
-				}
-			}
-			return activated;
-		}
-
-		bool FoundAlarm(int time, uint8_t *alarmNumber, bool *start, int *val)
-		{
-			if (hasAlarm)
-			{
-				if (alarm1.start == time)
-				{
-					*alarmNumber = 1;
-					*start = true;
-					*val = alarm1.start;
-					return true;
-				}
-				if (alarm1.end == time)
-				{
-					*alarmNumber = 1;
-					*start = false;
-					*val = alarm1.end;
-					return true;
-				}
-				if (alarm2.start == time)
-				{
-					*alarmNumber = 2;
-					*start = true;
-					*val = alarm2.start;
-					return true;
-				}
-				if (alarm2.end == time)
-				{
-					*alarmNumber = 2;
-					*start = false;
-					*val = alarm2.end;
-					return true;
-				}
-			}
-			return false;
-		}
-
-	private:
-		// Alarm is activated if time in [start, end[
-		bool _IsAlarmActivated(Alarm_typedef alarm, int time)
-		{
-			if (alarm.start != -1)
-			{
-				if (time >= alarm.start)
-				{
-					// If end is defined else until end of day
-					if (alarm.end != -1)
-						return (time < alarm.end);
-					else
-						return true;
-				}
-				else
-					return false;
-			}
-			else
-			{
-				// end must be defined
-				return (time < alarm.end);
-			}
-		}
+		uint8_t idRelay;    // The id of the relay
+		uint8_t gpio;       // The gpio that command the relay
+		bool active = true; // Is the state of relay can be change ?
+		bool state = false; // The state of the relay. True = relay ON, False = relay OFF
+		int IDAlarm1 = -1;  // The first alarm ID to command the relay
+		int IDAlarm2 = -1;  // The second alarm ID to command the relay
 } Relay_typedef;
-
-/**
- * Structure that contains the time at which the relay referenced by its identifier has an alarm
- */
-typedef struct
-{
-		uint16_t time;
-		uint8_t idRelay;
-} TimeAlarm_typedef;
-
-enum AlarmNumber
-{
-	Alarm1 = 1,
-	Alarm2
-};
 
 typedef std::initializer_list<uint8_t> RelayGPIOList;
 typedef std::vector<Relay_typedef> RelayList;
-typedef std::vector<TimeAlarm_typedef> TimeList;
 
 // Callback when a relay change
 typedef void (*Relay_on_before_change_cb)(uint8_t id, bool new_state, bool *accept);
@@ -182,15 +48,26 @@ class Relay_Class
 		void Initialize(const RelayGPIOList &gpios);
 		void add(uint8_t gpio);
 
-		size_t size(void)
+		size_t size(void) const
 		{
 			return _relay.size();
 		}
 
+		Relay_typedef* getRelay(uint8_t idRelay)
+		{
+			if (idRelay < _relay.size())
+				return &_relay[idRelay];
+			else
+				return NULL;
+		}
+
+		void setActive(uint8_t idRelay, bool active);
+		bool getActive(uint8_t idRelay) const;
+
 		void setState(uint8_t idRelay, bool state);
 		bool getState(uint8_t idRelay) const;
 		void toggleState(uint8_t idRelay);
-		String getAllState(void);
+		String getAllState(void) const;
 
 		/**
 		 * Return true if one relay is ON, false if all relay are OFF
@@ -199,19 +76,6 @@ class Relay_Class
 		{
 			return (relaisOnCount > 0);
 		}
-
-		void updateTime(int _time = -1);
-		bool hasAlarm(void) const;
-		bool hasAlarm(uint8_t idRelay) const;
-		bool addAlarm(uint8_t idRelay, AlarmNumber num, int start, int end, bool updateTimeList = true);
-		bool addAlarm(uint8_t idRelay, int start1, int end1, int start2, int end2, bool updateTimeList = true);
-		void deleteAlarm(uint8_t idRelay, AlarmNumber num, bool updateTimeList = true);
-		bool getAlarm(uint8_t idRelay, AlarmNumber num, int *start, int *end);
-		void getAlarm(uint8_t idRelay, AlarmNumber num, String &start, String &end);
-
-		void printAlarm(void) const;
-
-		String toString(int time, bool withtime = false) const;
 
 		void setOnBeforeChangeCallback(const Relay_on_before_change_cb &callback)
 		{
@@ -225,17 +89,9 @@ class Relay_Class
 
 	protected:
 		RelayList _relay;    // The list of relay
-		TimeList _time;      // The list of time (minute of the day) with an alarm (on or off a relay)
-		int currentTime;     // The current time in minute of the day unit
-		int idTime;          // The current index in the list of time action
-		bool isTimeInitialized;  // Is currentTime initialized ?
-		int relaisOnCount;       // Number of relay in state ON
+		int relaisOnCount;   // Number of relay in state ON
 
 	private:
 		Relay_on_before_change_cb _relay_on_before_change_cb = NULL;
 		Relay_on_after_change_cb _relay_on_after_change_cb = NULL;
-		bool CheckMinuteRange(int minute);
-		void UpdateTimeList(void);
-		void UpdateNextAlarm(bool updateLastAlarm);
-		void CheckAlarmTime(void);
 };
