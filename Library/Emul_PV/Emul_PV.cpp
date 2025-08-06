@@ -2,8 +2,7 @@
 #include <stdio.h>
 #include <math.h>
 #include "rayonnement.h"
-#include "RTCLocal.h"
-#include "Debug_utils.h"
+//#include "Debug_utils.h"
 
 EmulPV_Class::EmulPV_Class()
 {
@@ -256,12 +255,10 @@ String EmulPV_Class::getData_str(PVData_Enum data)
 /**
  * Défini la date du jour. Actualise les données du jour : le lever et coucher du Soleil, énergie
  */
-void EmulPV_Class::setDateTime(void)
+void EmulPV_Class::setDateTime(uint8_t day, uint8_t month, uint8_t year)
 {
-	uint8_t day, month, year;
 	TDateTime Date;
 
-	RTC_Local.getDate(&day, &month, &year);
 	EncodeDate(2000 + year, month, day, &Date);
 	CurrentDay = Date;
 	Day_Init();

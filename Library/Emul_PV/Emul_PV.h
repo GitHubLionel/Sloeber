@@ -89,7 +89,7 @@ class EmulPV_Class
 		int getSunSet_int(bool toLocalTime);
 		TDateTime getSunTransit(TDateTime day, bool toLocalTime);
 		char *SunRise_SunSet(void);
-		void setDateTime(void);
+		void setDateTime(uint8_t day, uint8_t month, uint8_t year);
 		void setSummerTime(bool summer)
 		{
 			GLOBAL_SUMMER_HOUR = (summer) ? 2 : 1;
