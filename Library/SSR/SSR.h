@@ -64,7 +64,9 @@ float SSR_Compute_Dump_power(float default_Power = 0.0);
 void SSR_Set_Action(SSR_Action_typedef do_action, bool restart = false);
 SSR_Action_typedef SSR_Get_Action(void);
 
+void SSR_Set_State(SSR_State_typedef state);
 SSR_State_typedef SSR_Get_State(void);
+
 void SSR_Enable(void);
 void SSR_Disable(void);
 
@@ -80,6 +82,14 @@ float SSR_Get_Current_Percent(void);
 
 void SSR_Set_Dimme_Target(float target);
 float SSR_Get_Dimme_Target(void);
+
+void SSR_Kill_Boost_With_Alarm(void);
+void SSR_Start_Boost_With_Alarm(int minute = 60);
+#ifdef SSR_USE_TASK
+void SSR_Start_Boost_With_Task(void);
+void SSR_Kill_Boost_With_Task(void);
+void SSR_Start_Dump_With_Task(void);
+#endif
 
 // Fonction pour avoir un top zéro cross
 #if defined(ZERO_CROSS_TOP_Xms)

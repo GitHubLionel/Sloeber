@@ -43,6 +43,9 @@ volatile SemaphoreHandle_t topZC_Semaphore = NULL;
 #include "Tasks_utils.h"
 #endif
 
+#include "RTCLocal.h"
+#include "Alarm_Minute.h"  // For boost with alarm
+
 #define DEBUG_SSR           0          // Affichage de P_100 et SSR_COUNT
 
 // Les handle des pins et du timer
@@ -576,6 +579,14 @@ SSR_Action_typedef SSR_Get_Action(void)
 	return current_action;
 }
 
+void SSR_Set_State(SSR_State_typedef state)
+{
+	if (state == SSR_OFF)
+		SSR_Disable();
+	else
+		SSR_Enable();
+}
+
 /**
  * Renvoie l'état du SSR
  * SSR_OFF: éteint
@@ -911,12 +922,58 @@ void SSR_Update_Surplus_Timer(const float Cirrus_voltage, const float Cirrus_pow
 }
 
 // ********************************************************************************
-// Task function to save the log
+// Boost function with Alarm
+// ********************************************************************************
+
+static SSR_Action_typedef lastActionBeforeBoost = SSR_Action_OFF;
+static SSR_State_typedef lastStateBeforeBoost = SSR_OFF;
+static int alarmID;
+
+void AlarmEndBoost_cb(size_t idAlarm, bool state, int param)
+{
+	print_debug("Alarm cb : End boost.");
+	SSR_Set_Action(lastActionBeforeBoost, (lastStateBeforeBoost != SSR_OFF));
+}
+
+void SSR_Kill_Boost_With_Alarm(void)
+{
+	Alarm.deleteAlarm(alarmID);
+	SSR_Set_Action(lastActionBeforeBoost, (lastStateBeforeBoost != SSR_OFF));
+}
+
+void SSR_Start_Boost_With_Alarm(int minute)
+{
+	lastActionBeforeBoost = SSR_Get_Action();
+	lastStateBeforeBoost = SSR_Get_State();
+	SSR_Set_Action(SSR_Action_FULL, true);
+	int end = (RTC_Local.getMinuteOfTheDay() + minute) % MINUTESINDAY;
+	alarmID = Alarm.add(-1, end, AlarmEndBoost_cb, 0);
+	Alarm.getAlarmByID(alarmID)->setOnlyOne(true);
+}
+
+// ********************************************************************************
+// Task function for boost and dump
 // ********************************************************************************
 
 #ifdef SSR_USE_TASK
+
+void SSR_Start_Boost_With_Task(void)
+{
+	// Save current action
+	lastActionBeforeBoost = SSR_Get_Action();
+	lastStateBeforeBoost = SSR_Get_State();
+	SSR_Set_Action(SSR_Action_FULL, true);
+	TaskList.ResumeTask("SSR_BOOST_Task");
+}
+
+void SSR_Kill_Boost_With_Task(void)
+{
+	TaskList.SuspendTask("SSR_BOOST_Task");
+	SSR_Set_Action(lastActionBeforeBoost, (lastStateBeforeBoost != SSR_OFF));
+}
+
 // Task to start SSR full load for one hour
-// First turn SSR action to FULL then ResumeTask
+// Use SSR_Start_Boost_With_Task() function to start
 void SSR_Boost_Task_code(void *parameter)
 {
 	BEGIN_TASK_CODE("SSR_BOOST_Task");
@@ -926,12 +983,27 @@ void SSR_Boost_Task_code(void *parameter)
 	{
 		SSR_Stop = !SSR_Stop;
 		if (SSR_Stop)
-			SSR_Set_Action(SSR_Action_Surplus, true);
+			SSR_Set_Action(lastActionBeforeBoost, (lastStateBeforeBoost != SSR_OFF));
 		END_TASK_CODE(SSR_Stop);
 	}
 }
 
+void SSR_Start_Dump_With_Task(void)
+{
+	// Save current action
+	lastActionBeforeBoost = SSR_Get_Action();
+	lastStateBeforeBoost = SSR_Get_State();
+	// Stop SSR
+	SSR_Set_Action(SSR_Action_OFF);
+	// Stop data acquisition
+	TaskList.SuspendTask("CIRRUS_Task");
+	delay(200);
+	// Start dump task
+	TaskList.ResumeTask("SSR_DUMP_Task");
+}
+
 // Task to compute dump power
+// Use SSR_Start_Dump_With_Task() function to start
 void SSR_Dump_Task_code(void *parameter)
 {
 	typedef enum
@@ -1014,6 +1086,11 @@ void SSR_Dump_Task_code(void *parameter)
 					step = dumpInitial;
 					SSR_Stop = true;
 
+					// Restart data acquisition
+					TaskList.ResumeTask("CIRRUS_Task");
+					// Restore last action
+					SSR_Set_Action(lastActionBeforeBoost, (lastStateBeforeBoost != SSR_OFF));
+					// Callback to do after dump computation
 					onDumpComputed(deltaP);
 				}
 		}
