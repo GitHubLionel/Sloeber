@@ -47,6 +47,12 @@ class ESP_NOW_Master_Peer: public ESP_NOW_Peer
 			return true;
 		}
 
+		// Terminate ESP-NOW
+		void end(void)
+		{
+			ESP_NOW.end();
+		}
+
 		// Function to send a message to all devices within the network
 		bool send_message(const uint8_t *data, size_t len)
 		{

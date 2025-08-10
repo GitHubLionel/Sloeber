@@ -195,6 +195,22 @@ int Alarm_Minute::add(int start, int end, const AlarmFunction_t &pAlarmAction, i
 	return alarm.getID();
 }
 
+/**
+ * Idem add function with only_One set to true. The alarm is deleted when end time come.
+ */
+int Alarm_Minute::add_one(int start, int end, const AlarmFunction_t &pAlarmAction, int param, bool updateTimeList)
+{
+	int id = add(start, end, pAlarmAction, param, updateTimeList);
+	if (id != -1)
+		getAlarmByID(id)->setOnlyOne(true);
+	return id;
+}
+
+int Alarm_Minute::add_one(int end, const AlarmFunction_t &pAlarmAction, int param, bool updateTimeList)
+{
+	return add_one(-1, end, pAlarmAction, updateTimeList);
+}
+
 bool Alarm_Minute::getRange(size_t idAlarm, int *start, int *end)
 {
 	*start = *end = -1;
@@ -261,7 +277,11 @@ void Alarm_Minute::printAlarm(void)
 	{
 		print_debug(alarm.print());
 	}
+#ifdef ESP32
 	vTaskDelay(1);
+#else
+	delay(1);
+#endif
 
 	String tmp = "";
 	int i = 0;
@@ -404,10 +424,11 @@ void Alarm_Minute::CheckAlarmTime(void)
 		String tmp = "Time: " + toString(currentTime, true);
 		print_debug(tmp);
 #endif
-		_time[idTime].alarm->DoAction(currentTime);
-		if (_time[idTime].alarm->getOnlyOne())
+		const Alarm_Property *alarm = _time[idTime].alarm;
+		alarm->DoAction(currentTime);
+		if (alarm->getOnlyOne() && alarm->IsEndTime(currentTime))
 		{
-			deleteAlarm(_time[idTime].alarm->getID(), false);
+			deleteAlarm(alarm->getID(), false);
 			needUpdate = true;
 		}
 		idTime++;

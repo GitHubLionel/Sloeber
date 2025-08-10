@@ -21,7 +21,13 @@ void ALARM_Task_code(void *parameter);
 // Number of minutes in a day
 #define MINUTESINDAY	1440
 
-typedef void (*AlarmFunction_t)(size_t, bool, int);
+/**
+ * Callback definition for the action
+ * @Param idAlarm: the identificator of the alarm who called the action
+ * @Param state: the state active/start or inactive/end
+ * @Param param: the parameter pass to the action
+ */
+typedef void (*AlarmFunction_t)(size_t idAlarm, bool state, int param);
 
 /**
  * Alarm range
@@ -241,6 +247,8 @@ class Alarm_Minute
 		}
 
 		int add(int start, int end, const AlarmFunction_t &pAlarmAction, int param, bool updateTimeList = true);
+		int add_one(int start, int end, const AlarmFunction_t &pAlarmAction, int param, bool updateTimeList = true);
+		int add_one(int end, const AlarmFunction_t &pAlarmAction, int param, bool updateTimeList = true);
 
 		bool getRange(size_t idAlarm, int *start, int *end);
 		void getRange(size_t idAlarm, String &start, String &end);

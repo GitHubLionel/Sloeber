@@ -78,6 +78,8 @@ bool TaskList_c::Create(bool with_idle_task)
 
 	for (size_t i = 0; i < Tasks.size(); i++)
 	{
+		// If condition is Create or CreateSuspended
+		// If condition is NotCreate then the task should be created later with CreateTask()
 		if (Tasks[i].Condition > 0)
 		{
 			if (Tasks[i].Core == CoreAny)
@@ -101,7 +103,7 @@ bool TaskList_c::Create(bool with_idle_task)
 						Tasks[i].Core							 // Task core
 						);
 			}
-			if (Tasks[i].Condition == condSuspended)
+			if ((xReturned == pdPASS) && (Tasks[i].Condition == condSuspended))
 			{
 				Tasks[i].IsSuspended = true;
 				vTaskSuspend(Tasks[i].Handle);
@@ -213,7 +215,7 @@ bool TaskList_c::CreateTask(const String &name, bool forceDelete, void *param)
 			td->IsGroupSuspended = false;
 		}
 
-		// Create the task
+		// Create the task if the handle is NULL else do nothing
 		if (td->Handle == NULL)
 		{
 			// Replace the parameter pass to the function
@@ -241,12 +243,19 @@ bool TaskList_c::CreateTask(const String &name, bool forceDelete, void *param)
 						td->Core							// Task core
 						);
 			}
-			if (td->Condition == condSuspended)
+			if (xReturned == pdPASS)
 			{
-				td->IsSuspended = true;
-				vTaskSuspend(td->Handle);
+				if (td->Condition == condSuspended)
+				{
+					td->IsSuspended = true;
+					vTaskSuspend(td->Handle);
+				}
+				else
+					td->Condition = condCreate;
 			}
 		}
+		else
+			xReturned = pdPASS;
 	}
 	return (xReturned == pdPASS);
 }
