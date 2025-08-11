@@ -947,8 +947,7 @@ void SSR_Start_Boost_With_Alarm(int minute)
 	lastStateBeforeBoost = SSR_Get_State();
 	SSR_Set_Action(SSR_Action_FULL, true);
 	int end = (RTC_Local.getMinuteOfTheDay() + minute) % MINUTESINDAY;
-	alarmID = Alarm.add(-1, end, AlarmEndBoost_cb, 0);
-	Alarm.getAlarmByID(alarmID)->setOnlyOne(true);
+	alarmID = Alarm.add_one(end, AlarmEndBoost_cb, 0);
 }
 
 // ********************************************************************************
