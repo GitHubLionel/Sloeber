@@ -212,6 +212,8 @@ bool SH1107_Init(uint8_t pin_SDA, uint8_t pin_SCL, uint16_t I2C_Address, uint32_
 	_I2CWrite((unsigned char*) oled128_initbuf, sizeof(oled128_initbuf));
 
 	delay(100);
+	// Clear memory and display on
+	SH1107_Fill(0x0, 1);
 	_I2CWrite(uc, 2);
 
 	return true;
@@ -303,8 +305,7 @@ void SH1107_Test_Screen(void)
 	}
 	delay(2000);
 
-	SH1107_Fill(0, 0);
-	SH1107_DumpBuffer();
+	SH1107_Fill(0, 1);
 }
 
 //
