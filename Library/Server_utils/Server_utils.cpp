@@ -410,6 +410,7 @@ bool ServerConnexion::Connexion(bool toUART)
 		if (!WiFi.softAP(_SSID, _PWD))
 		{
 			GLOBAL_PRINT_DEBUG = true;
+			WaitForNetWork = true;
 			return false;
 		}
 		_IPaddress = "IP=" + WiFi.softAPIP().toString();
@@ -455,6 +456,7 @@ bool ServerConnexion::Connexion(bool toUART)
 					break;
 			}
 			GLOBAL_PRINT_DEBUG = true;
+			WaitForNetWork = true;
 			return false;
 		}
 #ifdef ESP32
@@ -543,16 +545,23 @@ bool ServerConnexion::Connexion(bool toUART)
 	}
 #endif
 
+	WaitForNetWork = false;
 	return true;
 }
 
 /**
  * Check if we have client connected
  */
-bool ServerConnexion::WifiConnected(void)
+bool ServerConnexion::WifiConnected(void) const
 {
 //	return ((WiFi.status() == WL_CONNECTED) && server.client().connected());
 	return ((WiFi.status() == WL_CONNECTED));
+}
+
+// No use of WiFi.status()
+bool ServerConnexion::IsConnected(void) const
+{
+	return (!WaitForNetWork);
 }
 
 /**
@@ -563,7 +572,7 @@ bool ServerConnexion::WifiConnected(void)
 void ServerConnexion::KeepAlive(void)
 {
 	// Try to reconnect if we are disconnected
-	if (!WifiConnected())
+	if (IsConnected() && (!WifiConnected()))
 	{
 #ifdef ESP32
 		WiFi.removeEvent(WiFiEvent);
@@ -576,7 +585,8 @@ void ServerConnexion::KeepAlive(void)
  * Wait for the connexion
  * Initialize the parameters (SSID, pwd) and try to connect.
  * If toUART = true then send IP to UART after connexion (default false)
- * return true while connexion is not established
+ * return true if connexion is not established
+ * This function should be called only once in the setup function.
  */
 bool ServerConnexion::WaitForConnexion(Conn_typedef connexion, bool toUART)
 {
