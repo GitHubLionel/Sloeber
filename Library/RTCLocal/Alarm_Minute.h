@@ -12,7 +12,7 @@
 // To create a basic task to check alarm every 10 secondes
 #ifdef ALARM_USE_TASK
 // Task to update relay according alarm
-#define ALARM_ACTION_TASK(start)	{start, "ALARM_Task", 1024 * 4, 10, 10000, CoreAny, ALARM_Task_code}
+#define ALARM_ACTION_TASK(start)	{(start), "ALARM_Task", 1024 * 4, 10, 10000, CoreAny, ALARM_Task_code}
 void ALARM_Task_code(void *parameter);
 #else
 #define ALARM_ACTION_TASK(start)	{}
@@ -150,7 +150,10 @@ class Alarm_Property : public Alarm_Range
 			else
 			{
 				// end must be defined
-				return (time < end);
+				if (only_One)
+					return (time == end);
+				else
+				  return (time < end);
 			}
 		}
 
@@ -269,6 +272,7 @@ class Alarm_Minute
 	private:
 		size_t unique_ID;  // One ID to reference one alarm
 		int busy = 0;      // Busy flag counter
+		bool add_one_flag = false;
 
 		bool CheckMinuteRange(int minute);
 		void UpdateTimeList(bool checkAlarm);

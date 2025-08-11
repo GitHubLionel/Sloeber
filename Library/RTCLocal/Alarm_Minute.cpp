@@ -180,7 +180,9 @@ int Alarm_Minute::add(int start, int end, const AlarmFunction_t &pAlarmAction, i
 	alarm.set(start, end);
 	alarm.setAction(pAlarmAction, param);
 	alarm.setActive(true);
+	alarm.setOnlyOne(add_one_flag);
 	_alarm.push_back(alarm);
+	add_one_flag = false;
 
 	// Test action
 	if (isTimeInitialized)
@@ -200,15 +202,13 @@ int Alarm_Minute::add(int start, int end, const AlarmFunction_t &pAlarmAction, i
  */
 int Alarm_Minute::add_one(int start, int end, const AlarmFunction_t &pAlarmAction, int param, bool updateTimeList)
 {
-	int id = add(start, end, pAlarmAction, param, updateTimeList);
-	if (id != -1)
-		getAlarmByID(id)->setOnlyOne(true);
-	return id;
+	add_one_flag = true;
+	return add(start, end, pAlarmAction, param, updateTimeList);
 }
 
 int Alarm_Minute::add_one(int end, const AlarmFunction_t &pAlarmAction, int param, bool updateTimeList)
 {
-	return add_one(-1, end, pAlarmAction, updateTimeList);
+	return add_one(-1, end, pAlarmAction, param, updateTimeList);
 }
 
 bool Alarm_Minute::getRange(size_t idAlarm, int *start, int *end)
@@ -330,7 +330,7 @@ String Alarm_Minute::toString(int time, bool withtime) const
 // Alarm_Minute private functions
 // ********************************************************************************
 
-bool sort_time(TimeAlarmLimit_typedef t1, TimeAlarmLimit_typedef t2)
+static bool sort_time(TimeAlarmLimit_typedef t1, TimeAlarmLimit_typedef t2)
 {
 	return (t1.time < t2.time);
 }
@@ -417,7 +417,7 @@ void Alarm_Minute::CheckAlarmTime(void)
 	bool needUpdate = false;
 
 	busy++;
-	// We can have the same alarm for several actions
+	// We can have several alarms for several actions at same time
 	while ((idTime < _time.size()) && (_time[idTime].time == currentTime))
 	{
 #ifdef DEBUG_ALARM
