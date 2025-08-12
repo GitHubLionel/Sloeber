@@ -94,6 +94,7 @@ class ESP_NOW_Slave_Peer
 		{
 		}
 		bool begin(void);
+		bool end(void);
 
 		// Set call back to manage message receive from master
 		void setOnReceive_cb(esp_now_peer_message_cb_t cb);

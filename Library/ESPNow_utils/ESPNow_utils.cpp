@@ -108,6 +108,11 @@ bool ESP_NOW_Slave_Peer::begin(void)
 	return true;
 }
 
+bool ESP_NOW_Slave_Peer::end(void)
+{
+	return ESP_NOW.end();
+}
+
 void ESP_NOW_Slave_Peer::setOnReceive_cb(esp_now_peer_message_cb_t cb)
 {
 	Receive_slave_cb = cb;
