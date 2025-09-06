@@ -4,10 +4,11 @@
 ### Installation
 Télécharger Sloeber V4.4.3 (Béryllium) version bundle : <a href="http://eclipse.baeyens.it/stable.php?OS=Windows" target="_blank">http://eclipse.baeyens.it/stable.php?OS=Windows</a>
 
-Pour simplifier, j'ai créé un dossier <span style="color:red">C:\Sloeber (noté DIR pour la suite)</span> pour le programme, mes librairies et le workspace.<br>
-Tous les chemins seront donc relatif à cet emplacement. A adpater suivant la configuration.
+Pour simplifier, créer un dossier par exemple <span style="color:red">C:\Sloeber <b>(noté DIR pour la suite)</b></span> pour le programme, mes librairies et le workspace.<br>
+Tous les chemins seront donc relatifs à cet emplacement. A adpater suivant la configuration.
 
-NOTE : En cas de ré-installation, renommer <span style="color:red">C:\Sloeber</span> en <span style="color:red">C:\Sloeber_old</span>. Créer un nouveau <span style="color:red">C:\Sloeber</span> et déplacer dedans les dossiers Doc et Library mais pas le workspace (en créer un nouveau). A la fin, on importera les anciens projets dans le nouveau workspace.
+<b>NOTE :</b> En cas de ré-installation, renommer <span style="color:red">C:\Sloeber</span> en <span style="color:red">C:\Sloeber_old</span>. Créer un nouveau <span style="color:red">C:\Sloeber</span> et déplacer dedans les dossiers Doc et Library mais pas le workspace (en créer un nouveau). A la fin, on importera les anciens projets dans le nouveau workspace.<br>
+Egalement, recopier le dossier "arduinoPlugin\downloads" de l'ancien Sloeber dans le nouveau. Cela permet de gagner du temps et d'éviter de re-télécharger les librairies Arduino.
 
 - Dézipper le fichier dans <span style="color:red">DIR</span>. Renommer le dossier Sloeber créé en <b>Sloeber4</b>
 - Lancer sloeber-ide.exe
@@ -66,7 +67,7 @@ Menu : Sloeber/preferences/Platforms and boards
 
 <b>Pour l'ESP32 :</b><br>
 Menu : Sloeber/preferences/Platforms and boards
-  - Sélectionner esp32/esp32/3.2.0 (s'il y a deux sections esp32, prendre la section qui va bien)
+  - Sélectionner esp32/esp32/3.2.0 (s'il y a deux sections esp32, prendre la section qui va bien). C'est la dernière version pour Windows 7 car utilise Python 3.8.7. Les versions 3.2.1 et supérieure utilisent Python 3.11 donc faut Windows 10 minimum.
   - Apply and close et <b>attendre</b>, c'est très long !! (surveiller en bas à droite la progression et attendre)
   - En cas d'erreur comme celle-ci : <br>
 ![ESP32_Problem](./ESP32_Problem.png "Error")<br>
